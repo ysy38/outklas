@@ -56,25 +56,26 @@ export async function getGuestId(): Promise<string> {
 
 export async function currentProfile() {
   const remote = await supabaseUser();
-  const db = await getDb();
-  if (remote) {
-    const found = await db.select().from(profiles).where(eq(profiles.id, remote.id)).limit(1);
-    if (found[0]) return found[0];
-    const created = {
-      id: remote.id,
-      email: remote.email || `${remote.id}@supabase.local`,
-      passwordHash: null,
-      role: adminEmails().includes(remote.email) ? "admin" : "learner",
-      onboardingCompleted: false,
-    };
-    await db.insert(profiles).values(created);
-    return (await db.select().from(profiles).where(eq(profiles.id, remote.id)).limit(1))[0] ?? null;
+  if (!remote) {
+    const jar = await cookies();
+    const id = readSigned(jar.get(sessionCookie)?.value);
+    if (!id) return null;
+    const db = await getDb();
+    const rows = await db.select().from(profiles).where(eq(profiles.id, id)).limit(1);
+    return rows[0] ?? null;
   }
-  const jar = await cookies();
-  const id = readSigned(jar.get(sessionCookie)?.value);
-  if (!id) return null;
-  const rows = await db.select().from(profiles).where(eq(profiles.id, id)).limit(1);
-  return rows[0] ?? null;
+  const db = await getDb();
+  const found = await db.select().from(profiles).where(eq(profiles.id, remote.id)).limit(1);
+  if (found[0]) return found[0];
+  const created = {
+    id: remote.id,
+    email: remote.email || `${remote.id}@supabase.local`,
+    passwordHash: null,
+    role: adminEmails().includes(remote.email) ? "admin" : "learner",
+    onboardingCompleted: false,
+  };
+  await db.insert(profiles).values(created);
+  return (await db.select().from(profiles).where(eq(profiles.id, remote.id)).limit(1))[0] ?? null;
 }
 
 function adminEmails(): string[] {

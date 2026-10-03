@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -8,6 +8,7 @@ import { publishBlockers } from "@/modules/content/publish";
 import type { PoolItem } from "@/modules/exam/select";
 import { hashPassword } from "@/server/password";
 import { examDraft, skillTree, stimuli, vocabDrafts, vocabLinkDrafts, type DraftItem } from "./exam-draft";
+import { initSql } from "./init-sql";
 import { answers, choices, events, itemSkills, itemVocabulary, items, mastery, plans, profiles, reviews, sessionItems, sessions, skills, stimuli as stimuliTable, subscriptions, vocabulary, vocabLinks } from "./schema";
 
 type AppDb = PgliteDatabase;
@@ -16,8 +17,7 @@ let database: AppDb | null = null;
 let ready: Promise<AppDb> | null = null;
 
 async function migrate(db: AppDb) {
-  const script = readFileSync(path.join(process.cwd(), "src/db/init.sql"), "utf8");
-  for (const statement of script.split(";").map((part) => part.trim()).filter(Boolean)) {
+  for (const statement of initSql.split(";").map((part) => part.trim()).filter(Boolean)) {
     await db.execute(sql.raw(statement));
   }
 }
@@ -92,6 +92,7 @@ export async function seed(db: AppDb) {
     (draft.vocab ?? []).map((vocabularyId) => ({ itemId: `item-${draft.slot}`, vocabularyId })),
   );
   if (vocabRows.length > 0) await db.insert(itemVocabulary).values(vocabRows);
+  if (process.env.VERCEL) return;
   await db.insert(profiles).values({
     id: randomUUID(),
     email: "admin@ydslab.local",
@@ -101,6 +102,17 @@ export async function seed(db: AppDb) {
     dailyMinutes: 30,
     targetScore: 80,
   });
+}
+
+async function openPglite(dataDir?: string): Promise<AppDb> {
+  const { PGlite } = await import("@electric-sql/pglite");
+  const { drizzle } = await import("drizzle-orm/pglite");
+  if (dataDir) mkdirSync(dataDir, { recursive: true });
+  const client = dataDir ? new PGlite(dataDir) : new PGlite();
+  const db = drizzle(client) as unknown as AppDb;
+  await migrate(db);
+  await seed(db);
+  return db;
 }
 
 async function open(): Promise<AppDb> {
@@ -113,15 +125,12 @@ async function open(): Promise<AppDb> {
     await seed(db);
     return db;
   }
-  const { PGlite } = await import("@electric-sql/pglite");
-  const { drizzle } = await import("drizzle-orm/pglite");
-  const dir = path.join(process.cwd(), ".data/pglite");
-  mkdirSync(dir, { recursive: true });
-  const client = new PGlite(dir);
-  const db = drizzle(client) as unknown as AppDb;
-  await migrate(db);
-  await seed(db);
-  return db;
+  const dir = process.env.VERCEL ? "/tmp/tomo-pglite" : path.join(process.cwd(), ".data/pglite");
+  try {
+    return await openPglite(dir);
+  } catch {
+    return openPglite();
+  }
 }
 
 export function getDb(): Promise<AppDb> {

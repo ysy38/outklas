@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #f3efe6;
-  --ink: #161a17;
-  --muted: #5e584e;
-  --line: #e3dcd0;
-  --pine: #143f36;
-  --pine-deep: #0c2b25;
-  --clay: #8d3f31;
-  --moss: #246b45;
-  --card: #fffcf6;
-  --cream: #f7f3ea;
-  --gold: #8d6b3a;
+  --paper: #eef4f7;
+  --ink: #122028;
+  --muted: #5c6d7a;
+  --line: #d4e2ea;
+  --pine: #0c5c62;
+  --pine-deep: #083e43;
+  --clay: #b4233a;
+  --moss: #0f766e;
+  --card: #ffffff;
+  --cream: #f4fafa;
+  --gold: #3c7394;
   color-scheme: light;
 }
 
