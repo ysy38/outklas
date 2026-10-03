@@ -1,0 +1,521 @@
+import { randomUUID } from "node:crypto";
+import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
+import { brand } from "@/brand";
+import { ydsBlueprint, type SectionId } from "@/modules/exam/blueprint";
+import { estimateFromAccuracy, scoreSession, type ScoreItem } from "@/modules/exam/score";
+import { selectDiagnostic, selectItems, selectMock, type PoolItem } from "@/modules/exam/select";
+import { canStartPractice, canStartSimulator, isPro, practiceAllowance } from "@/modules/billing/entitlement";
+import { nextMastery } from "@/modules/learning/mastery";
+import { buildPlan, type DailyPlan } from "@/modules/learning/plan";
+import { nextReview } from "@/modules/learning/review";
+import {
+  answers,
+  choices,
+  events,
+  getDb,
+  itemSkills,
+  items,
+  mastery,
+  plans,
+  profiles,
+  publishedPool,
+  reviews,
+  sessionItems,
+  sessions,
+  skills,
+  stimuliTable,
+  subscriptions,
+} from "@/db/client";
+import { getGuestId, claimGuest } from "./auth";
+
+export type Mode = "diagnostic" | "practice" | "simulator";
+
+function todayKey(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Istanbul" });
+}
+
+function startOfToday(): Date {
+  const key = todayKey();
+  return new Date(`${key}T00:00:00+03:00`);
+}
+
+export async function recordEvent(name: string, profileId: string | null, payload: Record<string, unknown> = {}) {
+  const db = await getDb();
+  await db.insert(events).values({ id: randomUUID(), profileId, name, payload });
+}
+
+export async function entitlementFor(profileId: string | null) {
+  if (process.env.DEV_PRO === "1") return { pro: true, plan: "pro" as const };
+  if (!profileId) return { pro: false, plan: "free" as const };
+  const db = await getDb();
+  const rows = await db.select().from(subscriptions).where(eq(subscriptions.profileId, profileId)).limit(1);
+  const row = rows[0];
+  const pro = isPro({
+    devPro: false,
+    plan: (row?.plan as "free" | "pro" | "exam_pass" | undefined) ?? null,
+    status: row?.status ?? null,
+    periodEnd: row?.periodEnd ?? null,
+    now: new Date(),
+  });
+  return { pro, plan: row?.plan ?? "free" };
+}
+
+async function answeredToday(profileId: string): Promise<number> {
+  const db = await getDb();
+  const rows = await db
+    .select({ id: answers.id })
+    .from(answers)
+    .innerJoin(sessions, eq(sessions.id, answers.sessionId))
+    .where(and(eq(answers.profileId, profileId), eq(sessions.mode, "practice"), gte(answers.createdAt, startOfToday())));
+  return rows.length;
+}
+
+async function completedSimulators(owner: { profileId?: string | null; guestId?: string }): Promise<number> {
+  const db = await getDb();
+  const filter = owner.profileId
+    ? eq(sessions.profileId, owner.profileId)
+    : eq(sessions.guestId, owner.guestId ?? "");
+  const rows = await db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(and(filter, eq(sessions.mode, "simulator"), eq(sessions.status, "submitted")));
+  return rows.length;
+}
+
+export async function createSession(input: {
+  mode: Mode;
+  profileId: string | null;
+  itemIds?: string[];
+}): Promise<{ id?: string; error?: string; paywall?: boolean }> {
+  const guestId = await getGuestId();
+  const access = await entitlementFor(input.profileId);
+  const pool = await publishedPool();
+  let picked: PoolItem[] = [];
+  if (input.mode === "diagnostic") {
+    picked = selectDiagnostic(pool);
+    await recordEvent("diagnostic_started", input.profileId);
+  } else if (input.mode === "simulator") {
+    const completed = await completedSimulators({ profileId: input.profileId, guestId });
+    if (!canStartSimulator({ pro: access.pro, completed, limit: brand.freeSimulators })) {
+      await recordEvent("paywall_viewed", input.profileId, { reason: "simulator" });
+      return { paywall: true, error: "Ücretsiz deneme hakkın doldu." };
+    }
+    picked = selectMock(pool);
+    if (picked.length !== 80) return { error: "Tam deneme için 80 yayımlanmış madde gerekli." };
+    await recordEvent("simulator_started", input.profileId);
+  } else {
+    const requested = input.itemIds ?? [];
+    const todayCount = input.profileId ? await answeredToday(input.profileId) : 0;
+    if (!canStartPractice({ pro: access.pro, answeredToday: todayCount, limit: brand.freeDailyQuestions })) {
+      await recordEvent("paywall_viewed", input.profileId, { reason: "practice" });
+      return { paywall: true, error: "Bugünkü ücretsiz soru hakkın doldu." };
+    }
+    const allowance = practiceAllowance({
+      pro: access.pro,
+      answeredToday: todayCount,
+      limit: brand.freeDailyQuestions,
+      requested: requested.length || 8,
+    });
+    const allowed = new Set(pool.map((item) => item.id));
+    const fromPlan = requested.filter((id) => allowed.has(id)).slice(0, allowance);
+    picked =
+      fromPlan.length > 0
+        ? fromPlan.map((id) => pool.find((item) => item.id === id)).filter((item): item is PoolItem => Boolean(item))
+        : selectItems({
+            pool,
+            count: allowance,
+            seenIds: input.profileId ? await seenIds(input.profileId) : [],
+            preferredSections: ["cloze", "sentence"],
+            difficulty: 3,
+          });
+    if (picked.length === 0) return { error: "Şu an çözebileceğin yayımlanmış soru kalmadı." };
+    await recordEvent("daily_plan_started", input.profileId);
+  }
+  const db = await getDb();
+  const id = randomUUID();
+  const endsAt = input.mode === "simulator" ? new Date(Date.now() + ydsBlueprint.minutes * 60_000) : null;
+  await db.insert(sessions).values({
+    id,
+    profileId: input.profileId,
+    guestId,
+    mode: input.mode,
+    status: "active",
+    endsAt,
+  });
+  await db.insert(sessionItems).values(
+    picked.map((item, index) => ({
+      sessionId: id,
+      itemId: item.id,
+      position: index,
+      flagged: false,
+    })),
+  );
+  return { id };
+}
+
+async function seenIds(profileId: string): Promise<string[]> {
+  const db = await getDb();
+  const rows = await db.select({ itemId: answers.itemId }).from(answers).where(eq(answers.profileId, profileId));
+  return rows.map((row) => row.itemId);
+}
+
+export async function loadPlayer(sessionId: string, profileId: string | null, guestId: string) {
+  const db = await getDb();
+  const sessionRows = await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1);
+  const session = sessionRows[0];
+  if (!session) return null;
+  if (session.profileId && session.profileId !== profileId) return null;
+  if (!session.profileId && session.guestId !== guestId) return null;
+  const links = await db.select().from(sessionItems).where(eq(sessionItems.sessionId, sessionId)).orderBy(asc(sessionItems.position));
+  const ids = links.map((link) => link.itemId);
+  if (ids.length === 0) return { session, items: [] };
+  const itemRows = await db.select().from(items).where(inArray(items.id, ids));
+  const choiceRows = await db.select().from(choices).where(inArray(choices.itemId, ids)).orderBy(asc(choices.position));
+  const stimulusIds = itemRows.map((item) => item.stimulusId).filter((id): id is string => Boolean(id));
+  const stimulusRows = stimulusIds.length ? await db.select().from(stimuliTable).where(inArray(stimuliTable.id, stimulusIds)) : [];
+  const answerRows = await db.select().from(answers).where(eq(answers.sessionId, sessionId));
+  const byId = new Map(itemRows.map((item) => [item.id, item]));
+  const stimuli = new Map(stimulusRows.map((row) => [row.id, row.body]));
+  const playerItems = links.map((link) => {
+    const item = byId.get(link.itemId);
+    if (!item) return null;
+    const answer = answerRows.find((row) => row.itemId === item.id);
+    const itemChoices = choiceRows.filter((choice) => choice.itemId === item.id);
+    const correct = itemChoices.find((choice) => choice.correct);
+    const selected = itemChoices.find((choice) => choice.id === answer?.choiceId);
+    return {
+      id: item.id,
+      position: link.position,
+      slot: item.slot,
+      section: item.section,
+      layout: item.layout,
+      stem: item.stem,
+      stimulusBody: item.stimulusId ? (stimuli.get(item.stimulusId) ?? null) : null,
+      flagged: link.flagged,
+      selectedChoiceId: answer?.choiceId ?? null,
+      choices: itemChoices.map((choice) => ({ id: choice.id, body: choice.body })),
+      reveal:
+        session.mode === "practice" && answer
+          ? {
+              correct: Boolean(answer.correct),
+              explanation: item.explanation,
+              correctChoiceId: correct?.id ?? "",
+              note: selected && !selected.correct ? selected.distractorType : null,
+            }
+          : null,
+    };
+  });
+  return { session, items: playerItems.filter((item) => item !== null) };
+}
+
+export async function saveAnswer(input: {
+  sessionId: string;
+  itemId: string;
+  choiceId: string;
+  responseTimeMs: number;
+  confidence?: string | null;
+  profileId: string | null;
+  guestId: string;
+}) {
+  const loaded = await loadPlayer(input.sessionId, input.profileId, input.guestId);
+  if (!loaded || loaded.session.status !== "active") return { error: "Oturum kapalı." };
+  if (loaded.session.mode === "simulator" && loaded.session.endsAt && loaded.session.endsAt.getTime() < Date.now()) {
+    await submitSession(input.sessionId, input.profileId, input.guestId);
+    return { error: "Süre doldu.", submitted: true };
+  }
+  const db = await getDb();
+  const choiceRows = await db.select().from(choices).where(eq(choices.id, input.choiceId)).limit(1);
+  const choice = choiceRows[0];
+  if (!choice || choice.itemId !== input.itemId) return { error: "Şık bulunamadı." };
+  const existing = await db
+    .select()
+    .from(answers)
+    .where(and(eq(answers.sessionId, input.sessionId), eq(answers.itemId, input.itemId)))
+    .limit(1);
+  if (loaded.session.mode === "practice" && existing[0]) return { error: "Bu soru zaten cevaplandı." };
+  const correct = choice.correct;
+  if (existing[0]) {
+    await db
+      .update(answers)
+      .set({ choiceId: choice.id, correct, responseTimeMs: input.responseTimeMs, confidence: input.confidence ?? null })
+      .where(eq(answers.id, existing[0].id));
+  } else {
+    await db.insert(answers).values({
+      id: randomUUID(),
+      sessionId: input.sessionId,
+      profileId: input.profileId,
+      itemId: input.itemId,
+      choiceId: choice.id,
+      correct,
+      responseTimeMs: input.responseTimeMs,
+      confidence: input.confidence ?? null,
+    });
+  }
+  await recordEvent("question_answered", input.profileId, { sessionId: input.sessionId, itemId: input.itemId, correct });
+  if (loaded.session.mode === "practice" && input.profileId) {
+    await applyMastery(input.profileId, input.itemId, correct);
+    if (!correct) await touchReview(input.profileId, "item", input.itemId, false);
+  }
+  const item = loaded.items.find((row) => row.id === input.itemId);
+  if (loaded.session.mode !== "practice") return { saved: true };
+  const correctChoice = (await db.select().from(choices).where(eq(choices.itemId, input.itemId))).find((row) => row.correct);
+  const itemRow = (await db.select().from(items).where(eq(items.id, input.itemId)).limit(1))[0];
+  return {
+    saved: true,
+    reveal: {
+      correct,
+      explanation: itemRow?.explanation ?? "",
+      correctChoiceId: correctChoice?.id ?? "",
+      note: correct ? null : choice.distractorType,
+    },
+    section: item?.section,
+  };
+}
+
+async function applyMastery(profileId: string, itemId: string, correct: boolean) {
+  const db = await getDb();
+  const links = await db.select().from(itemSkills).where(eq(itemSkills.itemId, itemId));
+  const itemRows = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
+  const difficulty = itemRows[0]?.difficulty ?? 3;
+  for (const link of links) {
+    const current = await db
+      .select()
+      .from(mastery)
+      .where(and(eq(mastery.profileId, profileId), eq(mastery.skillId, link.skillId)))
+      .limit(1);
+    const previous = current[0]?.mastery ?? 50;
+    const next = Math.round(nextMastery(previous, correct, difficulty));
+    if (current[0]) {
+      await db
+        .update(mastery)
+        .set({
+          mastery: next,
+          confidence: next,
+          attempts: current[0].attempts + 1,
+          correctAttempts: current[0].correctAttempts + (correct ? 1 : 0),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(mastery.profileId, profileId), eq(mastery.skillId, link.skillId)));
+    } else {
+      await db.insert(mastery).values({
+        profileId,
+        skillId: link.skillId,
+        mastery: next,
+        confidence: next,
+        attempts: 1,
+        correctAttempts: correct ? 1 : 0,
+      });
+    }
+  }
+}
+
+export async function touchReview(profileId: string, targetType: "item" | "vocab", targetId: string, correct: boolean) {
+  const db = await getDb();
+  const id = `${profileId}:${targetType}:${targetId}`;
+  const current = await db.select().from(reviews).where(eq(reviews.id, id)).limit(1);
+  const update = nextReview(
+    { step: current[0]?.step ?? 0, lapses: current[0]?.lapses ?? 0 },
+    correct,
+    new Date(),
+  );
+  if (current[0]) {
+    await db
+      .update(reviews)
+      .set({ dueAt: update.dueAt, step: update.step, lapses: update.lapses, stabilityDays: update.stabilityDays })
+      .where(eq(reviews.id, id));
+  } else {
+    await db.insert(reviews).values({
+      id,
+      profileId,
+      targetType,
+      targetId,
+      dueAt: update.dueAt,
+      step: update.step,
+      lapses: update.lapses,
+      stabilityDays: update.stabilityDays,
+    });
+  }
+}
+
+export async function setFlag(sessionId: string, itemId: string, flagged: boolean, profileId: string | null, guestId: string) {
+  const loaded = await loadPlayer(sessionId, profileId, guestId);
+  if (!loaded) return;
+  const db = await getDb();
+  await db
+    .update(sessionItems)
+    .set({ flagged })
+    .where(and(eq(sessionItems.sessionId, sessionId), eq(sessionItems.itemId, itemId)));
+}
+
+export async function submitSession(sessionId: string, profileId: string | null, guestId: string) {
+  const loaded = await loadPlayer(sessionId, profileId, guestId);
+  if (!loaded || loaded.session.status === "submitted") return loaded?.session ?? null;
+  const db = await getDb();
+  const scoreItems: ScoreItem[] = [];
+  for (const item of loaded.items) {
+    const answer = (
+      await db
+        .select()
+        .from(answers)
+        .where(and(eq(answers.sessionId, sessionId), eq(answers.itemId, item.id)))
+        .limit(1)
+    )[0];
+    if (!answer) {
+      await db.insert(answers).values({
+        id: randomUUID(),
+        sessionId,
+        profileId,
+        itemId: item.id,
+        choiceId: null,
+        correct: null,
+        responseTimeMs: 0,
+      });
+    }
+    scoreItems.push({
+      section: item.section as SectionId,
+      slot: item.slot ?? item.position + 1,
+      correct: answer ? answer.correct : null,
+      responseTimeMs: answer?.responseTimeMs ?? 0,
+    });
+  }
+  const report = scoreSession(ydsBlueprint.scoring, scoreItems);
+  await db
+    .update(sessions)
+    .set({
+      status: "submitted",
+      submittedAt: new Date(),
+      score: report.score,
+      correctCount: report.correct,
+      wrongCount: report.wrong,
+      blankCount: report.blank,
+    })
+    .where(eq(sessions.id, sessionId));
+  if (profileId && loaded.session.mode === "diagnostic") {
+    const estimate = estimateFromAccuracy(report.correct, report.correct + report.wrong);
+    await db
+      .update(profiles)
+      .set({ estimatedLow: estimate.low, estimatedHigh: estimate.high })
+      .where(eq(profiles.id, profileId));
+    for (const item of loaded.items) {
+      const scored = scoreItems.find((row) => row.slot === (item.slot ?? item.position + 1) && row.section === item.section);
+      if (!scored || scored.correct == null) continue;
+      await applyMastery(profileId, item.id, scored.correct);
+    }
+  }
+  await recordEvent(loaded.session.mode === "diagnostic" ? "diagnostic_completed" : "simulator_completed", profileId, {
+    sessionId,
+    score: report.score,
+  });
+  return { ...loaded.session, status: "submitted", score: Math.round(report.score), correctCount: report.correct, wrongCount: report.wrong, blankCount: report.blank };
+}
+
+export async function ensureDailyPlan(profileId: string, dailyMinutes: number, targetScore: number | null) {
+  const db = await getDb();
+  const planDate = todayKey();
+  const existing = await db
+    .select()
+    .from(plans)
+    .where(and(eq(plans.profileId, profileId), eq(plans.planDate, planDate)))
+    .limit(1);
+  if (existing[0]) return existing[0].payload as DailyPlan;
+  const pool = await publishedPool();
+  const masteryRows = await db.select().from(mastery).where(eq(mastery.profileId, profileId));
+  const due = await db.select().from(reviews).where(and(eq(reviews.profileId, profileId), sql`${reviews.dueAt} <= now()`));
+  const skillRows = await db.select().from(skills);
+  const parents = new Map(skillRows.map((skill) => [skill.id, skill.parentId]));
+  const sectionOf = (skillId: string): SectionId | null => {
+    let current: string | null = skillId;
+    const seen = new Set<string>();
+    while (current && !seen.has(current)) {
+      seen.add(current);
+      if (ydsBlueprint.bands.some((band) => band.section === current)) return current as SectionId;
+      current = parents.get(current) ?? null;
+    }
+    return null;
+  };
+  const sectionMastery = new Map<SectionId, { total: number; count: number }>();
+  for (const row of masteryRows) {
+    const section = sectionOf(row.skillId);
+    if (!section) continue;
+    const current = sectionMastery.get(section) ?? { total: 0, count: 0 };
+    current.total += row.mastery;
+    current.count += 1;
+    sectionMastery.set(section, current);
+  }
+  const plan = buildPlan({
+    minutes: dailyMinutes || 30,
+    mastery: [...sectionMastery.entries()].map(([section, value]) => ({ section, mastery: value.total / value.count })),
+    dueQuestionIds: due.filter((row) => row.targetType === "item").map((row) => row.targetId),
+    dueVocabIds: due.filter((row) => row.targetType === "vocab").map((row) => row.targetId),
+    pool,
+    seenIds: await seenIds(profileId),
+    targetSection: targetScore && targetScore >= 80 ? "reading" : undefined,
+  });
+  await db.insert(plans).values({ id: randomUUID(), profileId, planDate, payload: plan });
+  return plan;
+}
+
+export async function devActivate(profileId: string, plan: "pro" | "exam_pass") {
+  const db = await getDb();
+  const periodEnd = new Date();
+  periodEnd.setDate(periodEnd.getDate() + (plan === "exam_pass" ? 90 : 30));
+  await db
+    .insert(subscriptions)
+    .values({ profileId, plan, status: "active", provider: "dev", periodEnd })
+    .onConflictDoUpdate({
+      target: subscriptions.profileId,
+      set: { plan, status: "active", provider: "dev", periodEnd, updatedAt: new Date() },
+    });
+  await recordEvent("subscription_started", profileId, { plan, provider: "dev" });
+}
+
+export async function activateFromWebhook(input: {
+  profileId: string;
+  plan: "pro" | "exam_pass";
+  status: "active" | "canceled";
+  periodEnd: Date | null;
+}) {
+  const db = await getDb();
+  await db
+    .insert(subscriptions)
+    .values({
+      profileId: input.profileId,
+      plan: input.plan,
+      status: input.status,
+      provider: "iyzico",
+      periodEnd: input.periodEnd,
+    })
+    .onConflictDoUpdate({
+      target: subscriptions.profileId,
+      set: { plan: input.plan, status: input.status, provider: "iyzico", periodEnd: input.periodEnd, updatedAt: new Date() },
+    });
+  await recordEvent(input.status === "active" ? "subscription_started" : "subscription_cancelled", input.profileId, {
+    plan: input.plan,
+  });
+}
+
+export async function claimGuestSessions(profileId: string) {
+  await claimGuest(profileId);
+  const db = await getDb();
+  const existing = await db.select().from(mastery).where(eq(mastery.profileId, profileId)).limit(1);
+  if (existing[0]) return;
+  const diags = await db
+    .select()
+    .from(sessions)
+    .where(and(eq(sessions.profileId, profileId), eq(sessions.mode, "diagnostic"), eq(sessions.status, "submitted")));
+  let correct = 0;
+  let wrong = 0;
+  for (const session of diags) {
+    const answerRows = await db.select().from(answers).where(eq(answers.sessionId, session.id));
+    for (const answer of answerRows) {
+      if (answer.correct == null) continue;
+      if (answer.correct) correct += 1;
+      else wrong += 1;
+      await applyMastery(profileId, answer.itemId, answer.correct);
+    }
+  }
+  if (correct + wrong > 0) {
+    const estimate = estimateFromAccuracy(correct, correct + wrong);
+    await db.update(profiles).set({ estimatedLow: estimate.low, estimatedHigh: estimate.high }).where(eq(profiles.id, profileId));
+  }
+}

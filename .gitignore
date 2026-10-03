@@ -1,0 +1,9 @@
+node_modules
+.next
+.data
+.env
+.env.local
+*.pdf
+dist
+*.tsbuildinfo
+next-env.d.ts
