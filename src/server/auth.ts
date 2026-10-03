@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { getDb, profiles, sessions, answers } from "@/db/client";
 import { hashPassword, verifyPassword } from "./password";
+import { supabaseKey, supabaseUrl } from "./supabase";
 
 const sessionCookie = "tomo_session";
 const guestCookie = "tomo_guest";
@@ -28,7 +29,7 @@ function readSigned(value: string | undefined): string | null {
 }
 
 export async function supabaseEnabled(): Promise<boolean> {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  return Boolean(supabaseUrl() && supabaseKey());
 }
 
 async function supabaseUser(): Promise<{ id: string; email: string } | null> {

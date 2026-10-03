@@ -115,11 +115,17 @@ async function openPglite(dataDir?: string): Promise<AppDb> {
   return db;
 }
 
+function postgresUrl() {
+  return process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING || "";
+}
+
 async function open(): Promise<AppDb> {
-  if (process.env.DATABASE_URL) {
+  const url = postgresUrl();
+  if (url) {
     const postgres = (await import("postgres")).default;
     const { drizzle } = await import("drizzle-orm/postgres-js");
-    const client = postgres(process.env.DATABASE_URL, { max: 1 });
+    const pooled = /pgbouncer=true|:6543\b/.test(url);
+    const client = postgres(url, { max: 1, prepare: !pooled });
     const db = drizzle(client) as unknown as AppDb;
     await migrate(db);
     await seed(db);
