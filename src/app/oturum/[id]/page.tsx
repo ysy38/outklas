@@ -17,6 +17,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
     <SessionPlayer
       sessionId={id}
       mode={loaded.session.mode}
+      exam={loaded.session.exam}
       endsAt={loaded.session.endsAt ? loaded.session.endsAt.toISOString() : null}
       items={loaded.items}
     />

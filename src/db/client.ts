@@ -8,6 +8,7 @@ import { publishBlockers } from "@/modules/content/publish";
 import type { PoolItem } from "@/modules/exam/select";
 import { hashPassword } from "@/server/password";
 import { examDraft, skillTree, stimuli, vocabDrafts, vocabLinkDrafts, type DraftItem } from "./exam-draft";
+import { packItems, packStimuli } from "./pack-draft";
 import { initSql } from "./init-sql";
 import { answers, choices, events, itemSkills, itemVocabulary, items, mastery, plans, profiles, reviews, sessionItems, sessions, skills, stimuli as stimuliTable, subscriptions, vocabulary, vocabLinks } from "./schema";
 
@@ -69,7 +70,7 @@ export async function seed(db: AppDb) {
       stem: draft.stem,
       explanation: draft.explanation,
       difficulty: draft.difficulty,
-      status: "published",
+      status: draft.section === "cloze" || draft.section === "reading" ? "booklet" : "published",
       stimulusId: draft.stimulusKey ?? null,
     })),
   );
@@ -104,6 +105,51 @@ export async function seed(db: AppDb) {
   });
 }
 
+async function syncPack(db: AppDb) {
+  await db
+    .update(items)
+    .set({ status: "booklet" })
+    .where(and(inArray(items.section, ["cloze", "reading"]), sql`${items.id} like 'item-%'`));
+  await db
+    .insert(skills)
+    .values([
+      { id: "situation", parentId: null, name: "Situation" },
+      { id: "situation-line", parentId: "situation", name: "Situation line" },
+    ])
+    .onConflictDoNothing();
+  const present = await db.select({ id: items.id }).from(items).where(eq(items.id, "pack-201")).limit(1);
+  if (present.length > 0) return;
+  for (const draft of packItems) assertDraft(draft);
+  await db.insert(stimuliTable).values(packStimuli.map((stimulus) => ({ id: stimulus.key, kind: stimulus.kind, body: stimulus.body }))).onConflictDoNothing();
+  await db.insert(items).values(
+    packItems.map((draft) => ({
+      id: `pack-${draft.slot}`,
+      slot: draft.slot,
+      section: draft.section,
+      layout: draft.layout,
+      direction: null,
+      stem: draft.stem,
+      explanation: draft.explanation,
+      difficulty: draft.difficulty,
+      status: "published",
+      stimulusId: draft.stimulusKey ?? null,
+    })),
+  );
+  await db.insert(choices).values(
+    packItems.flatMap((draft) =>
+      draft.choices.map((choice, index) => ({
+        id: `pack-${draft.slot}-c${index}`,
+        itemId: `pack-${draft.slot}`,
+        position: index,
+        body: choice.text,
+        correct: Boolean(choice.correct),
+        distractorType: choice.distractor ?? null,
+      })),
+    ),
+  );
+  await db.insert(itemSkills).values(packItems.flatMap((draft) => draft.skills.map((skillId) => ({ itemId: `pack-${draft.slot}`, skillId }))));
+}
+
 async function openPglite(dataDir?: string): Promise<AppDb> {
   const { PGlite } = await import("@electric-sql/pglite");
   const { drizzle } = await import("drizzle-orm/pglite");
@@ -112,6 +158,7 @@ async function openPglite(dataDir?: string): Promise<AppDb> {
   const db = drizzle(client) as unknown as AppDb;
   await migrate(db);
   await seed(db);
+  await syncPack(db);
   return db;
 }
 
@@ -129,6 +176,7 @@ async function open(): Promise<AppDb> {
     const db = drizzle(client) as unknown as AppDb;
     await migrate(db);
     await seed(db);
+    await syncPack(db);
     return db;
   }
   const dir = process.env.VERCEL ? "/tmp/tomo-pglite" : path.join(process.cwd(), ".data/pglite");
@@ -153,7 +201,7 @@ export function getDb(): Promise<AppDb> {
   return ready;
 }
 
-export async function publishedPool(): Promise<PoolItem[]> {
+export async function publishedPool(scope: "study" | "mock" = "study"): Promise<PoolItem[]> {
   const db = await getDb();
   const rows = await db
     .select({
@@ -164,7 +212,7 @@ export async function publishedPool(): Promise<PoolItem[]> {
       difficulty: items.difficulty,
     })
     .from(items)
-    .where(eq(items.status, "published"))
+    .where(inArray(items.status, scope === "mock" ? ["published", "booklet"] : ["published"]))
     .orderBy(asc(items.slot));
   const links = await db.select().from(itemSkills);
   const byItem = new Map<string, string[]>();

@@ -21,7 +21,7 @@ export const siteFaqs = [
   {
     question: "Soru seçimini bir model mi yapıyor?",
     answer:
-      "Hayır. Hangi sorunun geleceği skorla belirlenir: yayımlanmış madde, görülmemiş olan, zorluk bandın ve bölüm kotası. Açıklama sorunun içinde, yazarın elinden durur.",
+      "Hayır. Sırayı bir model kurmaz. Yayımlanmış sorular, daha önce görmediklerin, zorluk ve bölüm kotası belirler. Açıklama sorunun içinde, yazarın elinden durur.",
   },
 ] as const;
 

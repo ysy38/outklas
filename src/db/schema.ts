@@ -11,6 +11,9 @@ export const profiles = pgTable("profiles", {
   priorScore: integer("prior_score"),
   estimatedLow: integer("estimated_low"),
   estimatedHigh: integer("estimated_high"),
+  exam: text("exam").notNull().default("yds"),
+  streak: integer("streak").notNull().default(0),
+  lastMissionDate: text("last_mission_date"),
   onboardingCompleted: boolean("onboarding_completed").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -87,6 +90,7 @@ export const sessions = pgTable("sessions", {
   profileId: uuid("profile_id"),
   guestId: text("guest_id"),
   mode: text("mode").notNull(),
+  exam: text("exam").notNull().default("yds"),
   status: text("status").notNull().default("active"),
   score: real("score"),
   correctCount: integer("correct_count"),

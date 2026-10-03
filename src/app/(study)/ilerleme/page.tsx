@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { getDb, mastery, sessions, skills } from "@/db/client";
-import { modeLabel, sessionStatusLabel } from "@/content/labels";
+import { answers, getDb, items, mastery, sessions, skills } from "@/db/client";
+import { modeLabel, sessionStatusLabel, skillName } from "@/content/labels";
+import { asExam, blueprintFor, type SectionId } from "@/modules/exam/blueprint";
 import { currentProfile } from "@/server/auth";
 
 export default async function ProgressPage() {
@@ -11,31 +13,101 @@ export default async function ProgressPage() {
   const rows = await db.select().from(mastery).where(eq(mastery.profileId, profile.id));
   const skillRows = await db.select().from(skills);
   const history = await db.select().from(sessions).where(eq(sessions.profileId, profile.id)).orderBy(desc(sessions.startedAt)).limit(8);
-  const weakest = [...rows].sort((a, b) => a.mastery - b.mastery).slice(0, 3);
+  const answered = await db
+    .select({ section: items.section, correct: answers.correct })
+    .from(answers)
+    .innerJoin(items, eq(items.id, answers.itemId))
+    .where(eq(answers.profileId, profile.id));
+  const parentOf = new Map(skillRows.map((skill) => [skill.id, skill.parentId]));
+  const sectionMastery = new Map<string, { total: number; count: number }>();
+  for (const row of rows) {
+    const parent = parentOf.get(row.skillId);
+    const section = parent ?? row.skillId;
+    const cell = sectionMastery.get(section) ?? { total: 0, count: 0 };
+    cell.total += row.mastery;
+    cell.count += 1;
+    sectionMastery.set(section, cell);
+  }
+  const tally = new Map<string, { correct: number; wrong: number }>();
+  for (const row of answered) {
+    const cell = tally.get(row.section) ?? { correct: 0, wrong: 0 };
+    if (row.correct === true) cell.correct += 1;
+    else if (row.correct === false) cell.wrong += 1;
+    tally.set(row.section, cell);
+  }
+  const latest = history.find(
+    (session) =>
+      (session.mode === "simulator" || session.mode === "diagnostic") &&
+      session.status === "submitted" &&
+      session.wrongCount != null,
+  );
+  const exam = asExam(profile.exam);
+  const blueprint = blueprintFor(exam);
+  const estimate =
+    profile.estimatedLow != null && profile.estimatedHigh != null
+      ? exam === "ydt"
+        ? `Teşhis aralığın ${profile.estimatedLow}–${profile.estimatedHigh} net. Bu bir YKS puanı değildir.`
+        : `Teşhis aralığın ${profile.estimatedLow}–${profile.estimatedHigh}. Bu resmi bir YDS puanı değildir.`
+      : "Teşhis aralığı henüz yok.";
+  const hasAnswers = [...tally.values()].some((cell) => cell.correct + cell.wrong > 0);
   return (
     <section>
       <h1 className="text-4xl">İlerleme</h1>
-      <p className="mt-2 text-muted">
-        Tahmin {profile.estimatedLow ?? "—"}–{profile.estimatedHigh ?? "—"}
-      </p>
-      <div className="mt-6 space-y-3">
-        {rows.map((row) => (
-          <div key={row.skillId}>
-            <div className="mb-1 flex justify-between text-sm">
-              <span>{skillRows.find((skill) => skill.id === row.skillId)?.name ?? row.skillId}</span>
-              <span>{row.mastery}</span>
-            </div>
-            <div className="h-2 rounded-full bg-line">
-              <div className="h-2 rounded-full bg-pine" style={{ width: `${row.mastery}%` }} />
-            </div>
-          </div>
-        ))}
-        {rows.length === 0 ? <p className="text-muted">Teşhis veya pratik sonrası beceri çubukları burada birikir.</p> : null}
-      </div>
-      {weakest.length > 0 ? (
-        <p className="mt-6 text-sm">En zayıf: {weakest.map((row) => skillRows.find((skill) => skill.id === row.skillId)?.name ?? row.skillId).join(", ")}</p>
+      <p className="mt-2 text-sm text-muted">{estimate}</p>
+      {latest && latest.wrongCount ? (
+        <p className="mt-3 max-w-xl text-sm leading-6">
+          Son {latest.mode === "simulator" ? "denemede" : "teşhiste"} {latest.wrongCount} yanlış vardı.{" "}
+          {exam === "ydt"
+            ? `Tam kâğıtta dört yanlış bir net götürür: yaklaşık ${(Math.round((latest.wrongCount / 4) * 100) / 100).toLocaleString("tr-TR")} net.`
+            : `Tam kâğıtta her yanlış 1,25 puanın yerinde kalması demektir: ${(Math.round(latest.wrongCount * 125) / 100).toLocaleString("tr-TR")} puan.`}{" "}
+          Bu, o oturumdaki yanlışların karşılığıdır.
+        </p>
       ) : null}
-      <ul className="mt-6 space-y-2 text-sm">
+      <div className="mt-8 space-y-4">
+        {blueprint.bands.map((band) => {
+          const cell = tally.get(band.section) ?? { correct: 0, wrong: 0 };
+          const seen = cell.correct + cell.wrong;
+          const rolled = sectionMastery.get(band.section);
+          const bar = seen > 0 ? Math.round((cell.correct / seen) * 100) : rolled ? Math.round(rolled.total / rolled.count) : 0;
+          return (
+            <div key={band.section}>
+              <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
+                <Link href={`/rehber/${band.section as SectionId}`} className="hover:text-pine">
+                  {band.title}
+                </Link>
+                <span className="text-right text-muted">
+                  {seen > 0
+                    ? `${cell.correct}/${seen}${
+                        cell.wrong > 0
+                          ? exam === "ydt"
+                            ? ` · ${(Math.round((cell.wrong / 4) * 100) / 100).toLocaleString("tr-TR")} net`
+                            : ` · ${(Math.round(cell.wrong * 125) / 100).toLocaleString("tr-TR")} puan yerinde`
+                          : ""
+                      }`
+                    : "henüz yok"}
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-line">
+                <div className="h-2 rounded-full bg-pine" style={{ width: `${bar}%` }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {!hasAnswers ? <p className="mt-4 text-sm text-muted">Teşhis bu bölümleri açar. Çubuk, çözdüğün sorulardan gelir.</p> : null}
+      <h2 className="mt-10 text-2xl">Okumanın içi</h2>
+      <ul className="mt-3 space-y-2 text-sm">
+        {["detail", "inference", "reference", "main-idea", "purpose"].map((id) => {
+          const row = rows.find((item) => item.skillId === id);
+          return (
+            <li key={id} className="flex justify-between gap-3">
+              <span>{skillName(id)}</span>
+              <span className="text-muted">{row ? row.mastery : "—"}</span>
+            </li>
+          );
+        })}
+      </ul>
+      <ul className="mt-8 space-y-2 text-sm">
         {history.map((session) => (
           <li key={session.id} className="rounded-xl border border-line bg-card px-3 py-2">
             {modeLabel[session.mode] ?? session.mode} · {sessionStatusLabel[session.status] ?? session.status} · {session.score ?? "—"}

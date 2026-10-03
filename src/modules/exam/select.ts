@@ -1,4 +1,4 @@
-import { diagnosticQuota, ydsBlueprint, type SectionId } from "./blueprint";
+import { diagnosticQuota, ydsBlueprint, type Blueprint, type SectionId } from "./blueprint";
 
 export type PoolItem = {
   id: string;
@@ -33,12 +33,19 @@ function takeLoose(items: PoolItem[], count: number, used: Set<string>): PoolIte
   return chosen;
 }
 
-export function selectDiagnostic(pool: PoolItem[]): PoolItem[] {
+export function studyPool(pool: PoolItem[]): PoolItem[] {
+  const packed = new Set(pool.filter((item) => item.id.startsWith("pack-")).map((item) => item.section));
+  if (packed.size === 0) return pool;
+  return pool.filter((item) => !packed.has(item.section) || item.id.startsWith("pack-"));
+}
+
+export function selectDiagnostic(pool: PoolItem[], blueprint: Blueprint = ydsBlueprint): PoolItem[] {
   const used = new Set<string>();
   const picked: PoolItem[] = [];
-  for (const band of ydsBlueprint.bands) {
+  const source = studyPool(pool);
+  for (const band of blueprint.bands) {
     const quota = diagnosticQuota[band.section];
-    const sectionItems = pool.filter((item) => item.section === band.section);
+    const sectionItems = source.filter((item) => item.section === band.section);
     if (band.section === "cloze") {
       picked.push(...takeFromStimulus(sectionItems, quota, used));
       continue;

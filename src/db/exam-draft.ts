@@ -44,6 +44,8 @@ export const skillTree: { id: string; parentId: string | null; name: string }[] 
   { id: "purpose", parentId: "reading", name: "Purpose" },
   { id: "dialogue", parentId: null, name: "Dialogue" },
   { id: "dialogue-intent", parentId: "dialogue", name: "Speaker intent" },
+  { id: "situation", parentId: null, name: "Situation" },
+  { id: "situation-line", parentId: "situation", name: "Situation line" },
   { id: "restatement", parentId: null, name: "Restatement" },
   { id: "restatement-shift", parentId: "restatement", name: "Meaning shift" },
   { id: "paragraph", parentId: null, name: "Paragraph completion" },

@@ -31,7 +31,7 @@ export default async function MistakesPage() {
               <p className="text-sm text-muted">{ydsBlueprint.bands.find((band) => band.section === item?.section)?.title ?? item?.section}</p>
               <h2 className="mt-1 text-xl">{item?.stem}</h2>
               <p className="mt-2 text-sm">Seçilen: {picked?.body}</p>
-              {picked?.distractorType ? <p className="text-sm text-clay">Çeldirici: {distractorText(picked.distractorType)}</p> : null}
+              {picked?.distractorType ? <p className="text-sm text-clay">Neden tutmadı: {distractorText(picked.distractorType)}</p> : null}
               <p className="mt-2 text-sm leading-6">{item?.explanation}</p>
             </article>
           );

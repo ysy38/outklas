@@ -2,6 +2,7 @@ import { ydsBlueprint, bandForSlot, type SectionId } from "@/modules/exam/bluepr
 import { publishBlockers } from "@/modules/content/publish";
 import { selectDiagnostic, selectMock, type PoolItem } from "@/modules/exam/select";
 import { examDraft, stimuli } from "./exam-draft";
+import { packItems, packStimuli } from "./pack-draft";
 import { describe, expect, it } from "vitest";
 
 describe("exam draft", () => {
@@ -38,5 +39,47 @@ describe("exam draft", () => {
     }));
     expect(selectMock(pool)).toHaveLength(ydsBlueprint.questionCount);
     expect(selectDiagnostic(pool)).toHaveLength(24);
+  });
+
+  it("publishes an original reading and cloze pack", () => {
+    expect(packItems.length).toBeGreaterThanOrEqual(20);
+    for (const draft of packItems) {
+      expect(draft.section === "cloze" || draft.section === "reading").toBe(true);
+      expect(packStimuli.some((stimulus) => stimulus.key === draft.stimulusKey)).toBe(true);
+      expect(
+        publishBlockers({
+          stem: draft.stem,
+          explanation: draft.explanation,
+          difficulty: draft.difficulty,
+          skillIds: draft.skills,
+          layout: draft.layout,
+          choices: draft.choices.map((choice) => ({
+            body: choice.text,
+            correct: Boolean(choice.correct),
+            distractorType: choice.distractor ?? null,
+          })),
+        }),
+      ).toEqual([]);
+    }
+    const mixed = [
+      ...examDraft.map((draft) => ({
+        id: `item-${draft.slot}`,
+        slot: draft.slot,
+        section: draft.section as SectionId,
+        stimulusId: draft.stimulusKey ?? null,
+        difficulty: draft.difficulty,
+        skillIds: draft.skills,
+      })),
+      ...packItems.map((draft) => ({
+        id: `pack-${draft.slot}`,
+        slot: draft.slot,
+        section: draft.section as SectionId,
+        stimulusId: draft.stimulusKey ?? null,
+        difficulty: draft.difficulty,
+        skillIds: draft.skills,
+      })),
+    ];
+    const picked = selectDiagnostic(mixed);
+    expect(picked.filter((item) => item.section === "reading" || item.section === "cloze").every((item) => item.id.startsWith("pack-"))).toBe(true);
   });
 });

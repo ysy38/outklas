@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ydsBlueprint } from "@/modules/exam/blueprint";
+import { asExam, blueprintFor } from "@/modules/exam/blueprint";
 import { distractorText } from "@/content/labels";
 import { answerAction, flagAction, submitAction } from "@/server/actions";
 
@@ -37,11 +37,13 @@ function gaps(stem: string) {
 export function SessionPlayer({
   sessionId,
   mode,
+  exam = "yds",
   endsAt,
   items,
 }: {
   sessionId: string;
   mode: string;
+  exam?: string;
   endsAt: string | null;
   items: PlayerItem[];
 }) {
@@ -90,8 +92,8 @@ export function SessionPlayer({
     if (!item) return null;
     const previous = items[index - 1];
     if (previous && previous.section === item.section) return null;
-    return ydsBlueprint.bands.find((band) => band.section === item.section)?.instruction ?? null;
-  }, [item, index, items]);
+    return blueprintFor(asExam(exam)).bands.find((band) => band.section === item.section)?.instruction ?? null;
+  }, [exam, item, index, items]);
 
   if (!item) return null;
   const reveal = reveals[item.id];
@@ -146,7 +148,7 @@ export function SessionPlayer({
       </aside>
       <article className="rounded-2xl border border-line bg-card p-6">
         <div className="mb-4 flex items-center justify-between gap-3 text-sm text-muted">
-          <span>{ydsBlueprint.bands.find((band) => band.section === item.section)?.title}</span>
+          <span>{blueprintFor(asExam(exam)).bands.find((band) => band.section === item.section)?.title}</span>
           <button type="button" onClick={toggleFlag} className="rounded-full border border-line px-3 py-1">
             {flags[item.id] ? "İşaretli" : "İşaretle"}
           </button>
@@ -197,7 +199,7 @@ export function SessionPlayer({
           <div className="mt-5 rounded-xl bg-paper p-4 text-sm leading-6">
             <p className="font-medium">{reveal.correct ? "Doğru." : "Bu şık tutmadı."}</p>
             <p className="mt-2">{reveal.explanation}</p>
-            {reveal.note ? <p className="mt-2 text-muted">Çeldirici: {distractorText(reveal.note)}</p> : null}
+            {reveal.note ? <p className="mt-2 text-muted">Neden tutmadı: {distractorText(reveal.note)}</p> : null}
           </div>
         ) : null}
         <div className="mt-6 flex justify-between">

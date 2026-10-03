@@ -25,7 +25,11 @@ export default async function VocabularyPage() {
               <p className="mt-1 text-muted">{word.meaningTr}</p>
               <p className="mt-3 text-sm leading-6">{word.example}</p>
               {related.length > 0 ? (
-                <p className="mt-2 text-sm text-muted">{related.map((link) => `${link.kind}: ${link.toId}`).join(" · ")}</p>
+                <p className="mt-2 text-sm text-muted">
+                  {related
+                    .map((link) => `${link.kind === "synonym" ? "yakın" : link.kind === "antonym" ? "zıt" : link.kind === "collocation" ? "eşdizim" : link.kind}: ${link.toId}`)
+                    .join(" · ")}
+                </p>
               ) : null}
               <div className="mt-4 flex flex-wrap gap-2">
                 {(["know", "again", "hard"] as const).map((rating) => (

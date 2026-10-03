@@ -28,7 +28,7 @@ export default function ScorePage() {
       <p className="text-xs uppercase tracking-[0.18em] text-gold">YDS · e-YDS</p>
       <h1 className="mt-3 text-5xl">YDS puan hesaplama</h1>
       <p className="mt-4 text-lg leading-8 text-muted">
-        Seksen soru, her doğru 1,25 puan. Yanlış bu çarpıma girmez. Aşağıdaki sayı deneme planı içindir; resmi sonuç ÖSYM belgesindedir.
+        YDS ve e-YDS’de seksen soru, her doğru 1,25 puan. Yanlış bu çarpıma girmez. YDT’de aynı seksen soru 120 dakikadır ve net, doğru eksi yanlış bölü dört diye kurulur. Aşağıdaki sayı YDS içindir; resmi sonuç ÖSYM belgesindedir.
       </p>
       <div className="mt-8">
         <ScoreCalculator />
@@ -53,7 +53,7 @@ export default function ScorePage() {
         </tbody>
       </table>
       <p className="mt-8 leading-8">
-        Tablo eksik doğru sayısını söyler, o doğrunun hangi banttan geleceğini söylemez. Onu teşhis ayırır.
+        Tablo eksik doğru sayısını söyler, o doğrunun hangi bölümden geleceğini söylemez. Onu teşhis ayırır.
       </p>
       <Link href="/teshis" className="mt-6 inline-block rounded-full bg-pine px-5 py-3 text-cream">
         Ücretsiz teşhisi başlat

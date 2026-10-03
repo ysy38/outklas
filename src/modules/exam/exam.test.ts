@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bandCoverage, diagnosticQuota, ydsBlueprint, ydtBlueprint } from "./blueprint";
-import { estimateFromAccuracy, observedDifficulty, scoreSession } from "./score";
-import { selectDiagnostic, selectItems, selectMock, type PoolItem } from "./select";
+import { estimateFromAccuracy, estimateNet, observedDifficulty, scoreSession } from "./score";
+import { selectDiagnostic, selectItems, selectMock, studyPool, type PoolItem } from "./select";
 
 function pool(): PoolItem[] {
   const items: PoolItem[] = [];
@@ -29,10 +29,13 @@ describe("blueprint", () => {
     expect(bandCoverage().gaps).toEqual([]);
   });
 
-  it("keeps YDT as a scoring blueprint without a learner surface", () => {
+  it("covers the YDT booklet without copying the YDS slots", () => {
     expect(ydtBlueprint.minutes).toBe(120);
     expect(ydtBlueprint.scoring).toBe("net_penalty");
-    expect(ydtBlueprint.bands).toEqual([]);
+    expect(bandCoverage(ydtBlueprint).ok).toBe(true);
+    expect(ydtBlueprint.bands.find((band) => band.section === "situation")).toMatchObject({ from: 54, to: 58 });
+    expect(ydtBlueprint.bands.find((band) => band.section === "reading")).toMatchObject({ from: 29, to: 43 });
+    expect(ydtBlueprint.bands.find((band) => band.section === "vocabulary")?.to).toBe(5);
   });
 
   it("asks for 24 diagnostic items", () => {
@@ -78,12 +81,26 @@ describe("score", () => {
 
   it("estimates a range rather than an official score", () => {
     expect(estimateFromAccuracy(16, 24)).toEqual({ point: 67, low: 59, high: 75 });
+    expect(estimateNet(16, 0, 24).point).toBe(53);
+    expect(estimateNet(12, 12, 24).point).toBe(30);
     expect(observedDifficulty(0.92)).toBe(1);
     expect(observedDifficulty(0.2)).toBe(5);
   });
 });
 
 describe("select", () => {
+  it("prefers the original pack over the booklet seed for the same section", () => {
+    const seed = pool();
+    const pack = seed
+      .filter((item) => item.section === "cloze")
+      .map((item) => ({ ...item, id: `pack-${item.id}`, slot: item.slot + 200 }));
+    const picked = selectDiagnostic([...seed, ...pack]);
+    const cloze = picked.filter((item) => item.section === "cloze");
+    expect(cloze.length).toBeGreaterThan(0);
+    expect(cloze.every((item) => item.id.startsWith("pack-"))).toBe(true);
+    expect(studyPool([...seed, ...pack]).some((item) => item.section === "cloze" && !item.id.startsWith("pack-"))).toBe(false);
+  });
+
   it("builds a 24-item diagnostic with shared passages", () => {
     const picked = selectDiagnostic(pool());
     expect(picked).toHaveLength(24);

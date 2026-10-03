@@ -14,7 +14,7 @@ const steps = [
   {
     n: "02",
     title: "Bugünün listesi",
-    body: "Süreye göre dağılır: zayıf bant, tekrar, hedef bölüm, biraz güçlü, biraz yeni. Bir bant listenin yarısını yutmaz.",
+    body: "Süreye göre dağılır: zayıf bölüm, tekrar, hedef bölüm, biraz güçlü, biraz yeni. Bir bölüm listenin yarısını yutmaz.",
   },
   {
     n: "03",
@@ -66,7 +66,7 @@ export default function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <section className="mx-auto grid w-full max-w-6xl items-end gap-12 px-5 pb-8 pt-14 md:grid-cols-[1.05fr_0.95fr] md:pt-20">
         <div>
-          <p className="text-xs uppercase tracking-[0.22em] text-gold">YDS ve e-YDS İngilizce</p>
+          <p className="text-xs uppercase tracking-[0.22em] text-gold">YDS, e-YDS ve YDT</p>
           <h1 className="mt-4 max-w-xl text-5xl leading-[1.05] xl:text-6xl">{brand.hero}</h1>
           <p className="mt-6 max-w-lg text-lg leading-8 text-muted">{brand.sub}</p>
           <div className="mt-8 flex flex-col items-start gap-3">
@@ -87,7 +87,7 @@ export default function HomePage() {
           <ol className="mt-5 space-y-3">
             {[
               ["Kelime tekrarı", "8 kart"],
-              ["Okuduğunu anlama", "zayıf bant · 4 soru"],
+              ["Okuduğunu anlama", "zayıf bölüm · 4 soru"],
               ["Dünün yanlışı", "eşdizim"],
               ["Cümle tamamlama", "yeni · 2 soru"],
             ].map(([title, meta]) => (
@@ -98,7 +98,7 @@ export default function HomePage() {
             ))}
           </ol>
           <p className="mt-5 border-t border-line pt-4 text-sm leading-6 text-muted">
-            56 doğru 70 puan eder. Eksik sekiz doğru hangi banttan gelecek, onu liste söyler.
+            56 doğru 70 puan eder. Eksik sekiz doğru hangi bölümden gelecek, onu liste söyler.
           </p>
         </aside>
       </section>
@@ -119,16 +119,18 @@ export default function HomePage() {
             <p className="text-xs uppercase tracking-[0.18em] text-gold">Soru dağılımı</p>
             <h2 className="mt-3 text-4xl">Puanın çeyreği 43–62 arasındadır.</h2>
             <p className="mt-4 leading-8 text-muted">
-              Kitapçık sırası yıllardır aynı on banttır. “Okuma çalış” demek, yirmi soruyu tek kovaya atmak olur. Lab bandı adıyla tutar.
+              Kitapçık yıllardır aynı on bölümle gelir. “Okuma çalış” demek, yirmi soruyu tek kovaya atmak olur. Her bölüm kendi adıyla durur.
             </p>
           </div>
           <ol className="grid gap-2 sm:grid-cols-2">
             {ydsBlueprint.bands.map((band) => (
-              <li key={band.section} className="flex items-baseline justify-between rounded-2xl border border-line px-4 py-3 text-sm">
-                <span>{band.title}</span>
-                <span className="text-muted">
-                  {band.from}–{band.to}
-                </span>
+              <li key={band.section}>
+                <Link href={`/rehber/${band.section}`} className="flex items-baseline justify-between rounded-2xl border border-line px-4 py-3 text-sm hover:border-pine">
+                  <span>{band.title}</span>
+                  <span className="text-muted">
+                    {band.from}–{band.to}
+                  </span>
+                </Link>
               </li>
             ))}
           </ol>
@@ -140,7 +142,7 @@ export default function HomePage() {
           <p className="text-xs uppercase tracking-[0.18em] text-gold">Puan</p>
           <h2 className="mt-3 text-4xl">Yanlış doğruyu götürmez.</h2>
           <p className="mt-4 leading-8 text-muted">
-            Hesap makinesi doğru sayını 1,25 ile çarpar, orada durur. Asıl soru şudur: 70 ile şu anki doğru arasındaki fark, hangi banttan kapanacak?
+            YDS ve e-YDS’de hesap makinesi doğru sayını 1,25 ile çarpar, yanlış girmez. YDT’de dört yanlış bir net götürür. Asıl soru aynıdır: hedefle arandaki fark hangi bölümden kapanacak?
           </p>
           <Link href="/yds-puan-hesaplama" className="mt-6 inline-block text-sm text-pine">
             Puan tablosuna geç
@@ -153,7 +155,7 @@ export default function HomePage() {
         <div className="rounded-[28px] bg-pine px-6 py-10 text-cream md:px-10">
           <h2 className="max-w-xl text-4xl text-cream">Deneme, kâğıt üstünde değil ekranda durur.</h2>
           <p className="mt-4 max-w-xl leading-8 text-cream/80">
-            80 soru, 180 dakika, 1’den 80’e ızgara, işaret ve şık eleme. Bitince en çok kaçan bant ve en yavaş bant yazılır. Bu ekran ÖSYM’nin kopyası değildir.
+            80 soru, 180 dakika, 1’den 80’e ızgara, işaret ve şık eleme. Bitince en çok kaçırdığın bölüm ve en yavaş çözdüğün bölüm yazılır. Bu ekran ÖSYM’nin kopyası değildir.
           </p>
           <Link href="/deneme" className="mt-6 inline-block rounded-full bg-cream px-5 py-3 text-sm text-pine-deep">
             Denemeye bak

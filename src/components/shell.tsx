@@ -4,6 +4,7 @@ import { ThemeToggle } from "./theme-toggle";
 
 const appLinks = [
   ["Bugün", "/bugun"],
+  ["Rehber", "/rehber"],
   ["Kelime", "/kelime"],
   ["Hatalar", "/hatalar"],
   ["İlerleme", "/ilerleme"],
@@ -12,6 +13,7 @@ const appLinks = [
 
 const publicLinks = [
   ["Teşhis", "/teshis"],
+  ["Rehber", "/rehber"],
   ["Deneme", "/deneme"],
   ["Puan", "/yds-puan-hesaplama"],
   ["Fiyat", "/fiyat"],
@@ -65,6 +67,7 @@ export function PublicFooter() {
         </div>
         <div className="text-sm leading-8">
           <p className="text-xs uppercase tracking-[0.16em] text-gold">Çalış</p>
+          <Link className="block hover:text-pine" href="/rehber">YDS rehberi</Link>
           <Link className="block hover:text-pine" href="/teshis">Ücretsiz teşhis</Link>
           <Link className="block hover:text-pine" href="/deneme">e-YDS benzeri deneme</Link>
           <Link className="block hover:text-pine" href="/yds-puan-hesaplama">YDS puan hesaplama</Link>

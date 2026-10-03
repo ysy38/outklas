@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { currentProfile } from "@/server/auth";
 import { ensureDailyPlan } from "@/server/sessions";
-import { ydsBlueprint } from "@/modules/exam/blueprint";
-import { bucketLabel } from "@/content/labels";
+import { asExam, blueprintFor } from "@/modules/exam/blueprint";
+import { daysUntilExam } from "@/modules/learning/plan";
 import { saveOnboardingAction, startTodayAction } from "@/server/actions";
 
 export default async function TodayPage() {
@@ -11,10 +11,17 @@ export default async function TodayPage() {
   if (!profile.onboardingCompleted) {
     return (
       <section className="max-w-lg">
-        <h1 className="text-4xl">Hedefin</h1>
+        <h1 className="text-4xl">Hangi sınav, nereyi tutturmak istiyorsun?</h1>
         <form action={saveOnboardingAction} className="mt-6 space-y-4">
           <label className="block text-sm">
-            Hedef puan
+            Sınav
+            <select name="exam" defaultValue="yds" className="mt-1 w-full rounded-xl border border-line bg-card px-3 py-2">
+              <option value="yds">YDS / e-YDS</option>
+              <option value="ydt">YDT, YKS yabancı dil</option>
+            </select>
+          </label>
+          <label className="block text-sm">
+            Hedef
             <select name="targetScore" defaultValue={70} className="mt-1 w-full rounded-xl border border-line bg-card px-3 py-2">
               {[50, 60, 70, 80, 90].map((score) => (
                 <option key={score} value={score}>
@@ -23,6 +30,7 @@ export default async function TodayPage() {
               ))}
             </select>
           </label>
+          <p className="text-sm text-muted">YDS’de hedef puandır. YDT’de nettir. Yanlış yalnız YDT’de neti düşürür.</p>
           <label className="block text-sm">
             Sınav tarihi
             <input name="examDate" type="date" className="mt-1 w-full rounded-xl border border-line bg-card px-3 py-2" />
@@ -41,39 +49,44 @@ export default async function TodayPage() {
             Varsa son puanın
             <input name="priorScore" type="number" min={0} max={100} className="mt-1 w-full rounded-xl border border-line bg-card px-3 py-2" />
           </label>
-          <button className="rounded-full bg-pine px-4 py-2 text-cream">Planı kur</button>
+          <button className="rounded-full bg-pine px-4 py-2 text-cream">Listeyi kur</button>
         </form>
       </section>
     );
   }
-  const plan = await ensureDailyPlan(profile.id, profile.dailyMinutes ?? 30, profile.targetScore);
-  const estimate =
-    profile.estimatedLow != null && profile.estimatedHigh != null ? `${profile.estimatedLow}–${profile.estimatedHigh}` : "henüz yok";
-  const rows = plan.blocks.reduce<Array<{ key: string; label: string; minutes: number }>>((groups, block) => {
-    const label =
-      block.kind === "vocab"
-        ? "Kelime tekrarı"
-        : `${ydsBlueprint.bands.find((band) => band.section === block.section)?.title ?? block.section} · ${bucketLabel[block.bucket]}`;
-    const last = groups.at(-1);
-    if (last && last.label === label) last.minutes += block.minutes;
-    else groups.push({ key: `${block.kind}-${block.id}`, label, minutes: block.minutes });
-    return groups;
-  }, []);
+  const exam = asExam(profile.exam);
+  const blueprint = blueprintFor(exam);
+  const unit = exam === "ydt" ? "net" : "puan";
+  const plan = await ensureDailyPlan(profile.id, profile.dailyMinutes ?? 30, profile.targetScore, profile.examDate);
+  const daysLeft = daysUntilExam(profile.examDate);
+  const midpoint =
+    profile.estimatedLow != null && profile.estimatedHigh != null ? Math.round((profile.estimatedLow + profile.estimatedHigh) / 2) : null;
+  const gap = midpoint != null && profile.targetScore != null ? profile.targetScore - midpoint : null;
+  const title = (section: string) => blueprint.bands.find((band) => band.section === section)?.title ?? section;
+  const skip = (plan.skipSections ?? []).map(title);
   return (
-    <section>
-      <p className="text-xs uppercase tracking-[0.18em] text-gold">Bugün</p>
-      <h1 className="mt-2 text-4xl">Bugün {plan.totalMinutes} dakika</h1>
-      <p className="mt-2 text-sm text-muted">Hedef {profile.targetScore ?? "—"} · tahmin {estimate}</p>
-      <ol className="mt-6 space-y-2">
-        {rows.map((row) => (
-          <li key={row.key} className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 text-sm">
-            <span>{row.label}</span>
-            <span className="text-muted">{row.minutes} dk</span>
-          </li>
-        ))}
-      </ol>
+    <section className="max-w-xl">
+      <p className="text-xs uppercase tracking-[0.18em] text-gold">{blueprint.title}</p>
+      <h1 className="mt-2 text-4xl">
+        {gap != null && gap > 0 ? `Hedefe ${gap} ${unit} var` : gap != null && gap <= 0 ? "Hedefin üstündesin" : "Bugünün işi"}
+      </h1>
+      <p className="mt-3 text-sm text-muted">
+        {plan.totalMinutes} dakika
+        {midpoint != null ? ` · tahmin ${profile.estimatedLow}–${profile.estimatedHigh} ${unit}` : ""}
+        {daysLeft != null && daysLeft >= 0 ? ` · sınava ${daysLeft === 0 ? "bugün" : `${daysLeft} gün`}` : ""}
+      </p>
+      {profile.streak > 0 ? <p className="mt-2 text-sm text-muted">Seri: {profile.streak} gün</p> : null}
+      {daysLeft != null && daysLeft >= 0 && daysLeft <= 14 ? (
+        <p className="mt-3 max-w-xl text-sm leading-6 text-muted">Sınav yakın. Bugün yeni sorudan çok, daha önce kaçırdığın soru var.</p>
+      ) : null}
+      <article className="mt-6 rounded-3xl border border-line bg-card p-6">
+        <p className="text-xs uppercase tracking-[0.16em] text-gold">Tek iş</p>
+        <p className="mt-3 text-2xl">Zayıf bölüm, tekrar, bir parça yeni soru.</p>
+        <p className="mt-3 text-sm leading-6 text-muted">Liste bunun dışında dağılmaz. Bitince bugünün işi kapanır.</p>
+        {skip.length > 0 ? <p className="mt-3 text-sm leading-6">Bugün çalışma: {skip.join(", ")}.</p> : null}
+      </article>
       <form action={startTodayAction} className="mt-6">
-        <button className="rounded-full bg-pine px-5 py-3 text-cream">Çalışmaya başla</button>
+        <button className="rounded-full bg-pine px-5 py-3 text-cream">İşe başla</button>
       </form>
     </section>
   );

@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import { brand } from "@/brand";
-import { ydsBlueprint, type SectionId } from "@/modules/exam/blueprint";
-import { estimateFromAccuracy, scoreSession, type ScoreItem } from "@/modules/exam/score";
-import { selectDiagnostic, selectItems, selectMock, type PoolItem } from "@/modules/exam/select";
+import { asExam, blueprintFor, type ExamCode, type SectionId } from "@/modules/exam/blueprint";
+import { estimateFromAccuracy, estimateNet, scoreSession, type ScoreItem } from "@/modules/exam/score";
+import { selectDiagnostic, selectItems, selectMock, studyPool, type PoolItem } from "@/modules/exam/select";
 import { canStartPractice, canStartSimulator, isPro, practiceAllowance } from "@/modules/billing/entitlement";
 import { nextMastery } from "@/modules/learning/mastery";
-import { buildPlan, type DailyPlan } from "@/modules/learning/plan";
+import { buildPlan, daysUntilExam, nextStreak, type DailyPlan } from "@/modules/learning/plan";
 import { nextReview } from "@/modules/learning/review";
 import {
   answers,
@@ -82,6 +82,13 @@ async function completedSimulators(owner: { profileId?: string | null; guestId?:
   return rows.length;
 }
 
+async function examFor(profileId: string | null): Promise<ExamCode> {
+  if (!profileId) return "yds";
+  const db = await getDb();
+  const rows = await db.select({ exam: profiles.exam }).from(profiles).where(eq(profiles.id, profileId)).limit(1);
+  return asExam(rows[0]?.exam);
+}
+
 export async function createSession(input: {
   mode: Mode;
   profileId: string | null;
@@ -89,19 +96,22 @@ export async function createSession(input: {
 }): Promise<{ id?: string; error?: string; paywall?: boolean }> {
   const guestId = await getGuestId();
   const access = await entitlementFor(input.profileId);
-  const pool = await publishedPool();
+  const exam = await examFor(input.profileId);
+  const blueprint = blueprintFor(exam);
+  const pool = await publishedPool(input.mode === "simulator" ? "mock" : "study");
   let picked: PoolItem[] = [];
   if (input.mode === "diagnostic") {
-    picked = selectDiagnostic(pool);
+    picked = selectDiagnostic(pool, blueprint);
     await recordEvent("diagnostic_started", input.profileId);
   } else if (input.mode === "simulator") {
+    if (exam === "ydt") return { error: "YDT tam denemesi kitapçık sırası tamamlanınca açılır. Teşhis ve günün işi duruyor." };
     const completed = await completedSimulators({ profileId: input.profileId, guestId });
     if (!canStartSimulator({ pro: access.pro, completed, limit: brand.freeSimulators })) {
       await recordEvent("paywall_viewed", input.profileId, { reason: "simulator" });
       return { paywall: true, error: "Ücretsiz deneme hakkın doldu." };
     }
     picked = selectMock(pool);
-    if (picked.length !== 80) return { error: "Tam deneme için 80 yayımlanmış madde gerekli." };
+    if (picked.length !== 80) return { error: "Tam deneme için 80 yayımlanmış soru gerekli." };
     await recordEvent("simulator_started", input.profileId);
   } else {
     const requested = input.itemIds ?? [];
@@ -133,12 +143,13 @@ export async function createSession(input: {
   }
   const db = await getDb();
   const id = randomUUID();
-  const endsAt = input.mode === "simulator" ? new Date(Date.now() + ydsBlueprint.minutes * 60_000) : null;
+  const endsAt = input.mode === "simulator" ? new Date(Date.now() + blueprint.minutes * 60_000) : null;
   await db.insert(sessions).values({
     id,
     profileId: input.profileId,
     guestId,
     mode: input.mode,
+    exam,
     status: "active",
     endsAt,
   });
@@ -378,7 +389,8 @@ export async function submitSession(sessionId: string, profileId: string | null,
       responseTimeMs: answer?.responseTimeMs ?? 0,
     });
   }
-  const report = scoreSession(ydsBlueprint.scoring, scoreItems);
+  const exam = asExam(loaded.session.exam);
+  const report = scoreSession(blueprintFor(exam).scoring, scoreItems);
   await db
     .update(sessions)
     .set({
@@ -390,8 +402,12 @@ export async function submitSession(sessionId: string, profileId: string | null,
       blankCount: report.blank,
     })
     .where(eq(sessions.id, sessionId));
+  if (profileId && (loaded.session.mode === "practice" || loaded.session.mode === "diagnostic")) {
+    await bumpStreak(profileId);
+  }
   if (profileId && loaded.session.mode === "diagnostic") {
-    const estimate = estimateFromAccuracy(report.correct, report.correct + report.wrong);
+    const answered = report.correct + report.wrong;
+    const estimate = exam === "ydt" ? estimateNet(report.correct, report.wrong, answered) : estimateFromAccuracy(report.correct, answered);
     await db
       .update(profiles)
       .set({ estimatedLow: estimate.low, estimatedHigh: estimate.high })
@@ -409,7 +425,19 @@ export async function submitSession(sessionId: string, profileId: string | null,
   return { ...loaded.session, status: "submitted", score: Math.round(report.score), correctCount: report.correct, wrongCount: report.wrong, blankCount: report.blank };
 }
 
-export async function ensureDailyPlan(profileId: string, dailyMinutes: number, targetScore: number | null) {
+async function bumpStreak(profileId: string) {
+  const db = await getDb();
+  const rows = await db.select({ streak: profiles.streak, lastMissionDate: profiles.lastMissionDate }).from(profiles).where(eq(profiles.id, profileId)).limit(1);
+  const row = rows[0];
+  if (!row) return;
+  const today = todayKey();
+  await db
+    .update(profiles)
+    .set({ streak: nextStreak(row.streak, row.lastMissionDate, today), lastMissionDate: today })
+    .where(eq(profiles.id, profileId));
+}
+
+export async function ensureDailyPlan(profileId: string, dailyMinutes: number, targetScore: number | null, examDate?: string | null) {
   const db = await getDb();
   const planDate = todayKey();
   const existing = await db
@@ -418,7 +446,8 @@ export async function ensureDailyPlan(profileId: string, dailyMinutes: number, t
     .where(and(eq(plans.profileId, profileId), eq(plans.planDate, planDate)))
     .limit(1);
   if (existing[0]) return existing[0].payload as DailyPlan;
-  const pool = await publishedPool();
+  const exam = await examFor(profileId);
+  const pool = studyPool(await publishedPool());
   const masteryRows = await db.select().from(mastery).where(eq(mastery.profileId, profileId));
   const due = await db.select().from(reviews).where(and(eq(reviews.profileId, profileId), sql`${reviews.dueAt} <= now()`));
   const skillRows = await db.select().from(skills);
@@ -428,7 +457,7 @@ export async function ensureDailyPlan(profileId: string, dailyMinutes: number, t
     const seen = new Set<string>();
     while (current && !seen.has(current)) {
       seen.add(current);
-      if (ydsBlueprint.bands.some((band) => band.section === current)) return current as SectionId;
+      if (blueprintFor(exam).bands.some((band) => band.section === current)) return current as SectionId;
       current = parents.get(current) ?? null;
     }
     return null;
@@ -449,7 +478,8 @@ export async function ensureDailyPlan(profileId: string, dailyMinutes: number, t
     dueVocabIds: due.filter((row) => row.targetType === "vocab").map((row) => row.targetId),
     pool,
     seenIds: await seenIds(profileId),
-    targetSection: targetScore && targetScore >= 80 ? "reading" : undefined,
+    targetSection: targetScore != null && targetScore >= (exam === "ydt" ? 60 : 80) ? "reading" : undefined,
+    daysToExam: daysUntilExam(examDate),
   });
   await db.insert(plans).values({ id: randomUUID(), profileId, planDate, payload: plan });
   return plan;
@@ -515,7 +545,8 @@ export async function claimGuestSessions(profileId: string) {
     }
   }
   if (correct + wrong > 0) {
-    const estimate = estimateFromAccuracy(correct, correct + wrong);
+    const exam = asExam(diags.at(-1)?.exam);
+    const estimate = exam === "ydt" ? estimateNet(correct, wrong, correct + wrong) : estimateFromAccuracy(correct, correct + wrong);
     await db.update(profiles).set({ estimatedLow: estimate.low, estimatedHigh: estimate.high }).where(eq(profiles.id, profileId));
   }
 }

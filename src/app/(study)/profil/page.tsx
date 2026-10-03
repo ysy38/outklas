@@ -11,7 +11,14 @@ export default async function ProfilePage() {
       <p className="mt-2 text-sm text-muted">{profile.email}</p>
       <form action={saveOnboardingAction} className="mt-6 space-y-4">
         <label className="block text-sm">
-          Hedef puan
+          Sınav
+          <select name="exam" defaultValue={profile.exam === "ydt" ? "ydt" : "yds"} className="mt-1 w-full rounded-xl border border-line bg-card px-3 py-2">
+            <option value="yds">YDS / e-YDS</option>
+            <option value="ydt">YDT, YKS yabancı dil</option>
+          </select>
+        </label>
+        <label className="block text-sm">
+          Hedef {profile.exam === "ydt" ? "net" : "puan"}
           <input name="targetScore" type="number" defaultValue={profile.targetScore ?? 70} className="mt-1 w-full rounded-xl border border-line bg-card px-3 py-2" />
         </label>
         <label className="block text-sm">

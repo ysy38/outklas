@@ -7,9 +7,13 @@ export const sections = [
   "reading",
   "dialogue",
   "restatement",
+  "situation",
   "paragraph",
   "irrelevant",
 ] as const;
+
+export const examCodes = ["yds", "ydt"] as const;
+export type ExamCode = (typeof examCodes)[number];
 
 export type SectionId = (typeof sections)[number];
 
@@ -128,7 +132,7 @@ export const ydsBlueprint: Blueprint = {
   ],
 };
 
-/** YDT is a different exam: 120 minutes, wrong answers reduce the net. No learner surface yet. */
+/** YDT booklet order, stable since 2018: 80 questions, 120 minutes, four wrong answers cancel one net. */
 export const ydtBlueprint: Blueprint = {
   code: "ydt-en",
   title: "YDT İngilizce",
@@ -136,7 +140,96 @@ export const ydtBlueprint: Blueprint = {
   questionCount: 80,
   choiceCount: 5,
   scoring: "net_penalty",
-  bands: [],
+  bands: [
+    {
+      section: "vocabulary",
+      from: 1,
+      to: 5,
+      title: "Kelime bilgisi",
+      instruction: "1–5. sorularda, cümlede boş bırakılan yerlere uygun düşen sözcük veya ifadeyi bulunuz.",
+      layout: "blank",
+    },
+    {
+      section: "grammar",
+      from: 6,
+      to: 15,
+      title: "Dil bilgisi",
+      instruction: "6–15. sorularda, cümlede boş bırakılan yerlere uygun düşen sözcük veya ifadeyi bulunuz.",
+      layout: "blank",
+    },
+    {
+      section: "cloze",
+      from: 16,
+      to: 20,
+      title: "Cloze test",
+      instruction: "16–20. sorularda, parçada boş bırakılan yerlere uygun düşen sözcük veya ifadeyi bulunuz.",
+      layout: "stimulus",
+    },
+    {
+      section: "sentence",
+      from: 21,
+      to: 28,
+      title: "Cümle tamamlama",
+      instruction: "21–28. sorularda, verilen cümleyi uygun şekilde tamamlayan ifadeyi bulunuz.",
+      layout: "blank",
+    },
+    {
+      section: "reading",
+      from: 29,
+      to: 43,
+      title: "Paragraf",
+      instruction: "29–43. sorularda, verilen parçaya göre soruları cevaplayınız.",
+      layout: "stimulus",
+    },
+    {
+      section: "dialogue",
+      from: 44,
+      to: 48,
+      title: "Diyalog tamamlama",
+      instruction: "44–48. sorularda, konuşmada boş bırakılan yere uygun düşen ifadeyi bulunuz.",
+      layout: "dialogue",
+    },
+    {
+      section: "restatement",
+      from: 49,
+      to: 53,
+      title: "Anlamca yakın cümle",
+      instruction: "49–53. sorularda, verilen cümleye anlamca en yakın olan cümleyi bulunuz.",
+      layout: "restatement",
+    },
+    {
+      section: "situation",
+      from: 54,
+      to: 58,
+      title: "Duruma uygun ifade",
+      instruction: "54–58. sorularda, verilen durumda söylenebilecek ifadeyi bulunuz.",
+      layout: "restatement",
+    },
+    {
+      section: "paragraph",
+      from: 59,
+      to: 63,
+      title: "Paragraf tamamlama",
+      instruction: "59–63. sorularda, parçada boş bırakılan yere uygun düşen cümleyi bulunuz.",
+      layout: "stimulus",
+    },
+    {
+      section: "translation",
+      from: 64,
+      to: 75,
+      title: "Çeviri",
+      instruction: "64–69. sorularda İngilizce cümlenin Türkçe karşılığını, 70–75. sorularda Türkçe cümlenin İngilizce karşılığını bulunuz.",
+      layout: "restatement",
+    },
+    {
+      section: "irrelevant",
+      from: 76,
+      to: 80,
+      title: "Anlam bütünlüğünü bozan cümle",
+      instruction: "76–80. sorularda, parçada anlam bütünlüğünü bozan cümleyi bulunuz.",
+      layout: "numbered",
+    },
+  ],
 };
 
 export const diagnosticQuota: Record<SectionId, number> = {
@@ -148,9 +241,18 @@ export const diagnosticQuota: Record<SectionId, number> = {
   reading: 6,
   dialogue: 1,
   restatement: 1,
+  situation: 0,
   paragraph: 1,
   irrelevant: 2,
 };
+
+export function blueprintFor(exam: string | null | undefined): Blueprint {
+  return exam === "ydt" ? ydtBlueprint : ydsBlueprint;
+}
+
+export function asExam(value: string | null | undefined): ExamCode {
+  return value === "ydt" ? "ydt" : "yds";
+}
 
 export function bandForSlot(slot: number, blueprint: Blueprint = ydsBlueprint): Band | undefined {
   return blueprint.bands.find((band) => slot >= band.from && slot <= band.to);

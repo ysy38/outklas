@@ -39,6 +39,7 @@ export async function saveOnboardingAction(formData: FormData) {
   await db
     .update(profiles)
     .set({
+      exam: String(formData.get("exam") ?? "yds") === "ydt" ? "ydt" : "yds",
       targetScore: Number(formData.get("targetScore") ?? 70),
       examDate: String(formData.get("examDate") ?? "") || null,
       dailyMinutes: Number(formData.get("dailyMinutes") ?? 30),
@@ -144,7 +145,7 @@ export async function saveItemAction(formData: FormData) {
 export async function startTodayAction() {
   const profile = await currentProfile();
   if (!profile) redirect("/giris");
-  const plan = await ensureDailyPlan(profile.id, profile.dailyMinutes ?? 30, profile.targetScore);
+  const plan = await ensureDailyPlan(profile.id, profile.dailyMinutes ?? 30, profile.targetScore, profile.examDate);
   const itemIds = plan.blocks.filter((block) => block.kind === "question").map((block) => block.id);
   const created = await createSession({ mode: "practice", profileId: profile.id, itemIds });
   if (created.paywall || !created.id) redirect("/odeme");

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ydsBlueprint, type SectionId } from "../exam/blueprint";
 import type { PoolItem } from "../exam/select";
 import { nextMastery } from "./mastery";
-import { buildPlan } from "./plan";
+import { buildPlan, nextStreak } from "./plan";
 import { nextReview } from "./review";
 
 describe("mastery", () => {
@@ -67,5 +67,14 @@ describe("plan", () => {
     expect(cloze / questions.length).toBeLessThanOrEqual(0.4);
     expect(plan.blocks.some((block) => block.kind === "vocab")).toBe(true);
     expect(plan.totalMinutes).toBeGreaterThan(0);
+    expect(plan.skipSections.length).toBeGreaterThan(0);
+    expect(plan.blocks.some((block) => block.kind === "question" && plan.skipSections.includes(block.section))).toBe(false);
+  });
+
+  it("keeps a streak only across consecutive days", () => {
+    expect(nextStreak(4, "2026-04-01", "2026-04-01")).toBe(4);
+    expect(nextStreak(4, "2026-04-01", "2026-04-02")).toBe(5);
+    expect(nextStreak(4, "2026-04-01", "2026-04-04")).toBe(1);
+    expect(nextStreak(0, null, "2026-04-01")).toBe(1);
   });
 });

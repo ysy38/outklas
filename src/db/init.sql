@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS profiles (
   prior_score integer,
   estimated_low integer,
   estimated_high integer,
+  exam text NOT NULL DEFAULT 'yds',
+  streak integer NOT NULL DEFAULT 0,
+  last_mission_date text,
   onboarding_completed boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -79,6 +82,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   profile_id uuid,
   guest_id text,
   mode text NOT NULL,
+  exam text NOT NULL DEFAULT 'yds',
   status text NOT NULL DEFAULT 'active',
   score real,
   correct_count integer,
@@ -162,3 +166,8 @@ CREATE TABLE IF NOT EXISTS events (
 );
 
 CREATE INDEX IF NOT EXISTS events_name ON events (name, created_at);
+
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS exam text NOT NULL DEFAULT 'yds';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS streak integer NOT NULL DEFAULT 0;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS last_mission_date text;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS exam text NOT NULL DEFAULT 'yds';

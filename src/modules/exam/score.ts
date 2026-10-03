@@ -51,6 +51,17 @@ export function scoreSession(rule: ScoringRule, items: ScoreItem[]): ScoreReport
   return { correct, wrong, blank, score, bySection: rows };
 }
 
+/** Projects a short YDT sitting onto an 80-question net. Not a YKS placement score. */
+export function estimateNet(correct: number, wrong: number, answered: number, full = 80): { low: number; high: number; point: number } {
+  if (answered <= 0) return { low: 0, high: 0, point: 0 };
+  const point = Math.round((correct / answered) * full - (wrong / answered) * (full / 4));
+  return {
+    point: Math.max(0, Math.min(full, point)),
+    low: Math.max(0, point - 6),
+    high: Math.min(full, point + 6),
+  };
+}
+
 export function estimateFromAccuracy(correct: number, answered: number): { low: number; high: number; point: number } {
   if (answered <= 0) return { low: 0, high: 0, point: 0 };
   const point = Math.round((correct / answered) * 100);
