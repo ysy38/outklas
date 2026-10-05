@@ -4,7 +4,8 @@ import { brand } from "@/brand";
 import { getDb, sessions } from "@/db/client";
 import { currentProfile, readGuestId } from "@/server/auth";
 import { entitlementFor } from "@/server/sessions";
-import { startModeAction } from "@/server/actions";
+import { PendingButton } from "@/components/pending-button";
+import { startSimulatorAction } from "@/server/actions";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -25,15 +26,11 @@ export default async function SimulatorPage() {
     .where(and(filter, eq(sessions.mode, "simulator"), eq(sessions.status, "submitted")));
   const ydt = profile?.exam === "ydt";
   const blocked = !access.pro && done.length >= brand.freeSimulators;
-  async function start() {
-    "use server";
-    await startModeAction("simulator");
-  }
   return (
-    <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 py-16 lg:grid-cols-[1fr_0.9fr]">
+    <section className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 py-10 sm:px-5 sm:py-16 lg:grid-cols-[1fr_0.9fr]">
       <div>
         <p className="text-xs uppercase tracking-[0.18em] text-gold">Deneme</p>
-        <h1 className="mt-3 text-5xl">{ydt ? "120 dakika, 80 soru, net." : "180 dakika, 80 soru, ekranda."}</h1>
+        <h1 className="display mt-3">{ydt ? "120 dakika, 80 soru, net." : "180 dakika, 80 soru, ekranda."}</h1>
         <p className="mt-4 max-w-xl leading-8 text-muted">
           {ydt
             ? "YDT’de süre 120 dakikadır ve dört yanlış bir net götürür. Tam kitapçık sırası hazır olunca deneme burada açılır. Teşhis ve günün işi şimdiden duruyor."
@@ -60,8 +57,10 @@ export default async function SimulatorPage() {
             Ücretsiz deneme kullanıldı. <Link href="/odeme" className="text-pine">Pro ile devam et.</Link>
           </p>
         ) : (
-          <form action={start} className="mt-8">
-            <button className="rounded-full bg-pine px-5 py-3 text-cream">Denemeyi başlat</button>
+          <form action={startSimulatorAction} className="mt-8">
+            <PendingButton pendingLabel="Deneme açılıyor…" className="w-full rounded-full bg-pine px-5 py-3 text-cream sm:w-auto">
+              Denemeyi başlat
+            </PendingButton>
           </form>
         )}
       </div>
@@ -70,7 +69,7 @@ export default async function SimulatorPage() {
           <span>Örnek ızgara</span>
           <span>{ydt ? "120:00" : "180:00"}</span>
         </div>
-        <div className="mt-4 grid grid-cols-10 gap-1">
+        <div className="mt-4 grid grid-cols-8 gap-1 sm:grid-cols-10">
           {Array.from({ length: 80 }, (_, index) => (
             <span
               key={index}

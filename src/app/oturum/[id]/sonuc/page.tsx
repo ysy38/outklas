@@ -42,17 +42,17 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
       ? `${wrong} yanlış, yaklaşık ${(Math.round((wrong / 4) * 100) / 100).toLocaleString("tr-TR")} net götürür`
       : `${wrong} kaçtı, ${(Math.round(wrong * 125) / 100).toLocaleString("tr-TR")} puan yerinde kaldı`;
   return (
-    <main className="mx-auto max-w-3xl px-5 py-10">
+    <main className="mx-auto max-w-3xl px-4 py-8 sm:px-5">
       <p className="text-sm text-muted">
         {loaded.session.mode === "diagnostic" ? "Teşhis tahmini" : loaded.session.mode === "practice" ? "Bugünün işi bitti" : exam === "ydt" ? "YDT neti" : "Deneme"}
       </p>
-      <h1 className="mt-2 text-5xl">{estimate ? `${estimate.low}–${estimate.high}` : report.score}</h1>
+      <h1 className="display mt-2">{estimate ? `${estimate.low}–${estimate.high}` : report.score}</h1>
       <p className="mt-3 text-muted">
         {report.correct} doğru, {report.wrong} yanlış, {report.blank} boş.
         {estimate
           ? exam === "ydt"
-            ? " Bu aralık bir net tahminidir. YKS yerleştirme puanı değildir."
-            : " Bu aralık resmi bir YDS puanı değildir."
+            ? " Bu bir net tahminidir. YKS yerleştirme puanı değildir."
+            : " Bu resmi puan değildir. 24 soru, 80 soruluk sınavın kısasıdır."
           : exam === "ydt"
             ? " Net, doğru sayısından yanlışın dörtte biri düşülerek bulunur."
             : " Puan, doğru sayısının 1,25 katıdır. Yanlış bu çarpıma girmez."}

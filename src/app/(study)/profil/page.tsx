@@ -1,5 +1,6 @@
 import { currentProfile } from "@/server/auth";
 import { redirect } from "next/navigation";
+import { PendingButton } from "@/components/pending-button";
 import { saveOnboardingAction, signOutAction } from "@/server/actions";
 
 export default async function ProfilePage() {
@@ -33,10 +34,14 @@ export default async function ProfilePage() {
           Son puan
           <input name="priorScore" type="number" defaultValue={profile.priorScore ?? ""} className="mt-1 w-full rounded-xl border border-line bg-card px-3 py-2" />
         </label>
-        <button className="rounded-full bg-pine px-4 py-2 text-cream">Kaydet</button>
+        <PendingButton pendingLabel="Kaydediliyor…" className="w-full rounded-full bg-pine px-4 py-3 text-cream sm:w-auto">
+          Kaydet
+        </PendingButton>
       </form>
       <form action={signOutAction} className="mt-6">
-        <button className="text-sm text-muted">Çıkış</button>
+        <PendingButton pendingLabel="Çıkılıyor…" className="text-sm text-muted">
+          Çıkış
+        </PendingButton>
       </form>
     </section>
   );

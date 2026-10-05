@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PendingButton } from "@/components/pending-button";
 import { signInAction, signUpAction } from "@/server/actions";
 
 export function AuthForm() {
@@ -73,7 +74,9 @@ export function AuthForm() {
         {process.env.NODE_ENV === "development" ? (
           <p className="text-xs text-muted">Yerel yönetici: admin@ydslab.local / lab-admin</p>
         ) : null}
-        <button className="w-full rounded-full bg-pine px-4 py-3 text-cream">{login ? "Giriş yap" : "Hesap aç"}</button>
+        <PendingButton pendingLabel={login ? "Giriliyor…" : "Açılıyor…"} className="w-full rounded-full bg-pine px-4 py-3 text-cream">
+          {login ? "Giriş yap" : "Hesap aç"}
+        </PendingButton>
       </form>
     </div>
   );

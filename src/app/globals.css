@@ -46,11 +46,30 @@
   --color-gold: var(--gold);
 }
 
+html,
+body {
+  overflow-x: clip;
+}
+
 body {
   font-family: var(--font-sans);
   background: var(--paper);
   color: var(--ink);
   text-rendering: optimizeLegibility;
+}
+
+.display {
+  font-size: clamp(2.25rem, 7vw, 3.5rem);
+  line-height: 1.08;
+}
+
+@keyframes load {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(420%);
+  }
 }
 
 h1,

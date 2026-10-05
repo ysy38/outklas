@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { brand } from "@/brand";
+import { AccountLink } from "./account-link";
 import { ThemeToggle } from "./theme-toggle";
 
 const appLinks = [
@@ -19,35 +20,37 @@ const publicLinks = [
   ["Fiyat", "/fiyat"],
 ];
 
-export function PublicHeader({ signedIn = false }: { signedIn?: boolean }) {
+export function PublicHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-line/80 bg-paper/85 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-3.5">
-        <Link href="/" className="flex items-center gap-2.5 font-serif text-xl tracking-tight">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-pine text-sm text-cream">Y</span>
-          {brand.name}
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-5">
+        <Link href="/" className="flex min-w-0 items-center gap-2 font-serif text-lg tracking-tight sm:gap-2.5 sm:text-xl">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-pine text-sm text-cream">Y</span>
+          <span className="hidden truncate sm:inline">{brand.name}</span>
         </Link>
-        <nav className="hidden items-center gap-6 text-sm text-muted md:flex">
+        <nav className="hidden items-center gap-5 text-sm text-muted lg:flex">
           {publicLinks.map(([label, href]) => (
             <Link key={href} href={href} className="hover:text-ink">
               {label}
             </Link>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
-          <details className="relative md:hidden">
+        <div className="flex shrink-0 items-center gap-2">
+          <details className="relative lg:hidden">
             <summary className="cursor-pointer list-none rounded-full border border-line px-3 py-2 text-sm">Menü</summary>
-            <div className="absolute right-0 z-50 mt-2 w-44 rounded-2xl border border-line bg-card p-3 text-sm shadow-lg">
+            <div className="absolute right-0 z-50 mt-2 w-48 rounded-2xl border border-line bg-card p-3 text-sm shadow-lg">
               {publicLinks.map(([label, href]) => (
-                <Link key={href} href={href} className="block py-1.5 text-muted hover:text-ink">
+                <Link key={href} href={href} className="block py-2 text-muted hover:text-ink">
                   {label}
                 </Link>
               ))}
+              <AccountLink className="block py-2 text-muted hover:text-ink sm:hidden" />
             </div>
           </details>
           <ThemeToggle />
-          <Link href={signedIn ? "/bugun" : "/giris"} className="rounded-full bg-pine px-4 py-2 text-sm text-cream">
-            {signedIn ? "Bugün" : "Giriş"}
+          <AccountLink className="hidden rounded-full border border-line px-3 py-2 text-sm sm:inline" />
+          <Link href="/teshis" className="rounded-full bg-pine px-3 py-2 text-sm text-cream">
+            Ücretsiz
           </Link>
         </div>
       </div>
@@ -58,11 +61,11 @@ export function PublicHeader({ signedIn = false }: { signedIn?: boolean }) {
 export function PublicFooter() {
   return (
     <footer className="border-t border-line">
-      <div className="mx-auto grid w-full max-w-6xl gap-8 px-5 py-12 md:grid-cols-[1.4fr_1fr_1fr]">
+      <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-12 sm:px-5 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
           <p className="font-serif text-2xl">{brand.name}</p>
           <p className="mt-3 max-w-sm text-sm leading-6 text-muted">
-            YDS ve e-YDS İngilizce için teşhis, günlük plan ve deneme. ÖSYM’nin resmi uygulaması değildir.
+            YDS, e-YDS, YÖKDİL ve e-YÖKDİL için ölçüm, günlük plan ve deneme. ÖSYM’nin resmi uygulaması değildir.
           </p>
         </div>
         <div className="text-sm leading-8">
@@ -87,10 +90,10 @@ export function PublicFooter() {
 export function AppHeader({ admin = false }: { admin?: boolean }) {
   return (
     <header className="sticky top-0 z-40 border-b border-line/80 bg-paper/85 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-5 py-3.5">
-        <Link href="/bugun" className="flex items-center gap-2.5 font-serif text-xl tracking-tight">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-pine text-sm text-cream">Y</span>
-          {brand.name}
+      <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-5">
+        <Link href="/bugun" className="flex min-w-0 items-center gap-2 font-serif text-lg tracking-tight sm:text-xl">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-pine text-sm text-cream">Y</span>
+          <span className="hidden truncate sm:inline">{brand.name}</span>
         </Link>
         <div className="flex items-center gap-3">
           <nav className="hidden items-center gap-4 text-sm lg:flex">

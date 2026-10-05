@@ -4,7 +4,7 @@ import { brand } from "@/brand";
 import { asExam, blueprintFor, type ExamCode, type SectionId } from "@/modules/exam/blueprint";
 import { estimateFromAccuracy, estimateNet, scoreSession, type ScoreItem } from "@/modules/exam/score";
 import { selectDiagnostic, selectItems, selectMock, studyPool, type PoolItem } from "@/modules/exam/select";
-import { canStartPractice, canStartSimulator, isPro, practiceAllowance } from "@/modules/billing/entitlement";
+import { canStartPractice, canStartSimulator, isPro, practiceAllowance, type CheckoutPlan, type PlanCode } from "@/modules/billing/entitlement";
 import { nextMastery } from "@/modules/learning/mastery";
 import { buildPlan, daysUntilExam, nextStreak, type DailyPlan } from "@/modules/learning/plan";
 import { nextReview } from "@/modules/learning/review";
@@ -52,7 +52,7 @@ export async function entitlementFor(profileId: string | null) {
   const row = rows[0];
   const pro = isPro({
     devPro: false,
-    plan: (row?.plan as "free" | "pro" | "exam_pass" | undefined) ?? null,
+    plan: (row?.plan as PlanCode | undefined) ?? null,
     status: row?.status ?? null,
     periodEnd: row?.periodEnd ?? null,
     now: new Date(),
@@ -485,10 +485,16 @@ export async function ensureDailyPlan(profileId: string, dailyMinutes: number, t
   return plan;
 }
 
-export async function devActivate(profileId: string, plan: "pro" | "exam_pass") {
+const accessDays: Record<CheckoutPlan, number> = {
+  lab_90: brand.accessDays.lab90,
+  lab_180: brand.accessDays.lab180,
+  sprint: brand.accessDays.sprint,
+};
+
+export async function devActivate(profileId: string, plan: CheckoutPlan) {
   const db = await getDb();
   const periodEnd = new Date();
-  periodEnd.setDate(periodEnd.getDate() + (plan === "exam_pass" ? 90 : 30));
+  periodEnd.setDate(periodEnd.getDate() + accessDays[plan]);
   await db
     .insert(subscriptions)
     .values({ profileId, plan, status: "active", provider: "dev", periodEnd })
@@ -501,7 +507,7 @@ export async function devActivate(profileId: string, plan: "pro" | "exam_pass") 
 
 export async function activateFromWebhook(input: {
   profileId: string;
-  plan: "pro" | "exam_pass";
+  plan: PlanCode;
   status: "active" | "canceled";
   periodEnd: Date | null;
 }) {

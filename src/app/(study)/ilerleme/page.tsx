@@ -46,13 +46,13 @@ export default async function ProgressPage() {
   const estimate =
     profile.estimatedLow != null && profile.estimatedHigh != null
       ? exam === "ydt"
-        ? `Teşhis aralığın ${profile.estimatedLow}–${profile.estimatedHigh} net. Bu bir YKS puanı değildir.`
-        : `Teşhis aralığın ${profile.estimatedLow}–${profile.estimatedHigh}. Bu resmi bir YDS puanı değildir.`
-      : "Teşhis aralığı henüz yok.";
+        ? `Tahmini netin ${profile.estimatedLow}–${profile.estimatedHigh}. Bu bir YKS puanı değildir.`
+        : `Tahmini puanın ${profile.estimatedLow}–${profile.estimatedHigh}. Bu resmi puan değildir.`
+      : "Henüz bir ölçüm yok.";
   const hasAnswers = [...tally.values()].some((cell) => cell.correct + cell.wrong > 0);
   return (
     <section>
-      <h1 className="text-4xl">İlerleme</h1>
+      <h1 className="display">İlerleme</h1>
       <p className="mt-2 text-sm text-muted">{estimate}</p>
       {latest && latest.wrongCount ? (
         <p className="mt-3 max-w-xl text-sm leading-6">
@@ -71,8 +71,8 @@ export default async function ProgressPage() {
           const bar = seen > 0 ? Math.round((cell.correct / seen) * 100) : rolled ? Math.round(rolled.total / rolled.count) : 0;
           return (
             <div key={band.section}>
-              <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
-                <Link href={`/rehber/${band.section as SectionId}`} className="hover:text-pine">
+              <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
+                <Link href={`/rehber/${band.section as SectionId}`} className="min-w-0 hover:text-pine">
                   {band.title}
                 </Link>
                 <span className="text-right text-muted">

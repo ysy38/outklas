@@ -1,11 +1,17 @@
 export const brand = {
   name: "YDS Lab",
   domain: "ydslab.com",
-  hero: "Bugün hangi soruyu çözeceğini bilmeden masa başına oturma.",
-  sub: "Teşhis, sınavdaki paya göre kurulur. Ertesi gün elinde tek bir liste olur: zayıf bölüm, dünün yanlışı, bir parça yeni soru.",
+  hero: "YDS ve YÖKDİL’de ne çalışacağını tahmin etme.",
+  sub: "e-YDS ve e-YÖKDİL de aynı hesap. Eksik kaldığın bölümü bulur, ertesi güne tek bir iş bırakır.",
   prices: {
-    proMonthly: 399,
-    examPass: 899,
+    lab90: 1490,
+    lab180: 2490,
+    sprint: 1990,
+  },
+  accessDays: {
+    lab90: 90,
+    lab180: 180,
+    sprint: 60,
   },
   freeDailyQuestions: 10,
   freeSimulators: 1,

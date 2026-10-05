@@ -105,11 +105,21 @@ export async function seed(db: AppDb) {
   });
 }
 
+let packReady = false;
+
 async function syncPack(db: AppDb) {
-  await db
-    .update(items)
-    .set({ status: "booklet" })
-    .where(and(inArray(items.section, ["cloze", "reading"]), sql`${items.id} like 'item-%'`));
+  if (packReady) return;
+  const stale = await db
+    .select({ id: items.id })
+    .from(items)
+    .where(and(eq(items.status, "published"), inArray(items.section, ["cloze", "reading"]), sql`${items.id} like 'item-%'`))
+    .limit(1);
+  if (stale.length > 0) {
+    await db
+      .update(items)
+      .set({ status: "booklet" })
+      .where(and(inArray(items.section, ["cloze", "reading"]), sql`${items.id} like 'item-%'`));
+  }
   await db
     .insert(skills)
     .values([
@@ -118,7 +128,10 @@ async function syncPack(db: AppDb) {
     ])
     .onConflictDoNothing();
   const present = await db.select({ id: items.id }).from(items).where(eq(items.id, "pack-201")).limit(1);
-  if (present.length > 0) return;
+  if (present.length > 0) {
+    packReady = true;
+    return;
+  }
   for (const draft of packItems) assertDraft(draft);
   await db.insert(stimuliTable).values(packStimuli.map((stimulus) => ({ id: stimulus.key, kind: stimulus.kind, body: stimulus.body }))).onConflictDoNothing();
   await db.insert(items).values(
@@ -148,6 +161,7 @@ async function syncPack(db: AppDb) {
     ),
   );
   await db.insert(itemSkills).values(packItems.flatMap((draft) => draft.skills.map((skillId) => ({ itemId: `pack-${draft.slot}`, skillId }))));
+  packReady = true;
 }
 
 async function openPglite(dataDir?: string): Promise<AppDb> {
@@ -201,7 +215,15 @@ export function getDb(): Promise<AppDb> {
   return ready;
 }
 
+const poolCache = new Map<"study" | "mock", { at: number; rows: PoolItem[] }>();
+
+export function clearPoolCache() {
+  poolCache.clear();
+}
+
 export async function publishedPool(scope: "study" | "mock" = "study"): Promise<PoolItem[]> {
+  const hit = poolCache.get(scope);
+  if (hit && Date.now() - hit.at < 5 * 60 * 1000) return hit.rows;
   const db = await getDb();
   const rows = await db
     .select({
@@ -221,7 +243,7 @@ export async function publishedPool(scope: "study" | "mock" = "study"): Promise<
     list.push(link.skillId);
     byItem.set(link.itemId, list);
   }
-  return rows
+  const mapped = rows
     .filter((row) => row.slot != null)
     .map((row) => ({
       id: row.id,
@@ -231,6 +253,8 @@ export async function publishedPool(scope: "study" | "mock" = "study"): Promise<
       difficulty: row.difficulty,
       skillIds: byItem.get(row.id) ?? [],
     }));
+  poolCache.set(scope, { at: Date.now(), rows: mapped });
+  return mapped;
 }
 
 export { and, asc, eq, gte, inArray, sql, answers, choices, events, itemSkills, items, mastery, plans, profiles, reviews, sessionItems, sessions, skills, subscriptions, vocabulary, vocabLinks, stimuliTable };

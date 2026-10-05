@@ -3,6 +3,8 @@ import Link from "next/link";
 import { rehberBySection } from "@/content/rehber";
 import { ydsBlueprint } from "@/modules/exam/blueprint";
 
+export const dynamic = "force-static";
+
 export const metadata: Metadata = {
   title: "YDS rehberi",
   description: "YDS ve e-YDS kitapçığındaki on bölüm: ne ölçülür, nereye bakılır, nerede kaçılır.",
@@ -11,9 +13,9 @@ export const metadata: Metadata = {
 
 export default function GuideIndexPage() {
   return (
-    <section className="mx-auto w-full max-w-6xl px-5 py-16">
+    <section className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-5 sm:py-16">
       <p className="text-xs uppercase tracking-[0.18em] text-gold">Rehber</p>
-      <h1 className="mt-3 max-w-2xl text-5xl">On bölüm. Puan bunların içinde.</h1>
+      <h1 className="display mt-3 max-w-2xl">On bölüm. Puan bunların içinde.</h1>
       <p className="mt-4 max-w-2xl leading-8 text-muted">
         Kitapçık yıllardır aynı sırayla gelir. Burada her bölümde neye bakacağın yazıyor. Soru çözdükçe senin sayın da o sayfaya düşer.
       </p>

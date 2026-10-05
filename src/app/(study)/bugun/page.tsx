@@ -3,6 +3,7 @@ import { currentProfile } from "@/server/auth";
 import { ensureDailyPlan } from "@/server/sessions";
 import { asExam, blueprintFor } from "@/modules/exam/blueprint";
 import { daysUntilExam } from "@/modules/learning/plan";
+import { PendingButton } from "@/components/pending-button";
 import { saveOnboardingAction, startTodayAction } from "@/server/actions";
 
 export default async function TodayPage() {
@@ -11,7 +12,7 @@ export default async function TodayPage() {
   if (!profile.onboardingCompleted) {
     return (
       <section className="max-w-lg">
-        <h1 className="text-4xl">Hangi sınav, nereyi tutturmak istiyorsun?</h1>
+        <h1 className="display">Hangi sınav, nereyi tutturmak istiyorsun?</h1>
         <form action={saveOnboardingAction} className="mt-6 space-y-4">
           <label className="block text-sm">
             Sınav
@@ -49,7 +50,9 @@ export default async function TodayPage() {
             Varsa son puanın
             <input name="priorScore" type="number" min={0} max={100} className="mt-1 w-full rounded-xl border border-line bg-card px-3 py-2" />
           </label>
-          <button className="rounded-full bg-pine px-4 py-2 text-cream">Listeyi kur</button>
+          <PendingButton pendingLabel="Kuruluyor…" className="w-full rounded-full bg-pine px-4 py-3 text-cream sm:w-auto">
+            Listeyi kur
+          </PendingButton>
         </form>
       </section>
     );
@@ -67,7 +70,7 @@ export default async function TodayPage() {
   return (
     <section className="max-w-xl">
       <p className="text-xs uppercase tracking-[0.18em] text-gold">{blueprint.title}</p>
-      <h1 className="mt-2 text-4xl">
+      <h1 className="display mt-2">
         {gap != null && gap > 0 ? `Hedefe ${gap} ${unit} var` : gap != null && gap <= 0 ? "Hedefin üstündesin" : "Bugünün işi"}
       </h1>
       <p className="mt-3 text-sm text-muted">
@@ -86,7 +89,9 @@ export default async function TodayPage() {
         {skip.length > 0 ? <p className="mt-3 text-sm leading-6">Bugün çalışma: {skip.join(", ")}.</p> : null}
       </article>
       <form action={startTodayAction} className="mt-6">
-        <button className="rounded-full bg-pine px-5 py-3 text-cream">İşe başla</button>
+        <PendingButton pendingLabel="Oturum açılıyor…" className="w-full rounded-full bg-pine px-5 py-3 text-cream sm:w-auto">
+          İşe başla
+        </PendingButton>
       </form>
     </section>
   );

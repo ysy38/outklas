@@ -17,9 +17,9 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
   const guide = guideBySlug((await params).slug);
   if (!guide) notFound();
   return (
-    <article className="mx-auto w-full max-w-3xl px-5 py-16">
+    <article className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-5 sm:py-16">
       <p className="text-xs uppercase tracking-[0.18em] text-gold">YDS İngilizce</p>
-      <h1 className="mt-3 text-5xl">{guide.title}</h1>
+      <h1 className="display mt-3">{guide.title}</h1>
       <p className="mt-4 text-lg text-muted">{guide.lead}</p>
       {guide.paragraphs.map((paragraph) => (
         <p key={paragraph} className="mt-4 leading-7">

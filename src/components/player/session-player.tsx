@@ -56,6 +56,7 @@ export function SessionPlayer({
   const [marks, setMarks] = useState<Record<number, boolean>>({});
   const [now, setNow] = useState(Date.now());
   const [startedAt, setStartedAt] = useState(Date.now());
+  const [finishing, setFinishing] = useState(false);
   const item = items[index];
 
   useEffect(() => {
@@ -112,7 +113,12 @@ export function SessionPlayer({
       setReveals((current) => ({ ...current, [item.id]: result.reveal as Reveal }));
     }
     if (result && "submitted" in result && result.submitted) router.push(`/oturum/${sessionId}/sonuc`);
-    router.refresh();
+  }
+
+  async function finish() {
+    if (finishing) return;
+    setFinishing(true);
+    await submitAction(sessionId);
   }
 
   async function toggleFlag() {
@@ -142,8 +148,8 @@ export function SessionPlayer({
             </button>
           ))}
         </div>
-        <button type="button" onClick={() => submitAction(sessionId)} className="mt-4 w-full rounded-full bg-pine px-3 py-2 text-sm text-cream">
-          Bitir
+        <button type="button" disabled={finishing} onClick={() => void finish()} className="mt-4 w-full rounded-full bg-pine px-3 py-2 text-sm text-cream disabled:opacity-70">
+          {finishing ? "Kaydediliyor…" : "Bitir"}
         </button>
       </aside>
       <article className="rounded-2xl border border-line bg-card p-6">
@@ -170,7 +176,7 @@ export function SessionPlayer({
             ))}
           </div>
         ) : null}
-        {item.layout === "dialogue" ? null : <h1 className="mb-5 text-2xl leading-snug">{item.layout === "blank" ? gaps(item.stem) : item.stem}</h1>}
+        {item.layout === "dialogue" ? null : <h1 className="mb-5 text-xl leading-snug break-words sm:text-2xl">{item.layout === "blank" ? gaps(item.stem) : item.stem}</h1>}
         <ol className="space-y-2">
           {item.choices.map((choice, choiceIndex) => {
             const active = (selected[item.id] ?? item.selectedChoiceId) === choice.id;
@@ -181,7 +187,7 @@ export function SessionPlayer({
                 <button
                   type="button"
                   onClick={() => choose(choice.id)}
-                  className={`flex-1 rounded-xl border px-4 py-3 text-left ${active ? "border-pine bg-pine/5" : "border-line"} ${show && right ? "border-moss" : ""} ${show && active && !right ? "border-clay" : ""} ${struck[choice.id] ? "line-through opacity-60" : ""}`}
+                  className={`min-w-0 flex-1 rounded-xl border px-4 py-3 text-left break-words ${active ? "border-pine bg-pine/5" : "border-line"} ${show && right ? "border-moss" : ""} ${show && active && !right ? "border-clay" : ""} ${struck[choice.id] ? "line-through opacity-60" : ""}`}
                 >
                   <span className="mr-2 text-muted">{letters[choiceIndex]}</span>
                   {choice.body}

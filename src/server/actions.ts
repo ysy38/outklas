@@ -2,10 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
-import { getDb, profiles, vocabulary } from "@/db/client";
+import { clearPoolCache, getDb, profiles, vocabulary } from "@/db/client";
 import { publishBlockers } from "@/modules/content/publish";
 import { iyzicoConfigured } from "@/modules/billing/iyzico";
-import { currentProfile, loginAccount, logoutAccount, registerAccount } from "./auth";
+import { currentProfile, loginAccount, logoutAccount, markSignedIn, registerAccount } from "./auth";
 import { claimGuestSessions, createSession, devActivate, ensureDailyPlan, recordEvent, saveAnswer, setFlag, submitSession, touchReview } from "./sessions";
 
 export async function signInAction(formData: FormData) {
@@ -48,11 +48,21 @@ export async function saveOnboardingAction(formData: FormData) {
     })
     .where(eq(profiles.id, profile.id));
   await recordEvent("onboarding_completed", profile.id);
+  await markSignedIn();
   redirect("/bugun");
+}
+
+export async function startDiagnosticAction() {
+  await startModeAction("diagnostic");
+}
+
+export async function startSimulatorAction() {
+  await startModeAction("simulator");
 }
 
 export async function startModeAction(mode: "diagnostic" | "practice" | "simulator", itemIds?: string[]) {
   const profile = await currentProfile();
+  if (profile) await markSignedIn();
   const created = await createSession({ mode, profileId: profile?.id ?? null, itemIds });
   if (created.paywall) redirect("/odeme");
   if (!created.id) return created;
@@ -91,7 +101,7 @@ export async function reviewVocabAction(vocabularyId: string, rating: "know" | "
   redirect("/kelime");
 }
 
-export async function devCheckoutAction(plan: "pro" | "exam_pass") {
+export async function devCheckoutAction(plan: "lab_90" | "lab_180" | "sprint") {
   if (iyzicoConfigured()) redirect("/odeme?hata=canli");
   const profile = await currentProfile();
   if (!profile) redirect("/giris");
@@ -139,12 +149,14 @@ export async function saveItemAction(formData: FormData) {
   }
   await db.delete(itemSkills).where(eq(itemSkills.itemId, id));
   if (skillIds.length > 0) await db.insert(itemSkills).values(skillIds.map((skillId) => ({ itemId: id, skillId })));
+  clearPoolCache();
   redirect("/admin");
 }
 
 export async function startTodayAction() {
   const profile = await currentProfile();
   if (!profile) redirect("/giris");
+  await markSignedIn();
   const plan = await ensureDailyPlan(profile.id, profile.dailyMinutes ?? 30, profile.targetScore, profile.examDate);
   const itemIds = plan.blocks.filter((block) => block.kind === "question").map((block) => block.id);
   const created = await createSession({ mode: "practice", profileId: profile.id, itemIds });

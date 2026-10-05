@@ -1,4 +1,8 @@
-export type PlanCode = "free" | "pro" | "exam_pass";
+export type PlanCode = "free" | "pro" | "exam_pass" | "lab_90" | "lab_180" | "sprint";
+
+export type CheckoutPlan = "lab_90" | "lab_180" | "sprint";
+
+const paidPlans = new Set<PlanCode>(["pro", "exam_pass", "lab_90", "lab_180", "sprint"]);
 
 export type EntitlementInput = {
   devPro: boolean;
@@ -12,7 +16,7 @@ export function isPro(input: EntitlementInput): boolean {
   if (input.devPro) return true;
   if (!input.plan || input.plan === "free" || input.status !== "active") return false;
   if (input.periodEnd && input.periodEnd.getTime() < input.now.getTime()) return false;
-  return input.plan === "pro" || input.plan === "exam_pass";
+  return paidPlans.has(input.plan);
 }
 
 export function canStartPractice(input: { pro: boolean; answeredToday: number; limit: number }): boolean {

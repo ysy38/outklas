@@ -31,7 +31,7 @@ export default async function GuideSectionPage({ params }: Props) {
   const readingSkills = profile && band.section === "reading" ? await readingBreakdown(profile.id) : [];
 
   return (
-    <article className="mx-auto grid w-full max-w-6xl gap-10 px-5 py-16 lg:grid-cols-[1.1fr_0.9fr]">
+    <article className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-10 sm:px-5 sm:py-16 lg:grid-cols-[1.1fr_0.9fr]">
       <div>
         <p className="text-xs uppercase tracking-[0.18em] text-gold">
           <Link href="/rehber" className="hover:text-ink">
@@ -40,7 +40,7 @@ export default async function GuideSectionPage({ params }: Props) {
           {" · "}
           {band.from}–{band.to}
         </p>
-        <h1 className="mt-3 text-5xl">{band.title}</h1>
+        <h1 className="display mt-3">{band.title}</h1>
         <p className="mt-4 max-w-xl leading-8 text-muted">{note.measures}</p>
         <h2 className="mt-10 text-3xl">Nereye bakılır</h2>
         <ol className="mt-4 space-y-3">

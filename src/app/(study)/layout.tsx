@@ -8,7 +8,7 @@ export default async function StudyLayout({ children }: { children: React.ReactN
   return (
     <>
       <AppHeader admin={profile.role === "admin"} />
-      <main className="mx-auto w-full max-w-5xl px-5 py-8">{children}</main>
+      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-5">{children}</main>
     </>
   );
 }
