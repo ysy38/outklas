@@ -1,8 +1,8 @@
 export const brand = {
   name: "YDS Lab",
   domain: "ydslab.com",
-  hero: "YDS ve YÖKDİL’de ne çalışacağını tahmin etme.",
-  sub: "e-YDS ve e-YÖKDİL de aynı hesap. Eksik kaldığın bölümü bulur, ertesi güne tek bir iş bırakır.",
+  hero: "YDS’yi daha fazla değil, daha doğru çalış.",
+  sub: "Seviyeni, hedefini ve çözdüğün her soruyu tartar; sıradaki en değerli çalışmayı önüne koyar. YDS, e-YDS, YÖKDİL ve e-YÖKDİL için.",
   prices: {
     lab90: 1490,
     lab180: 2490,

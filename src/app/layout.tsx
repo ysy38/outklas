@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "tr_TR",
     siteName: brand.name,
-    title: "YDS Lab — ne çalışacağını tahmin etme",
+    title: "YDS Lab — daha fazla değil, daha doğru çalış",
     description,
   },
   twitter: { card: "summary_large_image", title: brand.name, description },

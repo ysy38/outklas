@@ -142,6 +142,115 @@ body {
   }
 }
 
+.grad {
+  background: linear-gradient(110deg, var(--ink) 10%, var(--pine) 55%, var(--gold) 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.link-underline {
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
+  transition: background-size 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), color 0.2s ease;
+}
+
+.link-underline:hover {
+  background-size: 100% 1px;
+}
+
+.footer-mark {
+  font-size: clamp(5rem, 24vw, 19rem);
+  margin-bottom: -0.12em;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pine) 55%, var(--ink)) 10%, color-mix(in srgb, var(--pine) 8%, transparent) 92%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.tilt {
+  transform: perspective(1400px) rotateY(-5deg) rotateX(3deg);
+  transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.tilt:hover {
+  transform: perspective(1400px) rotateY(0) rotateX(0) translateY(-6px);
+}
+
+.float {
+  animation: float 7s ease-in-out infinite;
+}
+
+@keyframes float {
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-120%);
+  background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.35) 50%, transparent 70%);
+  transition: transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.shine:hover::after {
+  transform: translateX(120%);
+}
+
+.pulse-dot {
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--pine) 50%, transparent);
+  animation: pulse-dot 2.4s ease-out infinite;
+}
+
+@keyframes pulse-dot {
+  70% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+.route-line {
+  background: linear-gradient(90deg, var(--pine), var(--gold));
+  transform-origin: left;
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .route-line {
+      animation: bar-grow linear both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 45%;
+    }
+  }
+}
+
+.page-enter {
+  animation: rise-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+:root {
+  interpolate-size: allow-keywords;
+}
+
+details.faq::details-content {
+  height: 0;
+  overflow: clip;
+  transition: height 0.45s cubic-bezier(0.2, 0.7, 0.2, 1), content-visibility 0.45s allow-discrete;
+}
+
+details.faq[open]::details-content {
+  height: auto;
+}
+
 .bar-grow {
   transform-origin: left;
   animation: bar-grow 1.05s cubic-bezier(0.2, 0.7, 0.2, 1) both;
@@ -159,11 +268,13 @@ body {
 @keyframes rise-in {
   from {
     opacity: 0;
-    transform: translateY(22px);
+    translate: 0 22px;
+    scale: 0.985;
   }
   to {
     opacity: 1;
-    transform: none;
+    translate: 0 0;
+    scale: 1;
   }
 }
 
@@ -182,11 +293,16 @@ body {
 
   .ribbon-track,
   .bar-grow,
-  .rise-in {
+  .rise-in,
+  .float,
+  .pulse-dot,
+  .page-enter {
     animation: none;
   }
 
-  .lift:hover {
+  .lift:hover,
+  .tilt,
+  .tilt:hover {
     transform: none;
   }
 }

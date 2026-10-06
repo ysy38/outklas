@@ -66,15 +66,17 @@ export default async function PricingPage() {
   ];
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-5 sm:py-16">
+    <section className="landing mx-auto w-full max-w-6xl px-4 py-12 sm:px-5 sm:py-20">
       <p className="text-xs uppercase tracking-[0.18em] text-gold">Fiyat</p>
-      <h1 className="display mt-3 max-w-3xl">Seviyeni ölçmek bedava.</h1>
+      <h1 className="display-xl mt-4 max-w-3xl font-serif">
+        Seviyeni ölçmek <span className="grad">bedava.</span>
+      </h1>
       <p className="mt-4 max-w-2xl text-base leading-8 text-muted sm:text-lg">
         24 soruluk ölçüm ücretsiz. Çıkan sayı resmi puanın değildir; 80 soruluk sınavın kısasıdır. Ölçümden sonra, çalışmaya başlayınca günde {brand.freeDailyQuestions} soru ve{" "}
         {brand.freeSimulators} deneme hakkı var. Ücretli pakette bu sınır kalkar. Kartından her ay para çekilmez; aldığın süre bitince paket de biter.
       </p>
 
-      <div className="mt-10 rounded-[28px] border border-line bg-card p-5 sm:p-6">
+      <div data-rise className="glass mt-10 rounded-[28px] border border-line p-5 sm:p-6">
         <h2 className="text-2xl">Sıradaki sınavlar</h2>
         <p className="mt-2 text-sm leading-6 text-muted">ÖSYM’nin 2026 sınav takviminden. Tarih değişirse osym.gov.tr geçerlidir.</p>
         <ul className="mt-5 divide-y divide-line">
@@ -110,7 +112,7 @@ export default async function PricingPage() {
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <article className="rounded-3xl border border-line bg-card p-6">
+        <article data-rise className="lift glass rounded-3xl border border-line p-6">
           <h2 className="text-2xl">Ücretsiz</h2>
           <p className="mt-6 font-serif text-4xl">0 TL</p>
           <ul className="mt-6 space-y-2 text-sm leading-6 text-muted">
@@ -122,7 +124,12 @@ export default async function PricingPage() {
         {offers.map((offer) => (
           <article
             key={offer.plan}
-            className={offer.featured ? "rounded-3xl bg-pine p-6 text-cream shadow-[0_24px_60px_-36px_rgba(20,63,54,0.8)]" : "rounded-3xl border border-line bg-card p-6"}
+            data-rise
+            className={
+              offer.featured
+                ? "lift shine rounded-3xl bg-pine p-6 text-cream shadow-[0_24px_60px_-36px_rgba(20,63,54,0.8)]"
+                : "lift glass rounded-3xl border border-line p-6"
+            }
           >
             <h2 className={`text-2xl ${offer.featured ? "text-cream" : ""}`}>{offer.title}</h2>
             <p className={`mt-6 font-serif text-4xl ${offer.featured ? "text-cream" : ""}`}>

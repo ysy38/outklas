@@ -27,14 +27,14 @@ export default async function SimulatorPage() {
   const ydt = profile?.exam === "ydt";
   const blocked = !access.pro && done.length >= brand.freeSimulators;
   return (
-    <section className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 py-10 sm:px-5 sm:py-16 lg:grid-cols-[1fr_0.9fr]">
-      <div>
+    <section className="landing mx-auto grid w-full max-w-6xl items-center gap-12 px-4 py-12 sm:px-5 sm:py-20 lg:grid-cols-[1fr_0.9fr]">
+      <div className="rise-in">
         <p className="text-xs uppercase tracking-[0.18em] text-gold">Deneme</p>
         <h1 className="display mt-3">{ydt ? "120 dakika, 80 soru, net." : "180 dakika, 80 soru, ekranda."}</h1>
         <p className="mt-4 max-w-xl leading-8 text-muted">
           {ydt
             ? "YDT’de süre 120 dakikadır ve dört yanlış bir net götürür. Tam kitapçık sırası hazır olunca deneme burada açılır. Teşhis ve günün işi şimdiden duruyor."
-            : "Sıra kitapçıktaki on bölümdedir. Süre işler, soruyu işaretlersin, şıkkı elersin. Bitince puan, doğru sayısının 1,25 katıdır. Bu sayfa ÖSYM ekranının kopyası değildir."}
+            : "Sorular kitapçıktaki on bölümün sırasıyla gelir. Süre işler; soruyu işaretler, şık elersin. Bitince puanın doğru sayısının 1,25 katı olarak çıkar. Bu ekran ÖSYM’nin kopyası değildir."}
         </p>
         <dl className="mt-8 grid max-w-md grid-cols-3 gap-3 text-sm">
           {[
@@ -42,7 +42,7 @@ export default async function SimulatorPage() {
             [ydt ? "120" : "180", "dakika"],
             [ydt ? "−1/4" : "× 1,25", ydt ? "net" : "puan"],
           ].map(([value, label]) => (
-            <div key={label} className="rounded-2xl border border-line bg-card px-3 py-4">
+            <div key={label} className="lift glass rounded-2xl border border-line px-3 py-4">
               <dt className="font-serif text-2xl">{value}</dt>
               <dd className="mt-1 text-muted">{label}</dd>
             </div>
@@ -54,7 +54,7 @@ export default async function SimulatorPage() {
           </p>
         ) : blocked ? (
           <p className="mt-8">
-            Ücretsiz deneme kullanıldı. <Link href="/odeme" className="text-pine">Pro ile devam et.</Link>
+            Ücretsiz denemeni kullandın. <Link href="/odeme" className="text-pine">Ücretli pakete geç.</Link>
           </p>
         ) : (
           <form action={startSimulatorAction} className="mt-8">
@@ -64,7 +64,7 @@ export default async function SimulatorPage() {
           </form>
         )}
       </div>
-      <aside className="rounded-[28px] border border-line bg-card p-5 shadow-[0_30px_80px_-48px_rgba(20,26,23,0.55)]" aria-hidden>
+      <aside className="rise-in rise-in-late tilt glass rounded-[32px] border border-line p-5" aria-hidden>
         <div className="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-gold">
           <span>Örnek ızgara</span>
           <span>{ydt ? "120:00" : "180:00"}</span>
