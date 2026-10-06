@@ -201,22 +201,33 @@ async function prepare(db: AppDb) {
   );
 }
 
-function postgresUrl() {
-  return process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING || "";
-}
+const urlSources = ["DATABASE_URL", "POSTGRES_URL", "POSTGRES_PRISMA_URL", "POSTGRES_URL_NON_POOLING"] as const;
 
-export function databaseInfo() {
-  const url = postgresUrl();
-  if (!url) return { driver: "pglite" as const, host: null };
+/** `<ref>.supabase.co` is the HTTP API, not Postgres; connecting to it hangs until the timeout. */
+function usablePostgresUrl(value: string | undefined) {
+  if (!value) return false;
   try {
-    return { driver: "postgres" as const, host: new URL(url).hostname };
+    const url = new URL(value);
+    return /^postgres(ql)?:$/.test(url.protocol) && !/^[a-z0-9]+\.supabase\.co$/i.test(url.hostname);
   } catch {
-    return { driver: "postgres" as const, host: "invalid-url" };
+    return false;
   }
 }
 
+function postgresSource() {
+  const source = urlSources.find((name) => usablePostgresUrl(process.env[name]));
+  return source ? { source, url: process.env[source] as string } : null;
+}
+
+export function databaseInfo() {
+  const found = postgresSource();
+  const skipped = urlSources.filter((name) => process.env[name] && !usablePostgresUrl(process.env[name]));
+  if (!found) return { driver: "pglite" as const, source: null, host: null, skipped };
+  return { driver: "postgres" as const, source: found.source, host: new URL(found.url).hostname, skipped };
+}
+
 async function open(): Promise<AppDb> {
-  const url = postgresUrl();
+  const url = postgresSource()?.url;
   if (url) {
     const postgres = (await import("postgres")).default;
     const { drizzle } = await import("drizzle-orm/postgres-js");
@@ -227,7 +238,9 @@ async function open(): Promise<AppDb> {
     return db;
   }
   if (process.env.VERCEL) {
-    throw new Error("No Postgres URL on Vercel. Set DATABASE_URL or connect the Supabase integration (POSTGRES_URL).");
+    throw new Error(
+      "No usable Postgres URL on Vercel. Set DATABASE_URL to the Supabase pooler URL (postgresql://…pooler.supabase.com:6543/postgres) or connect the Supabase integration (POSTGRES_URL).",
+    );
   }
   const dir = path.join(process.cwd(), ".data/pglite");
   try {
