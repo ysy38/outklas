@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
@@ -170,14 +170,49 @@ async function openPglite(dataDir?: string): Promise<AppDb> {
   if (dataDir) mkdirSync(dataDir, { recursive: true });
   const client = dataDir ? new PGlite(dataDir) : new PGlite();
   const db = drizzle(client) as unknown as AppDb;
+  await prepare(db);
+  return db;
+}
+
+const schemaVersion = createHash("sha256")
+  .update(initSql)
+  .update(`${examDraft.length}:${packItems.length}:${packStimuli.length}`)
+  .digest("hex")
+  .slice(0, 16);
+
+async function storedVersion(db: AppDb): Promise<string | null> {
+  try {
+    const result = (await db.execute(sql`select value from app_meta where key = 'schema'`)) as unknown;
+    const rows = Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? []);
+    return (rows[0] as { value?: string } | undefined)?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Full migrate, seed and pack sync only when the schema or content version changes. */
+async function prepare(db: AppDb) {
+  if ((await storedVersion(db)) === schemaVersion) return;
   await migrate(db);
   await seed(db);
   await syncPack(db);
-  return db;
+  await db.execute(
+    sql`insert into app_meta (key, value) values ('schema', ${schemaVersion}) on conflict (key) do update set value = excluded.value`,
+  );
 }
 
 function postgresUrl() {
   return process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING || "";
+}
+
+export function databaseInfo() {
+  const url = postgresUrl();
+  if (!url) return { driver: "pglite" as const, host: null };
+  try {
+    return { driver: "postgres" as const, host: new URL(url).hostname };
+  } catch {
+    return { driver: "postgres" as const, host: "invalid-url" };
+  }
 }
 
 async function open(): Promise<AppDb> {
@@ -186,14 +221,15 @@ async function open(): Promise<AppDb> {
     const postgres = (await import("postgres")).default;
     const { drizzle } = await import("drizzle-orm/postgres-js");
     const pooled = /pgbouncer=true|:6543\b/.test(url);
-    const client = postgres(url, { max: 1, prepare: !pooled });
+    const client = postgres(url, { max: 4, prepare: !pooled, connect_timeout: 10, idle_timeout: 20 });
     const db = drizzle(client) as unknown as AppDb;
-    await migrate(db);
-    await seed(db);
-    await syncPack(db);
+    await prepare(db);
     return db;
   }
-  const dir = process.env.VERCEL ? "/tmp/tomo-pglite" : path.join(process.cwd(), ".data/pglite");
+  if (process.env.VERCEL) {
+    throw new Error("No Postgres URL on Vercel. Set DATABASE_URL or connect the Supabase integration (POSTGRES_URL).");
+  }
+  const dir = path.join(process.cwd(), ".data/pglite");
   try {
     return await openPglite(dir);
   } catch {
@@ -201,18 +237,20 @@ async function open(): Promise<AppDb> {
   }
 }
 
+/** One handle per process: dev compiles each route separately, and two PGlite instances on one directory do not see each other's writes. */
+const shared = globalThis as typeof globalThis & { __tomoDb?: Promise<AppDb> };
+
 export function getDb(): Promise<AppDb> {
   if (database) return Promise.resolve(database);
-  ready ??= open()
-    .then((db) => {
-      database = db;
-      return db;
-    })
-    .catch((error: unknown) => {
-      ready = null;
-      throw error;
-    });
-  return ready;
+  ready ??= shared.__tomoDb ??= open().catch((error: unknown) => {
+    shared.__tomoDb = undefined;
+    ready = null;
+    throw error;
+  });
+  return ready.then((db) => {
+    database = db;
+    return db;
+  });
 }
 
 const poolCache = new Map<"study" | "mock", { at: number; rows: PoolItem[] }>();
@@ -225,18 +263,20 @@ export async function publishedPool(scope: "study" | "mock" = "study"): Promise<
   const hit = poolCache.get(scope);
   if (hit && Date.now() - hit.at < 5 * 60 * 1000) return hit.rows;
   const db = await getDb();
-  const rows = await db
-    .select({
-      id: items.id,
-      slot: items.slot,
-      section: items.section,
-      stimulusId: items.stimulusId,
-      difficulty: items.difficulty,
-    })
-    .from(items)
-    .where(inArray(items.status, scope === "mock" ? ["published", "booklet"] : ["published"]))
-    .orderBy(asc(items.slot));
-  const links = await db.select().from(itemSkills);
+  const [rows, links] = await Promise.all([
+    db
+      .select({
+        id: items.id,
+        slot: items.slot,
+        section: items.section,
+        stimulusId: items.stimulusId,
+        difficulty: items.difficulty,
+      })
+      .from(items)
+      .where(inArray(items.status, scope === "mock" ? ["published", "booklet"] : ["published"]))
+      .orderBy(asc(items.slot)),
+    db.select().from(itemSkills),
+  ]);
   const byItem = new Map<string, string[]>();
   for (const link of links) {
     const list = byItem.get(link.itemId) ?? [];

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { after } from "next/server";
 import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import { brand } from "@/brand";
 import { asExam, blueprintFor, type ExamCode, type SectionId } from "@/modules/exam/blueprint";
@@ -39,9 +40,20 @@ function startOfToday(): Date {
   return new Date(`${key}T00:00:00+03:00`);
 }
 
+/** Runs work after the response is sent when inside a request; inline otherwise (tests, scripts). */
+async function later(work: () => Promise<unknown>) {
+  try {
+    after(work);
+  } catch {
+    await work();
+  }
+}
+
 export async function recordEvent(name: string, profileId: string | null, payload: Record<string, unknown> = {}) {
-  const db = await getDb();
-  await db.insert(events).values({ id: randomUUID(), profileId, name, payload });
+  await later(async () => {
+    const db = await getDb();
+    await db.insert(events).values({ id: randomUUID(), profileId, name, payload });
+  });
 }
 
 export async function entitlementFor(profileId: string | null) {
@@ -94,11 +106,13 @@ export async function createSession(input: {
   profileId: string | null;
   itemIds?: string[];
 }): Promise<{ id?: string; error?: string; paywall?: boolean }> {
-  const guestId = await getGuestId();
-  const access = await entitlementFor(input.profileId);
-  const exam = await examFor(input.profileId);
+  const [guestId, access, exam, pool] = await Promise.all([
+    getGuestId(),
+    entitlementFor(input.profileId),
+    examFor(input.profileId),
+    publishedPool(input.mode === "simulator" ? "mock" : "study"),
+  ]);
   const blueprint = blueprintFor(exam);
-  const pool = await publishedPool(input.mode === "simulator" ? "mock" : "study");
   let picked: PoolItem[] = [];
   if (input.mode === "diagnostic") {
     picked = selectDiagnostic(pool, blueprint);
@@ -170,21 +184,31 @@ async function seenIds(profileId: string): Promise<string[]> {
   return rows.map((row) => row.itemId);
 }
 
-export async function loadPlayer(sessionId: string, profileId: string | null, guestId: string) {
+async function ownedSession(sessionId: string, profileId: string | null, guestId: string) {
   const db = await getDb();
-  const sessionRows = await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1);
-  const session = sessionRows[0];
+  const session = (await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1))[0];
   if (!session) return null;
   if (session.profileId && session.profileId !== profileId) return null;
   if (!session.profileId && session.guestId !== guestId) return null;
-  const links = await db.select().from(sessionItems).where(eq(sessionItems.sessionId, sessionId)).orderBy(asc(sessionItems.position));
+  return session;
+}
+
+export async function loadPlayer(sessionId: string, profileId: string | null, guestId: string) {
+  const db = await getDb();
+  const [session, links, answerRows] = await Promise.all([
+    ownedSession(sessionId, profileId, guestId),
+    db.select().from(sessionItems).where(eq(sessionItems.sessionId, sessionId)).orderBy(asc(sessionItems.position)),
+    db.select().from(answers).where(eq(answers.sessionId, sessionId)),
+  ]);
+  if (!session) return null;
   const ids = links.map((link) => link.itemId);
   if (ids.length === 0) return { session, items: [] };
-  const itemRows = await db.select().from(items).where(inArray(items.id, ids));
-  const choiceRows = await db.select().from(choices).where(inArray(choices.itemId, ids)).orderBy(asc(choices.position));
-  const stimulusIds = itemRows.map((item) => item.stimulusId).filter((id): id is string => Boolean(id));
+  const [itemRows, choiceRows] = await Promise.all([
+    db.select().from(items).where(inArray(items.id, ids)),
+    db.select().from(choices).where(inArray(choices.itemId, ids)).orderBy(asc(choices.position)),
+  ]);
+  const stimulusIds = [...new Set(itemRows.map((item) => item.stimulusId).filter((id): id is string => Boolean(id)))];
   const stimulusRows = stimulusIds.length ? await db.select().from(stimuliTable).where(inArray(stimuliTable.id, stimulusIds)) : [];
-  const answerRows = await db.select().from(answers).where(eq(answers.sessionId, sessionId));
   const byId = new Map(itemRows.map((item) => [item.id, item]));
   const stimuli = new Map(stimulusRows.map((row) => [row.id, row.body]));
   const playerItems = links.map((link) => {
@@ -228,22 +252,29 @@ export async function saveAnswer(input: {
   profileId: string | null;
   guestId: string;
 }) {
-  const loaded = await loadPlayer(input.sessionId, input.profileId, input.guestId);
-  if (!loaded || loaded.session.status !== "active") return { error: "Oturum kapalı." };
-  if (loaded.session.mode === "simulator" && loaded.session.endsAt && loaded.session.endsAt.getTime() < Date.now()) {
+  const session = await ownedSession(input.sessionId, input.profileId, input.guestId);
+  if (!session || session.status !== "active") return { error: "Oturum kapalı." };
+  if (session.mode === "simulator" && session.endsAt && session.endsAt.getTime() < Date.now()) {
     await submitSession(input.sessionId, input.profileId, input.guestId);
     return { error: "Süre doldu.", submitted: true };
   }
   const db = await getDb();
-  const choiceRows = await db.select().from(choices).where(eq(choices.id, input.choiceId)).limit(1);
+  const [choiceRows, existing, membership] = await Promise.all([
+    db.select().from(choices).where(eq(choices.id, input.choiceId)).limit(1),
+    db
+      .select()
+      .from(answers)
+      .where(and(eq(answers.sessionId, input.sessionId), eq(answers.itemId, input.itemId)))
+      .limit(1),
+    db
+      .select({ itemId: sessionItems.itemId })
+      .from(sessionItems)
+      .where(and(eq(sessionItems.sessionId, input.sessionId), eq(sessionItems.itemId, input.itemId)))
+      .limit(1),
+  ]);
   const choice = choiceRows[0];
-  if (!choice || choice.itemId !== input.itemId) return { error: "Şık bulunamadı." };
-  const existing = await db
-    .select()
-    .from(answers)
-    .where(and(eq(answers.sessionId, input.sessionId), eq(answers.itemId, input.itemId)))
-    .limit(1);
-  if (loaded.session.mode === "practice" && existing[0]) return { error: "Bu soru zaten cevaplandı." };
+  if (!choice || choice.itemId !== input.itemId || !membership[0]) return { error: "Şık bulunamadı." };
+  if (session.mode === "practice" && existing[0]) return { error: "Bu soru zaten cevaplandı." };
   const correct = choice.correct;
   if (existing[0]) {
     await db
@@ -263,14 +294,20 @@ export async function saveAnswer(input: {
     });
   }
   await recordEvent("question_answered", input.profileId, { sessionId: input.sessionId, itemId: input.itemId, correct });
-  if (loaded.session.mode === "practice" && input.profileId) {
-    await applyMastery(input.profileId, input.itemId, correct);
-    if (!correct) await touchReview(input.profileId, "item", input.itemId, false);
+  if (session.mode !== "practice") return { saved: true };
+  const profileId = input.profileId;
+  if (profileId) {
+    await later(async () => {
+      await applyMastery(profileId, input.itemId, correct);
+      if (!correct) await touchReview(profileId, "item", input.itemId, false);
+    });
   }
-  const item = loaded.items.find((row) => row.id === input.itemId);
-  if (loaded.session.mode !== "practice") return { saved: true };
-  const correctChoice = (await db.select().from(choices).where(eq(choices.itemId, input.itemId))).find((row) => row.correct);
-  const itemRow = (await db.select().from(items).where(eq(items.id, input.itemId)).limit(1))[0];
+  const [choiceList, itemRows] = await Promise.all([
+    db.select().from(choices).where(eq(choices.itemId, input.itemId)),
+    db.select().from(items).where(eq(items.id, input.itemId)).limit(1),
+  ]);
+  const correctChoice = choiceList.find((row) => row.correct);
+  const itemRow = itemRows[0];
   return {
     saved: true,
     reveal: {
@@ -279,7 +316,7 @@ export async function saveAnswer(input: {
       correctChoiceId: correctChoice?.id ?? "",
       note: correct ? null : choice.distractorType,
     },
-    section: item?.section,
+    section: itemRow?.section,
   };
 }
 
@@ -349,8 +386,8 @@ export async function touchReview(profileId: string, targetType: "item" | "vocab
 }
 
 export async function setFlag(sessionId: string, itemId: string, flagged: boolean, profileId: string | null, guestId: string) {
-  const loaded = await loadPlayer(sessionId, profileId, guestId);
-  if (!loaded) return;
+  const session = await ownedSession(sessionId, profileId, guestId);
+  if (!session) return;
   const db = await getDb();
   await db
     .update(sessionItems)
@@ -362,26 +399,28 @@ export async function submitSession(sessionId: string, profileId: string | null,
   const loaded = await loadPlayer(sessionId, profileId, guestId);
   if (!loaded || loaded.session.status === "submitted") return loaded?.session ?? null;
   const db = await getDb();
+  const answerRows = await db.select().from(answers).where(eq(answers.sessionId, sessionId));
+  const answerByItem = new Map(answerRows.map((row) => [row.itemId, row]));
+  const blanks = loaded.items.filter((item) => !answerByItem.has(item.id));
+  if (blanks.length > 0) {
+    await db
+      .insert(answers)
+      .values(
+        blanks.map((item) => ({
+          id: randomUUID(),
+          sessionId,
+          profileId,
+          itemId: item.id,
+          choiceId: null,
+          correct: null,
+          responseTimeMs: 0,
+        })),
+      )
+      .onConflictDoNothing();
+  }
   const scoreItems: ScoreItem[] = [];
   for (const item of loaded.items) {
-    const answer = (
-      await db
-        .select()
-        .from(answers)
-        .where(and(eq(answers.sessionId, sessionId), eq(answers.itemId, item.id)))
-        .limit(1)
-    )[0];
-    if (!answer) {
-      await db.insert(answers).values({
-        id: randomUUID(),
-        sessionId,
-        profileId,
-        itemId: item.id,
-        choiceId: null,
-        correct: null,
-        responseTimeMs: 0,
-      });
-    }
+    const answer = answerByItem.get(item.id);
     scoreItems.push({
       section: item.section as SectionId,
       slot: item.slot ?? item.position + 1,

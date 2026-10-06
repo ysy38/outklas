@@ -10,8 +10,8 @@ import { loadPlayer } from "@/server/sessions";
 
 export default async function ResultPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const profile = await currentProfile();
-  const loaded = await loadPlayer(id, profile?.id ?? null, (await readGuestId()) ?? "");
+  const [profile, guestId] = await Promise.all([currentProfile(), readGuestId()]);
+  const loaded = await loadPlayer(id, profile?.id ?? null, guestId ?? "");
   if (!loaded || loaded.session.status !== "submitted") notFound();
   const db = await getDb();
   const answerRows = await db.select().from(answers).where(eq(answers.sessionId, id));

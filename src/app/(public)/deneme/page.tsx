@@ -15,15 +15,15 @@ export const metadata: Metadata = {
 };
 
 export default async function SimulatorPage() {
-  const profile = await currentProfile();
-  const guestId = await readGuestId();
-  const access = await entitlementFor(profile?.id ?? null);
-  const db = await getDb();
+  const [profile, guestId, db] = await Promise.all([currentProfile(), readGuestId(), getDb()]);
   const filter = profile ? eq(sessions.profileId, profile.id) : guestId ? eq(sessions.guestId, guestId) : eq(sessions.mode, "__none__");
-  const done = await db
-    .select({ id: sessions.id })
-    .from(sessions)
-    .where(and(filter, eq(sessions.mode, "simulator"), eq(sessions.status, "submitted")));
+  const [access, done] = await Promise.all([
+    entitlementFor(profile?.id ?? null),
+    db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(and(filter, eq(sessions.mode, "simulator"), eq(sessions.status, "submitted"))),
+  ]);
   const ydt = profile?.exam === "ydt";
   const blocked = !access.pro && done.length >= brand.freeSimulators;
   return (

@@ -171,3 +171,13 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS exam text NOT NULL DEFAULT 'yds';
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS streak integer NOT NULL DEFAULT 0;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS last_mission_date text;
 ALTER TABLE sessions ADD COLUMN IF NOT EXISTS exam text NOT NULL DEFAULT 'yds';
+
+CREATE TABLE IF NOT EXISTS app_meta (
+  key text PRIMARY KEY,
+  value text NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS sessions_profile_mode ON sessions (profile_id, mode, status);
+CREATE INDEX IF NOT EXISTS sessions_guest_mode ON sessions (guest_id, mode, status);
+CREATE INDEX IF NOT EXISTS answers_profile_created ON answers (profile_id, created_at);
+CREATE INDEX IF NOT EXISTS choices_item ON choices (item_id, position);
