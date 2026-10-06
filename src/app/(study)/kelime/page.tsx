@@ -16,6 +16,7 @@ export default async function VocabularyPage() {
   return (
     <section>
       <h1 className="text-4xl">Kelime</h1>
+      <p className="mt-2 text-sm text-muted">Her kelimeyi ne kadar iyi bildiğini işaretle. Zorlandığın kelimeler daha sık, bildiklerin daha seyrek karşına çıkar.</p>
       <div className="mt-6 grid gap-4">
         {queue.map((word) => {
           const related = links.filter((link) => link.fromId === word.id);
@@ -27,7 +28,7 @@ export default async function VocabularyPage() {
               {related.length > 0 ? (
                 <p className="mt-2 text-sm text-muted">
                   {related
-                    .map((link) => `${link.kind === "synonym" ? "yakın" : link.kind === "antonym" ? "zıt" : link.kind === "collocation" ? "eşdizim" : link.kind}: ${link.toId}`)
+                    .map((link) => `${link.kind === "synonym" ? "eş anlamlısı" : link.kind === "antonym" ? "zıt anlamlısı" : link.kind === "collocation" ? "birlikte kullanıldığı kelime" : link.kind}: ${link.toId}`)
                     .join(" · ")}
                 </p>
               ) : null}
@@ -35,7 +36,7 @@ export default async function VocabularyPage() {
                 {(["know", "again", "hard"] as const).map((rating) => (
                   <form key={rating} action={reviewVocabAction.bind(null, word.id, rating)}>
                     <button className="rounded-full border border-line px-3 py-1 text-sm">
-                      {rating === "know" ? "Biliyorum" : rating === "again" ? "Tekrar et" : "Zorlandım"}
+                      {rating === "know" ? "Biliyorum" : rating === "again" ? "Bilmiyorum" : "Zorlandım"}
                     </button>
                   </form>
                 ))}

@@ -8,12 +8,12 @@ const sans = Manrope({ subsets: ["latin", "latin-ext"], variable: "--font-manrop
 const serif = Newsreader({ subsets: ["latin", "latin-ext"], variable: "--font-newsreader" });
 
 const description =
-  "YDS, e-YDS, YÖKDİL ve e-YÖKDİL için ücretsiz ölçüm, günlük iş ve 180 dakikalık deneme. Puan doğru sayının 1,25 katıdır; yanlış doğruyu götürmez.";
+  "YDS, e-YDS, YÖKDİL ve e-YÖKDİL için ücretsiz seviye testi, günlük çalışma planı ve gerçek sınav gibi deneme. Her gün neye çalışacağını bilerek puanını yükselt.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(`https://${brand.domain}`),
   title: {
-    default: "YDS Lab — YDS ve YÖKDİL için günlük plan",
+    default: "YDS Lab — YDS ve YÖKDİL için günlük çalışma planı",
     template: "%s · YDS Lab",
   },
   description,

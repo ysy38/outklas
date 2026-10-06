@@ -27,7 +27,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
         </p>
       ))}
       <Link href="/teshis" className="mt-8 inline-block rounded-full bg-pine px-5 py-3 text-cream">
-        Bunun teşhisteki yerini gör
+        Bu konuda nerede olduğunu gör
       </Link>
     </article>
   );

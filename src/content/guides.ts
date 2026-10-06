@@ -9,19 +9,19 @@ export const guides: Guide[] = [
   {
     slug: "yds-baglac-testi",
     title: "YDS bağlaç testi",
-    lead: "Bağlaç, YDS’de ayrı bir oturum değildir. Dil bilgisinin ve cümle tamamlamanın içindedir.",
+    lead: "YDS’de bağlaçlar ayrı bir bölüm olarak sorulmaz; dil bilgisi ve cümle tamamlama sorularının içinde karşına çıkar.",
     paragraphs: [
-      "7–16 dil bilgisi, 27–36 cümle tamamlamadır. Zaman, edat ve bağlaç bu iki bölümün içindedir. Bölüm yine tektir; etiket, yanlışın nedenini ayırmak içindir.",
-      "“However biliyorum” yetmez. Şık, cümlenin yönünü tersine çeviriyorsa bu bir bağlaç hatasıdır, kelime eksiği değil. Teşhis bunu ayırır; ertesi günün listesi de ona göre kurulur.",
+      "Dil bilgisi bölümünde 10, cümle tamamlama bölümünde 10 soru var. Zaman, edat ve bağlaç soruları bu iki bölümün içine dağılmıştır. YDS Lab bunları ayrı ayrı takip eder, böylece yanlışlarının asıl nedenini görürsün.",
+      "“However’ı biliyorum” demek yetmez. Seçtiğin şık cümlenin anlamını tersine çeviriyorsa, sorun kelime bilgisinde değil bağlacı yanlış kullanmandadır. Seviye testi bu farkı ortaya çıkarır ve ertesi günkü çalışman buna göre hazırlanır.",
     ],
   },
   {
     slug: "yds-okudugunu-anlama",
     title: "YDS okuduğunu anlama",
-    lead: "Okuma 43–62 arasındadır: beş metin, her biri dört soru. Puanın çeyreği bu yirmi sorudadır.",
+    lead: "Okuma bölümünde 5 metin ve her metne ait 4 soru var. Toplam 20 soruyla puanın dörtte biri buradan gelir.",
     paragraphs: [
-      "Metinsiz okuma sorusu olmaz. Teşhiste bir metin dört soruyla, bir kısa metin iki soruyla gelir. Tahmin, okumayı üç soruda geçiştirmez.",
-      "Ayrıntı, çıkarım, gönderim, ana fikir, amaç ve “hangisi yoktur” aynı bölümün içindedir. “Okuma zayıf” demek yerine, hangi işin kaçtığı yazılır.",
+      "Okuma soruları her zaman bir metinle gelir. Seviye testinde de böyle: bir uzun metin 4 soruyla, bir kısa metin 2 soruyla gelir. Böylece okuma becerin birkaç soruyla geçiştirilmeden ölçülür.",
+      "Ayrıntı, çıkarım, zamirin neyi gösterdiği, ana fikir, yazarın amacı ve “hangisi söylenemez” soruları aynı bölümdedir. YDS Lab sana “okuman zayıf” demek yerine, bu soru tiplerinden hangisinde puan kaybettiğini gösterir.",
     ],
   },
 ];

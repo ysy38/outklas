@@ -20,9 +20,10 @@ export default async function MistakesPage() {
   const choiceRows = itemIds.length ? await db.select().from(choices) : [];
   return (
     <section>
-      <h1 className="text-4xl">Hatalar</h1>
+      <h1 className="text-4xl">Yanlışların</h1>
+      <p className="mt-2 text-sm text-muted">Son yanlış yaptığın 20 soru. Her birinin doğru cevabını ve nedenini oku; bu sorular tekrar listene de girer.</p>
       <div className="mt-6 space-y-4">
-        {wrong.length === 0 ? <p className="text-muted">Henüz kayıtlı bir yanlış yok.</p> : null}
+        {wrong.length === 0 ? <p className="text-muted">Henüz yanlışın yok. Soru çözdükçe yanlış yaptıkların burada toplanır.</p> : null}
         {wrong.map((answer) => {
           const item = itemRows.find((row) => row.id === answer.itemId);
           const picked = choiceRows.find((row) => row.id === answer.choiceId);
@@ -30,8 +31,8 @@ export default async function MistakesPage() {
             <article key={answer.id} className="rounded-2xl border border-line bg-card p-4">
               <p className="text-sm text-muted">{ydsBlueprint.bands.find((band) => band.section === item?.section)?.title ?? item?.section}</p>
               <h2 className="mt-1 text-xl">{item?.stem}</h2>
-              <p className="mt-2 text-sm">Seçilen: {picked?.body}</p>
-              {picked?.distractorType ? <p className="text-sm text-clay">Neden tutmadı: {distractorText(picked.distractorType)}</p> : null}
+              <p className="mt-2 text-sm">Senin cevabın: {picked?.body}</p>
+              {picked?.distractorType ? <p className="text-sm text-clay">Neden yanlış: {distractorText(picked.distractorType)}</p> : null}
               <p className="mt-2 text-sm leading-6">{item?.explanation}</p>
             </article>
           );

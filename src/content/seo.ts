@@ -11,31 +11,31 @@ export const siteFaqs: readonly Faq[] = [
   {
     question: "YDS'ye nasıl çalışmalıyım?",
     answer:
-      "Daha çok soru çözmek tek başına yetmez. Önce hangi bölümde puan kaybettiğini bul, her gün o açığı kapatacak tek bir işe odaklan, kaçırdığın soruları da belli aralıklarla yeniden çöz. YDS Lab bu işe 24 soruluk ücretsiz ölçümle başlar. Aynı yol e-YDS, YÖKDİL ve e-YÖKDİL için de geçerli.",
+      "Daha çok soru çözmek tek başına yetmez. Önce hangi bölümde puan kaybettiğini bul, her gün o açığı kapatacak tek bir işe odaklan, kaçırdığın soruları da belli aralıklarla yeniden çöz. YDS Lab işe 24 soruluk ücretsiz bir seviye testiyle başlar. Aynı yol e-YDS, YÖKDİL ve e-YÖKDİL için de geçerli.",
     place: ["home"],
   },
   {
     question: "YDS'de kaç soru var?",
     answer:
-      "80 soru var, süre 180 dakika. e-YDS, YÖKDİL ve e-YÖKDİL’de de durum aynı. Her doğru 1,25 puan getirir; yanlışlar doğruları götürmez.",
+      "80 soru var ve süre 180 dakika. e-YDS, YÖKDİL ve e-YÖKDİL’de de aynı. Her doğru 1,25 puan getirir; yanlışlar doğruları götürmez.",
     place: ["home", "score"],
   },
   {
     question: "YDS denemesi çözebilir miyim?",
     answer:
-      "Evet. Deneme gerçek sınav gibi 80 soru ve 180 dakika sürer; sorular kitapçıktaki on bölümün sırasıyla gelir. Süre geri sayar, istediğin soruyu işaretler, emin olmadığın şıkları elersin. Bitince puanını ve en çok puan kaybettiğin bölümü görürsün. Ekran ÖSYM’nin birebir kopyası değildir.",
+      "Evet. Deneme, gerçek sınav gibi 80 soru ve 180 dakikadır; sorular kitapçıktaki sırayla gelir. Süre geri sayar; istediğin soruyu işaretleyebilir, emin olmadığın şıkları eleyebilirsin. Bitince puanını ve en çok puan kaybettiğin bölümü görürsün. Ekran ÖSYM’nin birebir kopyası değildir.",
     place: ["home"],
   },
   {
     question: "e-YDS simülasyonu var mı?",
     answer:
-      "Var. Deneme, e-YDS’deki gibi bilgisayar ekranında çözülür; sınav günü seni şaşırtacak bir şey kalmaz. e-YÖKDİL için de aynı düzen geçerli, yalnızca soru dağılımı YÖKDİL’e göredir. Ekran ÖSYM arayüzünün birebir kopyası değildir.",
+      "Var. Deneme, e-YDS’deki gibi bilgisayarda çözülür; böylece sınav günü ekrana alışmış olursun. e-YÖKDİL için de aynısı geçerli, yalnızca soru dağılımı YÖKDİL’e göre değişir. Ekran ÖSYM arayüzünün birebir kopyası değildir.",
     place: ["home"],
   },
   {
     question: "YDS kelime nasıl çalışılır?",
     answer:
-      "Uzun ezber listeleri yerine, soru çözerken takıldığın kelimelerle çalışırsın. Kartlar bu kelimelerden oluşur. Bildiğin kelime daha seyrek, unuttuğun daha sık karşına çıkar.",
+      "Uzun ezber listeleri yerine, soru çözerken takıldığın kelimeleri çalışırsın. Bu kelimeler kartlara dönüşür. Bildiğin kelimeler daha seyrek, unuttukların daha sık karşına çıkar.",
     place: ["home"],
   },
   {
@@ -47,19 +47,19 @@ export const siteFaqs: readonly Faq[] = [
   {
     question: "YDS çalışma programı nasıl oluşturulur?",
     answer:
-      "Programı hedef puanın, sınav tarihin ve günde ayırabildiğin süre belirler. Her günün listesinde zayıf olduğun bölümden sorular, dünkü yanlışların ve biraz yeni soru bulunur. Zaten iyi olduğun bölüm o gün listeye girmez, vaktin boşa gitmez.",
+      "Programını hedef puanın, sınav tarihin ve günde ayırabildiğin süre belirler. Her gün zayıf olduğun bölümden sorular, önceki yanlışların ve birkaç yeni soru çözersin. Zaten iyi olduğun bölüme o gün vakit harcamazsın.",
     place: ["home"],
   },
   {
     question: "YDS Lab ücretsiz mi?",
     answer:
-      "Başlangıç ücretsiz: 24 soruluk ölçüm, günde 10 soru ve 1 tam deneme için ödeme yapmazsın. Sınırsız kullanmak istersen 90 gün 1.490 TL, 180 gün 2.490 TL. Sınava az kaldıysa 60 günlük sprint 1.990 TL. Aylık abonelik yok, tek seferlik ödersin.",
+      "Başlamak ücretsiz: 24 soruluk seviye testi, her gün 10 soru ve 1 tam deneme için ödeme yapmazsın. Sınırsız kullanmak istersen 90 gün 1.490 TL, 180 gün 2.490 TL. Sınavına 1–2 ay kaldıysa 60 günlük yoğun paket 1.990 TL. Abonelik yoktur, bir kez ödersin.",
     place: ["home"],
   },
   {
     question: "YDS'de yanlış doğruyu götürür mü?",
     answer:
-      "Götürmez. Puanın doğru sayısının 1,25 katıdır. 56 doğru, yanında 4 yanlış da olsa 20 yanlış da olsa 70 puan eder. Boş bırakmanın da yanlış yapmanın da puana etkisi yoktur. YÖKDİL ve e-YÖKDİL’de de kural aynı.",
+      "Götürmez. Puanın, doğru sayının 1,25 katıdır. 56 doğrun varsa, 4 yanlışın da olsa 20 yanlışın da olsa puanın 70’tir. Boş bırakmak da yanlış yapmak da puanını düşürmez. YÖKDİL ve e-YÖKDİL’de de kural aynı.",
     place: ["score"],
   },
   {
@@ -71,7 +71,7 @@ export const siteFaqs: readonly Faq[] = [
   {
     question: "e-YDS ile YDS puanı aynı mıdır?",
     answer:
-      "Evet, aynı. İkisinde de 80 soru, 180 dakika ve doğru başına 1,25 puan var. Tek fark, e-YDS’nin bilgisayarda, YDS’nin kâğıt üzerinde yapılması.",
+      "Evet, aynıdır. İkisinde de 80 soru, 180 dakika ve doğru başına 1,25 puan vardır. Tek fark, e-YDS’nin bilgisayarda, YDS’nin kâğıt üzerinde yapılmasıdır.",
     place: ["score"],
   },
   {
@@ -81,15 +81,15 @@ export const siteFaqs: readonly Faq[] = [
     place: ["home", "score"],
   },
   {
-    question: "24 soruluk ölçüm resmi puan mıdır?",
+    question: "Seviye testinin sonucu resmi puan mı?",
     answer:
-      "Hayır. 24 soru, 80 soruluk sınavın kısa bir örneğidir ve sana tahmini bir puan verir; ÖSYM sonucunun yerini tutmaz. Sorular sınavdaki ağırlığa göre dağıldığı için okuma burada da büyük yer tutar.",
+      "Hayır. 24 soruluk seviye testi, 80 soruluk sınavda alabileceğin puanı tahmin eder; ÖSYM sonucunun yerini tutmaz. Sorular gerçek sınavdaki bölüm ağırlıklarına göre seçildiği için okuma sorusu burada da çoktur.",
     place: ["home", "score"],
   },
   {
-    question: "Soru seçimini bir model mi yapıyor?",
+    question: "Soruları yapay zekâ mı seçiyor?",
     answer:
-      "Hayır. Sıradaki soruyu belirli kurallar seçer: o bölümdeki isabetin, daha önce görmediğin sorular ve bölümün sınavdaki ağırlığı. Çözüm açıklamalarını editörlerimiz yazar.",
+      "Hayır. Sıradaki soru belli kurallarla seçilir: o bölümdeki doğru oranın, daha önce görmediğin sorular ve bölümün sınavdaki ağırlığı. Çözüm açıklamalarını editörlerimiz yazar.",
     place: ["home"],
   },
 ];
@@ -101,8 +101,8 @@ export function faqsFor(place: FaqPlace) {
 export const scoreMarks = [
   { correct: 40, score: 50, note: "E düzeyi eşiği" },
   { correct: 48, score: 60, note: "D" },
-  { correct: 52, score: 65, note: "Birçok lisansüstü barajı" },
-  { correct: 56, score: 70, note: "Sık görülen hedef" },
+  { correct: 52, score: 65, note: "Birçok lisansüstü programın barajı" },
+  { correct: 56, score: 70, note: "En sık hedeflenen puan" },
   { correct: 60, score: 75, note: "C" },
   { correct: 64, score: 80, note: "B" },
   { correct: 72, score: 90, note: "A eşiği" },

@@ -9,8 +9,8 @@ import { startSimulatorAction } from "@/server/actions";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "e-YDS benzeri deneme",
-  description: "80 soru, 180 dakika, 1’den 80’e ızgara. YDS ve e-YDS’de yanlış doğruyu götürmez. Ekran ÖSYM kopyası değildir.",
+  title: "Ücretsiz YDS ve e-YDS denemesi",
+  description: "Gerçek sınav gibi 80 soru ve 180 dakika. Bitince puanını ve en çok puan kaybettiğin bölümü görürsün. Ekran ÖSYM’nin kopyası değildir.",
   alternates: { canonical: "/deneme" },
 };
 
@@ -30,11 +30,11 @@ export default async function SimulatorPage() {
     <section className="landing mx-auto grid w-full max-w-6xl items-center gap-12 px-4 py-12 sm:px-5 sm:py-20 lg:grid-cols-[1fr_0.9fr]">
       <div className="rise-in">
         <p className="text-xs uppercase tracking-[0.18em] text-gold">Deneme</p>
-        <h1 className="display mt-3">{ydt ? "120 dakika, 80 soru, net." : "180 dakika, 80 soru, ekranda."}</h1>
+        <h1 className="display mt-3">{ydt ? "80 soru, 120 dakika. Gerçek YDT gibi." : "80 soru, 180 dakika. Gerçek sınav gibi."}</h1>
         <p className="mt-4 max-w-xl leading-8 text-muted">
           {ydt
-            ? "YDT’de süre 120 dakikadır ve dört yanlış bir net götürür. Tam kitapçık sırası hazır olunca deneme burada açılır. Teşhis ve günün işi şimdiden duruyor."
-            : "Sorular kitapçıktaki on bölümün sırasıyla gelir. Süre işler; soruyu işaretler, şık elersin. Bitince puanın doğru sayısının 1,25 katı olarak çıkar. Bu ekran ÖSYM’nin kopyası değildir."}
+            ? "YDT’de süre 120 dakikadır ve dört yanlış bir doğruyu götürür. YDT denemesi çok yakında burada olacak. O zamana kadar seviye testini çözebilir, günlük çalışmana devam edebilirsin."
+            : "Sorular, sınav kitapçığındaki sırayla gelir. Süre geri sayar; dönmek istediğin soruyu işaretleyebilir, emin olmadığın şıkları eleyebilirsin. Bitince puanını görürsün: her doğru 1,25 puan, yanlışlar doğruları götürmez. Bu ekran ÖSYM’nin birebir kopyası değildir."}
         </p>
         <dl className="mt-8 grid max-w-md grid-cols-3 gap-3 text-sm">
           {[
@@ -50,23 +50,23 @@ export default async function SimulatorPage() {
         </dl>
         {ydt ? (
           <p className="mt-8">
-            <Link href="/teshis" className="text-pine">Teşhisten başla.</Link>
+            <Link href="/teshis" className="text-pine">Seviye testine başla.</Link>
           </p>
         ) : blocked ? (
           <p className="mt-8">
-            Ücretsiz denemeni kullandın. <Link href="/odeme" className="text-pine">Ücretli pakete geç.</Link>
+            Ücretsiz deneme hakkını kullandın. Yeni deneme çözmek için <Link href="/odeme" className="text-pine">bir paket seç.</Link>
           </p>
         ) : (
           <form action={startSimulatorAction} className="mt-8">
-            <PendingButton pendingLabel="Deneme açılıyor…" className="w-full rounded-full bg-pine px-5 py-3 text-cream sm:w-auto">
-              Denemeyi başlat
+            <PendingButton pendingLabel="Deneme hazırlanıyor…" className="w-full rounded-full bg-pine px-5 py-3 text-cream sm:w-auto">
+              Denemeye başla
             </PendingButton>
           </form>
         )}
       </div>
       <aside className="rise-in rise-in-late tilt glass rounded-[32px] border border-line p-5" aria-hidden>
         <div className="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-gold">
-          <span>Örnek ızgara</span>
+          <span>Soru haritası</span>
           <span>{ydt ? "120:00" : "180:00"}</span>
         </div>
         <div className="mt-4 grid grid-cols-8 gap-1 sm:grid-cols-10">
@@ -79,7 +79,7 @@ export default async function SimulatorPage() {
             </span>
           ))}
         </div>
-        <p className="mt-4 text-sm leading-6 text-muted">İşaret, eleme ve kalan süre aynı ekranda durur. Bitince en çok kaçırdığın bölüm yazılır.</p>
+        <p className="mt-4 text-sm leading-6 text-muted">İşaretlediğin sorular, elediğin şıklar ve kalan süre hep gözünün önünde. Bitince en çok puan kaybettiğin bölümü görürsün.</p>
       </aside>
     </section>
   );

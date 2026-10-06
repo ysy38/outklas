@@ -27,11 +27,11 @@ export default async function ProfilePage() {
           <input name="examDate" type="date" defaultValue={profile.examDate ?? ""} className="mt-1 w-full rounded-xl border border-line bg-card px-3 py-2" />
         </label>
         <label className="block text-sm">
-          Günlük dakika
+          Günde kaç dakika çalışacaksın?
           <input name="dailyMinutes" type="number" defaultValue={profile.dailyMinutes ?? 30} className="mt-1 w-full rounded-xl border border-line bg-card px-3 py-2" />
         </label>
         <label className="block text-sm">
-          Son puan
+          Son sınav puanın (varsa)
           <input name="priorScore" type="number" defaultValue={profile.priorScore ?? ""} className="mt-1 w-full rounded-xl border border-line bg-card px-3 py-2" />
         </label>
         <PendingButton pendingLabel="Kaydediliyor…" className="w-full rounded-full bg-pine px-4 py-3 text-cream sm:w-auto">
@@ -39,8 +39,8 @@ export default async function ProfilePage() {
         </PendingButton>
       </form>
       <form action={signOutAction} className="mt-6">
-        <PendingButton pendingLabel="Çıkılıyor…" className="text-sm text-muted">
-          Çıkış
+        <PendingButton pendingLabel="Çıkış yapılıyor…" className="text-sm text-muted">
+          Çıkış yap
         </PendingButton>
       </form>
     </section>

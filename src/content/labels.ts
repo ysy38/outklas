@@ -1,12 +1,12 @@
 const distractors: Record<string, string> = {
-  CONTEXT_MISMATCH: "bağlam tutmuyor",
-  COLLOCATION_ERROR: "eşdizim tutmuyor",
-  VOCAB_SIMILAR_MEANING: "anlamı yakın, işi değil",
-  LOGICAL_ERROR: "mantık ters",
-  CONNECTOR_ERROR: "bağlaç yanlış",
-  GRAMMAR_TRAP: "yapı tuzağı",
-  REFERENCE_ERROR: "gönderim şaşıyor",
-  TRANSLATION_SHIFT: "çeviri kayıyor",
+  CONTEXT_MISMATCH: "cümlenin bağlamına uymuyor",
+  COLLOCATION_ERROR: "kelime bu kalıpla kullanılmıyor",
+  VOCAB_SIMILAR_MEANING: "anlamı yakın ama cümleye oturmuyor",
+  LOGICAL_ERROR: "anlam mantıklı değil",
+  CONNECTOR_ERROR: "bağlaç yanlış ilişki kuruyor",
+  GRAMMAR_TRAP: "dil bilgisi tuzağı",
+  REFERENCE_ERROR: "zamir yanlış şeyi gösteriyor",
+  TRANSLATION_SHIFT: "çeviride anlam değişiyor",
 };
 
 export function distractorText(code: string | null | undefined) {
@@ -34,28 +34,28 @@ const skillNames: Record<string, string> = {
   passive: "Edilgen",
   prepositions: "Edat",
   cloze: "Paragrafta boşluk",
-  "cloze-context": "Paragrafın akışı",
+  "cloze-context": "Paragraftaki bağlam",
   sentence: "Cümle tamamlama",
-  "sentence-link": "Cümlenin bağı",
+  "sentence-link": "Cümle içi bağlantı",
   translation: "Çeviri",
   "translation-en-tr": "İngilizceden Türkçeye",
   "translation-tr-en": "Türkçeden İngilizceye",
   reading: "Okuma",
   detail: "Ayrıntı",
   inference: "Çıkarım",
-  reference: "Gönderim",
+  reference: "Zamirin gösterdiği",
   "main-idea": "Ana fikir",
   purpose: "Yazarın amacı",
   dialogue: "Diyalog",
   "dialogue-intent": "Konuşanın niyeti",
   situation: "Duruma uygun ifade",
-  "situation-line": "Durumda söylenecek söz",
+  "situation-line": "Duruma uygun söz",
   restatement: "Anlamca yakın cümle",
-  "restatement-shift": "Anlam kayması",
+  "restatement-shift": "Anlam farkını görme",
   paragraph: "Paragraf tamamlama",
   "paragraph-flow": "Paragrafın akışı",
-  irrelevant: "Anlamı bozan cümle",
-  "irrelevant-break": "Akışın koptuğu yer",
+  irrelevant: "Anlam bütünlüğünü bozan cümle",
+  "irrelevant-break": "Akışı bozan cümleyi bulma",
 };
 
 export function skillName(id: string, fallback?: string) {
@@ -63,12 +63,12 @@ export function skillName(id: string, fallback?: string) {
 }
 
 export const modeLabel: Record<string, string> = {
-  diagnostic: "Teşhis",
-  practice: "Pratik",
+  diagnostic: "Seviye testi",
+  practice: "Günlük çalışma",
   simulator: "Deneme",
 };
 
 export const sessionStatusLabel: Record<string, string> = {
-  active: "açık",
-  submitted: "bitti",
+  active: "devam ediyor",
+  submitted: "tamamlandı",
 };

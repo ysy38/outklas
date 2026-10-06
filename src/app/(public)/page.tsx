@@ -7,50 +7,50 @@ import { startDiagnosticAction } from "@/server/actions";
 
 export const dynamic = "force-static";
 
-const ribbon = ["YDS", "e-YDS", "YÖKDİL", "e-YÖKDİL", "80 soru", "180 dakika", "her doğru 1,25 puan", "hedef puan", "günün görevi"];
+const ribbon = ["YDS", "e-YDS", "YÖKDİL", "e-YÖKDİL", "80 soru", "180 dakika", "her doğru 1,25 puan", "hedef puan", "günlük plan"];
 
 const problems = [
   {
-    tag: "İçerik yığını",
-    title: "Ne çalışacağını seçmek bile başlı başına iş.",
-    body: "Kaynak çok, zaman az. Herkese aynı sırayı vermek en çok zamanı yer.",
+    tag: "Kaynak çok",
+    title: "Neye çalışacağına karar vermek bile yorucu.",
+    body: "Kitaplar, videolar, soru bankaları… Herkese aynı sırayla çalıştıran bir program en çok senin zamanını harcar.",
   },
   {
-    tag: "Körlemesine tekrar",
-    title: "Yanlış yapmak, öğrenmek demek değil.",
-    body: "Yanlışın nedenini görmeden yüz soru daha çözmek, çoğu zaman aynı hatayı yüz kez yapmaktır.",
+    tag: "Ezbere soru çözmek",
+    title: "Çok soru çözmek tek başına yetmez.",
+    body: "Neden yanlış yaptığını anlamadan yüz soru daha çözersen, büyük ihtimalle aynı hatayı tekrar edersin.",
   },
   {
     tag: "Yol haritası yok",
-    title: "Hedef puan belli, yol belli değil.",
-    body: "64’ten 72’ye çıkmak isteyen, hangi konunun kaç puan getireceğini bilmiyor.",
+    title: "Hedefin belli ama oraya nasıl gideceğin belli değil.",
+    body: "64’ten 72’ye çıkmak istiyorsun ama hangi konunun sana kaç puan kazandıracağını bilmiyorsun.",
   },
 ];
 
 const compare = [
-  ["İçerik", "Video, kitap, soru", "Doğru anda doğru parça"],
-  ["Plan", "Herkese aynı program", "Seviyene göre kurulan rota"],
-  ["Yanlışlar", "Çözümü okuyup geçmek", "Hatanın nedeni, ardından sıradaki adım"],
-  ["Deneme", "Puan ve doğru sayısı", "Puanın hangi bölümde kaldığı"],
-  ["Hedef", "“Daha çok çalış”", "“Bugün en çok puan getirecek işi yap”"],
+  ["Kaynak", "Video, kitap, soru yığını", "Sadece o gün işine yarayan çalışma"],
+  ["Plan", "Herkese aynı program", "Seviyene göre hazırlanan plan"],
+  ["Yanlışlar", "Çözümü okuyup geçmek", "Yanlışın nedenini görüp benzer sorularla pekiştirmek"],
+  ["Deneme", "Sadece puan ve doğru sayısı", "Hangi bölümde puan kaybettiğin"],
+  ["Hedef", "“Daha çok çalış”", "“Bugün sana en çok puan kazandıracak konuya çalış”"],
 ];
 
 const steps = [
-  { title: "Hedef ve ölçüm", body: "Hedef puanını yazarsın, 24 soru çözersin. Çıkan sayı resmi puan değil, tahmindir." },
-  { title: "Puan haritası", body: "Hangi bölümde puan bıraktığın ortaya çıkar." },
-  { title: "Sıradaki soru", body: "O an en çok işine yarayacak soru seçilir." },
-  { title: "Günün görevi", body: "Bugünün işi küçük, ölçülebilir bir göreve dönüşür." },
+  { title: "Seviye testi", body: "Hedef puanını belirler, 24 soruluk kısa bir test çözersin. Çıkan sonuç resmi puan değil, tahmindir." },
+  { title: "Eksiklerin", body: "Hangi bölümlerde puan kaybettiğini görürsün." },
+  { title: "Doğru sorular", body: "Her seferinde o an en çok işine yarayacak sorular seçilir." },
+  { title: "Günün görevi", body: "Her gün kısa ve net bir çalışma görevi alırsın." },
   { title: "Puan tahmini", body: "Hedefe ne kadar yaklaştığın her gün yeniden hesaplanır." },
 ];
 
 const smart = [
-  { tag: "Uyarlar", title: "Soru seçimi", body: "Zorluk, konu ve soru tipi geçmiş performansına göre değişir." },
-  { tag: "Teşhis eder", title: "Hata analizi", body: "“Yanlış” bilgisini hatanın türüne çevirir: kelime mi, yapı mı, süre mi?" },
-  { tag: "Sıralar", title: "Puan etkisi", body: "Her eksik aynı değerde değil. Hedef puanına en çok katkı verecek bölüm öne çıkar." },
-  { tag: "İzler", title: "Hazırlık sinyali", body: "Gerçek sınava ne kadar yaklaştığını takip eder." },
+  { tag: "Uyarlanır", title: "Soru seçimi", body: "Soruların zorluğu, konusu ve tipi, şimdiye kadarki sonuçlarına göre belirlenir." },
+  { tag: "Analiz eder", title: "Yanlış analizi", body: "Yanlışlarının nedenini ayırır: kelime bilgisi mi, dil bilgisi mi, yoksa süre mi?" },
+  { tag: "Önceliklendirir", title: "Puan etkisi", body: "Her eksik aynı derecede önemli değildir. Hedef puanına en çok katkı sağlayacak bölüm öne çıkar." },
+  { tag: "Takip eder", title: "Hazırlık durumu", body: "Gerçek sınava ne kadar hazır olduğunu takip eder." },
 ];
 
-const loop = ["Hata", "Nedeni", "Not", "Benzer soru", "Tekrar"];
+const loop = ["Yanlış", "Nedeni", "Kısa not", "Benzer soru", "Tekrar"];
 
 const bars = [36, 43, 51, 48, 64, 70, 76];
 
@@ -76,7 +76,7 @@ export default function HomePage() {
       },
       {
         "@type": "HowTo",
-        name: "YDS’de sıradaki çalışma nasıl seçilir",
+        name: "YDS’de neye çalışacağın nasıl belirlenir",
         inLanguage: "tr-TR",
         step: steps.map((step, index) => ({
           "@type": "HowToStep",
@@ -102,10 +102,10 @@ export default function HomePage() {
             YDS’yi daha fazla değil, <span className="grad">daha doğru</span> çalış.
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-8 text-muted">
-            Seviyeni, hedefini ve çözdüğün her soruyu tartar. Sıradaki en değerli çalışmayı önüne koyar. Ders yığını, video yığını, bitmeyen soru bankası yok.
+            YDS Lab seviyeni ve hedefini ölçer, çözdüğün her soruyu takip eder ve her gün sana en çok puan kazandıracak çalışmayı gösterir. Saatlerce ders, video ya da bitmeyen soru bankası yok.
           </p>
           <p className="mt-3 max-w-xl text-sm leading-7 text-muted">
-            YÖKDİL ve e-YÖKDİL de aynı hesapla işler: 80 soru, 180 dakika, her doğru 1,25 puan.{" "}
+            YÖKDİL ve e-YÖKDİL’de de puan aynı şekilde hesaplanır: 80 soru, 180 dakika, her doğru 1,25 puan.{" "}
             <Link href="/yds-puan-hesaplama" className="link-underline text-pine">
               Puanını hesapla →
             </Link>
@@ -113,24 +113,24 @@ export default function HomePage() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
             <form action={startDiagnosticAction}>
               <PendingButton
-                pendingLabel="Analiz açılıyor…"
+                pendingLabel="Test hazırlanıyor…"
                 className="shine w-full rounded-full bg-pine px-6 py-3.5 text-cream shadow-[0_16px_40px_-18px_rgba(12,92,98,0.8)] transition hover:-translate-y-0.5 sm:w-auto"
               >
-                Ücretsiz analizi başlat →
+                Ücretsiz seviye testine başla →
               </PendingButton>
             </form>
             <a href="#nasil" className="rounded-full border border-line bg-card/60 px-6 py-3.5 text-center backdrop-blur transition hover:border-pine">
               Nasıl çalışıyor?
             </a>
           </div>
-          <p className="mt-4 text-sm text-muted">Kart istemez · Üye olmadan başlarsın · 15 dakika</p>
+          <p className="mt-4 text-sm text-muted">Kredi kartı gerekmez · Üye olmadan başlarsın · Yaklaşık 15 dakika</p>
         </div>
 
         <div className="rise-in rise-in-late" aria-hidden>
           <div className="float">
             <div className="tilt glass rounded-[32px] border border-line p-6 sm:p-7">
               <div className="flex justify-between text-[11px] uppercase tracking-[0.16em] text-muted">
-                <span>Örnek rota</span>
+                <span>Örnek plan</span>
                 <span className="flex items-center gap-2">
                   <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-pine" />
                   YDS
@@ -140,21 +140,21 @@ export default function HomePage() {
                 64 <span className="text-muted">→</span> 72
                 <span className="ml-2 font-sans text-sm tracking-normal text-pine">hedef</span>
               </p>
-              <p className="mt-1 text-sm text-muted">Kapanacak 8 puan var</p>
+              <p className="mt-1 text-sm text-muted">Hedefe 8 puan kaldı</p>
               <span className="mt-5 block h-2 overflow-hidden rounded-full bg-paper">
                 <span className="bar-grow block h-full w-[68%] rounded-full bg-gradient-to-r from-pine to-gold" />
               </span>
               <div className="mt-6 rounded-2xl border border-line bg-card/80 p-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-muted">Sıradaki en iyi iş</p>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-muted">Şimdi çalışman gereken</p>
                   <span className="pulse-dot h-2 w-2 rounded-full bg-pine" />
                 </div>
                 <p className="mt-2 text-lg">Bağlaçlar · zıtlık ve kabul</p>
                 <p className="mt-1 text-xs text-muted">12 soru · yaklaşık 18 dakika · tahmini +1,4 puan</p>
               </div>
               <div className="mt-3 rounded-2xl border border-line bg-card/80 p-4">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-muted">Neden bu?</p>
-                <p className="mt-2 text-lg">İsabet %61, puana etkisi yüksek</p>
+                <p className="text-[11px] uppercase tracking-[0.16em] text-muted">Neden bu konu?</p>
+                <p className="mt-2 text-lg">Doğru oranın %61, puana etkisi yüksek</p>
                 <p className="mt-1 text-xs text-muted">Hedefine en hızlı buradan yaklaşırsın.</p>
               </div>
             </div>
@@ -175,10 +175,10 @@ export default function HomePage() {
 
       <section className="mx-auto w-full max-w-6xl px-4 py-20 text-center sm:px-5 sm:py-28">
         <div data-rise>
-          <p className="text-xs uppercase tracking-[0.18em] text-gold">Asıl sorun</p>
-          <h2 className="mx-auto mt-4 max-w-3xl text-4xl sm:text-6xl">Sorun içerik eksikliği değil.</h2>
+          <p className="text-xs uppercase tracking-[0.18em] text-gold">Asıl sorun ne?</p>
+          <h2 className="mx-auto mt-4 max-w-3xl text-4xl sm:text-6xl">Sorun kaynak eksikliği değil.</h2>
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
-            Bugün YDS’ye hazırlanan birinin önünde binlerce soru, video, kitap, deneme ve yapay zekâ aracı var. Asıl soru şu: <span className="text-ink">Şimdi hangisini yapmalıyım?</span>
+            YDS’ye hazırlanan herkesin önünde binlerce soru, video, kitap ve deneme var. Asıl zor olan şu soruya cevap vermek: <span className="text-ink">Şimdi hangisine çalışmalıyım?</span>
           </p>
         </div>
         <div className="mt-14 grid gap-4 text-left md:grid-cols-3">
@@ -199,17 +199,17 @@ export default function HomePage() {
           <div data-rise className="lg:sticky lg:top-28">
             <p className="text-xs uppercase tracking-[0.18em] text-gold">Farkımız</p>
             <h2 className="mt-4 text-4xl sm:text-5xl">
-              Başkaları içerik verir. <span className="grad">Biz sıradaki işi seçeriz.</span>
+              Başkaları kaynak verir. <span className="grad">Biz neye çalışacağını söyleriz.</span>
             </h2>
             <p className="mt-5 max-w-md leading-8 text-muted">
-              YDS Lab ne bir soru bankası ne de bir yapay zekâ öğretmeni. Ne çalışacağına dair kararları senin yerine tartan bir sistem.
+              YDS Lab bir soru bankası ya da video kursu değil. Seviyene ve hedefine bakıp her gün neye çalışman gerektiğine karar veren bir sistem.
             </p>
           </div>
           <div data-rise className="glass overflow-hidden rounded-[28px] border border-line">
             <div className="hidden grid-cols-[0.8fr_1fr_1.2fr] border-b border-line bg-card/60 text-sm sm:grid">
-              <p className="px-5 py-4 text-muted">İhtiyaç</p>
-              <p className="border-l border-line px-5 py-4 text-muted">Alışılmış yol</p>
-              <p className="border-l border-line px-5 py-4">YDS Lab</p>
+              <p className="px-5 py-4 text-muted">Konu</p>
+              <p className="border-l border-line px-5 py-4 text-muted">Genelde</p>
+              <p className="border-l border-line px-5 py-4">YDS Lab’de</p>
             </div>
             {compare.map(([need, old, ours]) => (
               <div key={need} className="grid border-b border-line text-sm transition-colors last:border-0 hover:bg-card/70 sm:grid-cols-[0.8fr_1fr_1.2fr]">
@@ -225,9 +225,9 @@ export default function HomePage() {
       <section id="nasil" className="mx-auto w-full max-w-6xl scroll-mt-24 px-4 py-20 text-center sm:px-5 sm:py-28">
         <div data-rise>
           <p className="text-xs uppercase tracking-[0.18em] text-gold">Nasıl çalışıyor?</p>
-          <h2 className="mx-auto mt-4 max-w-3xl text-4xl sm:text-6xl">Her soru rotanı biraz daha netleştirir.</h2>
+          <h2 className="mx-auto mt-4 max-w-3xl text-4xl sm:text-6xl">Çözdüğün her soru planını biraz daha netleştirir.</h2>
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
-            Sen çözdükçe sistem seni tanır, öneriler değişir. Sabit bir program yerine seninle birlikte değişen bir rota.
+            Soru çözdükçe sistem seni daha iyi tanır ve önerileri buna göre değişir. Sabit bir program yerine seninle birlikte güncellenen bir plan.
           </p>
         </div>
         <div className="relative mt-16">
@@ -248,10 +248,10 @@ export default function HomePage() {
         <div data-rise className="text-center">
           <p className="text-xs uppercase tracking-[0.18em] text-gold">Uygulama</p>
           <h2 className="mx-auto mt-4 max-w-3xl text-4xl sm:text-6xl">
-            Kalabalık bir panel değil. <span className="grad">Bugünün işi.</span>
+            Karmaşık bir panel yok. <span className="grad">Sadece bugünün işi.</span>
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
-            Giriş yaptığında seni onlarca menü karşılamaz; bugün ne yapacağını görürsün. Liste süreye göre dağılır. Güçlü bölüm o gün dışarıda kalır, sınav yaklaştıkça kaçırdığın sorular öne geçer.
+            Giriş yaptığında seni onlarca menü karşılamaz; bugün ne yapacağını hemen görürsün. Görev, ayırdığın süreye göre hazırlanır. İyi olduğun bölüm o gün listeye girmez; sınav yaklaştıkça yanlış yaptığın sorular öne çıkar.
           </p>
         </div>
         <div data-rise className="glass mt-12 overflow-hidden rounded-[32px] border border-line" aria-hidden>
@@ -296,14 +296,14 @@ export default function HomePage() {
                   <span className="mt-8 inline-block rounded-full border border-pine px-4 py-2 text-sm text-pine">Göreve başla</span>
                 </div>
                 <div className="rounded-2xl border border-line bg-card/80 p-5">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-muted">En büyük fırsat</p>
-                  <p className="mt-2 text-lg">Dil bilgisi · zıtlık</p>
-                  <p className="mt-1 text-xs text-muted">%61 isabet · puana etkisi yüksek</p>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-muted">En çok puan kazanabileceğin yer</p>
+                  <p className="mt-2 text-lg">Dil bilgisi · zıtlık bağlaçları</p>
+                  <p className="mt-1 text-xs text-muted">%61 doğru · puana etkisi yüksek</p>
                 </div>
                 <div className="rounded-2xl border border-line bg-card/80 p-5">
                   <p className="text-[11px] uppercase tracking-[0.16em] text-muted">Son günlerde</p>
                   <p className="mt-2 text-lg">Okuma hızın düşüyor</p>
-                  <p className="mt-1 text-xs text-muted">Süreyi tuttuğunda isabetin korunuyor.</p>
+                  <p className="mt-1 text-xs text-muted">Süreye dikkat ettiğinde doğru oranın düşmüyor.</p>
                 </div>
               </div>
             </div>
@@ -316,10 +316,10 @@ export default function HomePage() {
           <div data-rise className="grid gap-6 lg:grid-cols-[1fr_1fr] lg:items-end">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-gold">Bölümler</p>
-              <h2 className="mt-4 text-4xl sm:text-5xl">On bölüm. Puan bunların içinde.</h2>
+              <h2 className="mt-4 text-4xl sm:text-5xl">Sınav 10 bölümden oluşur. Puanın bu bölümlerden gelir.</h2>
             </div>
             <p className="leading-8 text-muted">
-              Kitapçık yıllardır aynı düzende gelir. Her bölümün kendi sayfası var: ne ölçülür, nereye bakılır, nasıl çözülür. Çözüm yollarını biz yazdık; soru çözdükçe senin sonuçların da o sayfada görünür.
+              Soru tipleri yıllardır aynı düzende gelir. Her bölüm için bir rehber sayfası var: ne sorulur, nelere dikkat etmelisin, nasıl çözersin. Soru çözdükçe kendi sonuçlarını da o sayfada görürsün.
             </p>
           </div>
           <ol className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -336,7 +336,7 @@ export default function HomePage() {
             ))}
           </ol>
           <div data-rise className="mt-12 flex flex-col gap-4 rounded-[28px] border border-line bg-card/70 p-5 backdrop-blur sm:p-6 lg:flex-row lg:items-center lg:justify-between">
-            <p className="max-w-sm text-sm leading-6 text-muted">Kaçırdığın soru unutulmaz. Şu sırayla geri döner:</p>
+            <p className="max-w-sm text-sm leading-6 text-muted">Yanlış yaptığın sorular kaybolmaz; şu adımlarla tekrar karşına çıkar:</p>
             <ol className="flex flex-wrap items-center gap-2 text-sm">
               {loop.map((step, index) => (
                 <li key={step} className="flex items-center gap-2">
@@ -354,9 +354,9 @@ export default function HomePage() {
 
       <section className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-5 sm:py-28">
         <div data-rise className="text-center">
-          <p className="text-xs uppercase tracking-[0.18em] text-gold">İşin akıllı kısmı</p>
-          <h2 className="mx-auto mt-4 max-w-3xl text-4xl sm:text-6xl">Akıllı kısım vitrinde değil, motorun içinde.</h2>
-          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">Süs olsun diye koymadık. Ne çalışacağına karar veren düzenin bir parçası.</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-gold">Arka planda ne oluyor?</p>
+          <h2 className="mx-auto mt-4 max-w-3xl text-4xl sm:text-6xl">Asıl iş arka planda yapılıyor.</h2>
+          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">Bunlar gösteriş için değil; her gün neye çalışacağına bunlarla karar verilir.</p>
         </div>
         <div className="mt-14 grid gap-4 sm:grid-cols-2">
           {smart.map((item) => (
@@ -376,9 +376,9 @@ export default function HomePage() {
           <div className="relative grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-cream/70">Deneme</p>
-              <h2 className="mt-4 max-w-xl text-4xl text-cream sm:text-5xl">80 soru, 180 dakika, ekranda.</h2>
+              <h2 className="mt-4 max-w-xl text-4xl text-cream sm:text-5xl">80 soru, 180 dakika, bilgisayar ekranında.</h2>
               <p className="mt-5 max-w-xl leading-8 text-cream/80">
-                e-YDS ve e-YÖKDİL düzeninde, sınav ayarında yazılmış tam denemeler. Süre işler, soruyu işaretler, şık elersin. Bitince puanın ve en çok puan bıraktığın bölüm yazılır. Ekran ÖSYM’nin kopyası değildir.
+                e-YDS ve e-YÖKDİL’deki gibi ekranda çözülen, gerçek sınav zorluğunda tam denemeler. Süre geri sayar; soruları işaretleyebilir, emin olmadığın şıkları eleyebilirsin. Bitince puanını ve en çok puan kaybettiğin bölümü görürsün. Ekran, ÖSYM’nin birebir kopyası değildir.
               </p>
               <Link href="/deneme" className="shine mt-8 inline-block rounded-full bg-cream px-6 py-3 text-sm text-pine-deep transition hover:-translate-y-0.5">
                 Denemeye göz at →
@@ -395,17 +395,17 @@ export default function HomePage() {
 
       <section className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-20 sm:px-5 sm:py-28 lg:grid-cols-3">
         <article data-rise className="lift rounded-[28px] border border-line bg-card/80 p-7 backdrop-blur">
-          <h2 className="text-3xl">Kelime ezber listesi değil.</h2>
-          <p className="mt-3 text-sm leading-7 text-muted">Kartlar kaçırdığın soruların kelimelerinden çıkar. Bildiğini ileri atarsın, unuttuğun erken döner.</p>
+          <h2 className="text-3xl">Kelime çalışması ezber listesi değil.</h2>
+          <p className="mt-3 text-sm leading-7 text-muted">Kartlar, soru çözerken bilmediğin kelimelerden oluşur. Bildiğin kelimeler daha seyrek, unuttukların daha sık karşına çıkar.</p>
         </article>
         <article data-rise className="lift rounded-[28px] border border-line bg-card/80 p-7 backdrop-blur">
-          <h2 className="text-3xl">Tahmin her gün güncellenir.</h2>
-          <p className="mt-3 text-sm leading-7 text-muted">Bugün 64–72 ise birkaç hafta sonra 68–76 olabilir. Okuma isabetin %48’den %61’e çıkınca hedefe kalan puan oradan kapanır.</p>
+          <h2 className="text-3xl">Puan tahminin her gün güncellenir.</h2>
+          <p className="mt-3 text-sm leading-7 text-muted">Bugün tahminin 64 ile 72 arasındaysa, birkaç hafta sonra 68 ile 76 arasına çıkabilir. Örneğin okumada doğru oranın %48’den %61’e yükselirse, hedefine kalan puanın büyük kısmı buradan gelir.</p>
         </article>
         <article data-rise className="lift glass rounded-[28px] border border-line p-7">
-          <h2 className="text-3xl">Ölçmek bedava.</h2>
+          <h2 className="text-3xl">Başlamak ücretsiz.</h2>
           <p className="mt-3 text-sm leading-7 text-muted">
-            Ölçümden sonra günde {brand.freeDailyQuestions} soru ve {brand.freeSimulators} deneme de ücretsiz. Sınırı kaldırmak istersen 90 gün {brand.prices.lab90.toLocaleString("tr-TR")} TL. Sınava az kaldıysa 60 günlük sprint {brand.prices.sprint.toLocaleString("tr-TR")} TL.
+            Seviye testinden sonra her gün {brand.freeDailyQuestions} soru ve {brand.freeSimulators} tam deneme de ücretsiz. Sınırsız kullanmak istersen 90 gün {brand.prices.lab90.toLocaleString("tr-TR")} TL. Sınava az kaldıysa 60 günlük yoğun paket {brand.prices.sprint.toLocaleString("tr-TR")} TL.
           </p>
           <Link href="/fiyat" className="link-underline mt-5 inline-block text-sm text-pine">
             Fiyatlar ve sınav takvimi →
@@ -416,8 +416,8 @@ export default function HomePage() {
       <section className="mx-auto grid w-full max-w-6xl gap-10 px-4 pb-8 sm:px-5 lg:grid-cols-[0.8fr_1.2fr]">
         <div data-rise>
           <p className="text-xs uppercase tracking-[0.18em] text-gold">Sık sorulanlar</p>
-          <h2 className="mt-4 text-4xl sm:text-5xl">Aklındaki sorular</h2>
-          <p className="mt-4 max-w-sm leading-7 text-muted">Puan hesabı, deneme, ücret ve ölçümle ilgili en çok sorulanlar.</p>
+          <h2 className="mt-4 text-4xl sm:text-5xl">Merak ettiklerin</h2>
+          <p className="mt-4 max-w-sm leading-7 text-muted">Puan hesaplama, deneme, ücret ve seviye testi hakkında en çok sorulanlar.</p>
         </div>
         <div className="divide-y divide-line border-y border-line">
           {faqs.map((item) => (
@@ -435,17 +435,17 @@ export default function HomePage() {
       <section className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-5 sm:py-28">
         <div data-rise className="glass relative overflow-hidden rounded-[40px] border border-line px-6 py-16 text-center sm:px-12 sm:py-24">
           <div aria-hidden className="pointer-events-none absolute left-1/2 top-0 h-80 w-[36rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-pine/15 blur-3xl" />
-          <p className="relative text-xs uppercase tracking-[0.18em] text-gold">Rotanı başlat</p>
+          <p className="relative text-xs uppercase tracking-[0.18em] text-gold">Hemen başla</p>
           <h2 className="display-xl relative mx-auto mt-5 max-w-4xl font-serif">
-            Daha fazla çalışma saatine ihtiyacın yok. <span className="grad">Sıradaki işi bilmen yeter.</span>
+            Daha çok saat çalışmana gerek yok. <span className="grad">Neye çalışacağını bilmen yeter.</span>
           </h2>
-          <p className="relative mx-auto mt-6 max-w-lg text-lg text-muted">Seviyeni ölç, hedef puanını yaz, rotan başlasın.</p>
+          <p className="relative mx-auto mt-6 max-w-lg text-lg text-muted">Seviyeni ölç, hedef puanını belirle, planın hazır olsun.</p>
           <form action={startDiagnosticAction} className="relative mt-9">
-            <PendingButton pendingLabel="Analiz açılıyor…" className="shine w-full rounded-full bg-pine px-7 py-4 text-cream transition hover:-translate-y-0.5 sm:w-auto">
-              Ücretsiz analizi başlat →
+            <PendingButton pendingLabel="Test hazırlanıyor…" className="shine w-full rounded-full bg-pine px-7 py-4 text-cream transition hover:-translate-y-0.5 sm:w-auto">
+              Ücretsiz seviye testine başla →
             </PendingButton>
           </form>
-          <p className="relative mt-4 text-sm text-muted">Kart istemez · 15 dakika</p>
+          <p className="relative mt-4 text-sm text-muted">Kredi kartı gerekmez · Yaklaşık 15 dakika</p>
         </div>
       </section>
     </div>

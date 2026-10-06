@@ -46,9 +46,9 @@ export default async function ProgressPage() {
   const estimate =
     profile.estimatedLow != null && profile.estimatedHigh != null
       ? exam === "ydt"
-        ? `Tahmini netin ${profile.estimatedLow}–${profile.estimatedHigh}. Bu bir YKS puanı değildir.`
+        ? `Tahmini netin ${profile.estimatedLow}–${profile.estimatedHigh}. Bu, YKS puanın değildir.`
         : `Tahmini puanın ${profile.estimatedLow}–${profile.estimatedHigh}. Bu resmi puan değildir.`
-      : "Henüz bir ölçüm yok.";
+      : "Seviye testini çözünce tahmini puanın burada görünür.";
   const hasAnswers = [...tally.values()].some((cell) => cell.correct + cell.wrong > 0);
   return (
     <section>
@@ -56,11 +56,10 @@ export default async function ProgressPage() {
       <p className="mt-2 text-sm text-muted">{estimate}</p>
       {latest && latest.wrongCount ? (
         <p className="mt-3 max-w-xl text-sm leading-6">
-          Son {latest.mode === "simulator" ? "denemede" : "teşhiste"} {latest.wrongCount} yanlış vardı.{" "}
+          Son {latest.mode === "simulator" ? "denemende" : "seviye testinde"} {latest.wrongCount} yanlışın vardı.{" "}
           {exam === "ydt"
-            ? `Tam kâğıtta dört yanlış bir net götürür: yaklaşık ${(Math.round((latest.wrongCount / 4) * 100) / 100).toLocaleString("tr-TR")} net.`
-            : `Tam kâğıtta her yanlış 1,25 puanın yerinde kalması demektir: ${(Math.round(latest.wrongCount * 125) / 100).toLocaleString("tr-TR")} puan.`}{" "}
-          Bu, o oturumdaki yanlışların karşılığıdır.
+            ? `YDT’de 4 yanlış 1 doğruyu götürdüğü için bu, yaklaşık ${(Math.round((latest.wrongCount / 4) * 100) / 100).toLocaleString("tr-TR")} net kaybı demek.`
+            : `Bu soruları doğru yapsaydın ${(Math.round(latest.wrongCount * 125) / 100).toLocaleString("tr-TR")} puan daha alacaktın.`}
         </p>
       ) : null}
       <div className="mt-8 space-y-4">
@@ -80,11 +79,11 @@ export default async function ProgressPage() {
                     ? `${cell.correct}/${seen}${
                         cell.wrong > 0
                           ? exam === "ydt"
-                            ? ` · ${(Math.round((cell.wrong / 4) * 100) / 100).toLocaleString("tr-TR")} net`
-                            : ` · ${(Math.round(cell.wrong * 125) / 100).toLocaleString("tr-TR")} puan yerinde`
+                            ? ` · ${(Math.round((cell.wrong / 4) * 100) / 100).toLocaleString("tr-TR")} net kaybı`
+                            : ` · ${(Math.round(cell.wrong * 125) / 100).toLocaleString("tr-TR")} puan kaybı`
                           : ""
                       }`
-                    : "henüz yok"}
+                    : "henüz soru çözmedin"}
                 </span>
               </div>
               <div className="h-2 rounded-full bg-line">
@@ -94,23 +93,24 @@ export default async function ProgressPage() {
           );
         })}
       </div>
-      {!hasAnswers ? <p className="mt-4 text-sm text-muted">Teşhis bu bölümleri açar. Çubuk, çözdüğün sorulardan gelir.</p> : null}
-      <h2 className="mt-10 text-2xl">Okumanın içi</h2>
+      {!hasAnswers ? <p className="mt-4 text-sm text-muted">Soru çözdükçe her bölümdeki doğru oranın burada görünecek.</p> : null}
+      <h2 className="mt-10 text-2xl">Okuma becerilerin</h2>
       <ul className="mt-3 space-y-2 text-sm">
         {["detail", "inference", "reference", "main-idea", "purpose"].map((id) => {
           const row = rows.find((item) => item.skillId === id);
           return (
             <li key={id} className="flex justify-between gap-3">
               <span>{skillName(id)}</span>
-              <span className="text-muted">{row ? row.mastery : "—"}</span>
+              <span className="text-muted">{row ? `%${row.mastery}` : "henüz yok"}</span>
             </li>
           );
         })}
       </ul>
-      <ul className="mt-8 space-y-2 text-sm">
+      {history.length > 0 ? <h2 className="mt-10 text-2xl">Son çalışmaların</h2> : null}
+      <ul className="mt-3 space-y-2 text-sm">
         {history.map((session) => (
           <li key={session.id} className="rounded-xl border border-line bg-card px-3 py-2">
-            {modeLabel[session.mode] ?? session.mode} · {sessionStatusLabel[session.status] ?? session.status} · {session.score ?? "—"}
+            {modeLabel[session.mode] ?? session.mode} · {sessionStatusLabel[session.status] ?? session.status}{session.score != null ? ` · ${session.score} ${session.exam === "ydt" ? "net" : "puan"}` : ""}
           </li>
         ))}
       </ul>

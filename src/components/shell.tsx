@@ -14,7 +14,7 @@ const appLinks: [string, string][] = [
 ];
 
 const publicLinks: [string, string][] = [
-  ["Teşhis", "/teshis"],
+  ["Seviye testi", "/teshis"],
   ["Rehber", "/rehber"],
   ["Deneme", "/deneme"],
   ["Puan hesapla", "/yds-puan-hesaplama"],
@@ -25,9 +25,9 @@ const footerColumns: { title: string; links: [string, string][] }[] = [
   {
     title: "Çalış",
     links: [
-      ["Ücretsiz teşhis", "/teshis"],
+      ["Ücretsiz seviye testi", "/teshis"],
       ["Bölüm rehberi", "/rehber"],
-      ["e-YDS benzeri deneme", "/deneme"],
+      ["Ücretsiz deneme sınavı", "/deneme"],
       ["Puan hesapla", "/yds-puan-hesaplama"],
     ],
   },
@@ -37,7 +37,7 @@ const footerColumns: { title: string; links: [string, string][] }[] = [
       ["Bağlaçlar", "/yds-baglac-testi"],
       ["Okuduğunu anlama", "/yds-okudugunu-anlama"],
       ["Çeviri", "/rehber/translation"],
-      ["Paragrafta boşluk", "/rehber/cloze"],
+      ["Paragrafta boşluk doldurma", "/rehber/cloze"],
     ],
   },
   {
@@ -90,10 +90,10 @@ export function PublicFooter() {
         <div>
           <p className="max-w-xs font-serif text-3xl leading-tight">Daha fazla değil, daha doğru çalış.</p>
           <p className="mt-4 max-w-sm text-sm leading-6 text-muted">
-            YDS, e-YDS, YÖKDİL ve e-YÖKDİL için ölçüm, günlük plan ve deneme. ÖSYM ile bağı yoktur.
+            YDS, e-YDS, YÖKDİL ve e-YÖKDİL için seviye testi, günlük çalışma planı ve deneme sınavı. ÖSYM ile bir bağlantısı yoktur.
           </p>
           <Link href="/teshis" className="mt-6 inline-block rounded-full bg-pine px-5 py-3 text-sm text-cream transition hover:-translate-y-0.5">
-            Ücretsiz analizi başlat
+            Ücretsiz seviye testine başla
           </Link>
         </div>
         {footerColumns.map((column) => (

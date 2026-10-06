@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bandCoverage, diagnosticQuota, ydsBlueprint, ydtBlueprint } from "./blueprint";
-import { estimateFromAccuracy, estimateNet, observedDifficulty, scoreSession } from "./score";
+import { estimateFromAccuracy, estimateNet, observedDifficulty, scoreSession, weakestSection } from "./score";
 import { selectDiagnostic, selectItems, selectMock, studyPool, type PoolItem } from "./select";
 
 function pool(): PoolItem[] {
@@ -85,6 +85,19 @@ describe("score", () => {
     expect(estimateNet(12, 12, 24).point).toBe(30);
     expect(observedDifficulty(0.92)).toBe(1);
     expect(observedDifficulty(0.2)).toBe(5);
+  });
+
+  it("names no weakest section when nothing was answered wrong", () => {
+    const clean = scoreSession("correct_x_1_25", [
+      { section: "vocabulary", slot: 1, correct: true, responseTimeMs: 1 },
+      { section: "grammar", slot: 7, correct: null, responseTimeMs: 0 },
+    ]);
+    expect(weakestSection(clean)).toBeNull();
+    const missed = scoreSession("correct_x_1_25", [
+      { section: "vocabulary", slot: 1, correct: true, responseTimeMs: 1 },
+      { section: "grammar", slot: 7, correct: false, responseTimeMs: 1 },
+    ]);
+    expect(weakestSection(missed)?.section).toBe("grammar");
   });
 });
 

@@ -6,8 +6,8 @@ import { ydsBlueprint } from "@/modules/exam/blueprint";
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  title: "YDS rehberi",
-  description: "YDS ve e-YDS kitapçığındaki on bölüm: ne ölçülür, nereye bakılır, nerede kaçılır.",
+  title: "YDS bölüm rehberi",
+  description: "YDS ve e-YDS’deki 10 bölüm: her bölüm neyi ölçer, nasıl çözülür, en sık nerede hata yapılır.",
   alternates: { canonical: "/rehber" },
 };
 
@@ -16,10 +16,10 @@ export default function GuideIndexPage() {
     <section className="landing mx-auto w-full max-w-6xl px-4 py-12 sm:px-5 sm:py-20">
       <p className="text-xs uppercase tracking-[0.18em] text-gold">Rehber</p>
       <h1 className="display-xl mt-4 max-w-3xl font-serif">
-        On bölüm. <span className="grad">Puan bunların içinde.</span>
+        Sınav 10 bölümden oluşur. <span className="grad">Her birini nasıl çözeceğin burada.</span>
       </h1>
       <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
-        Kitapçık yıllardır aynı düzende gelir. Her bölümde neye bakacağın ve nasıl çözeceğin burada yazıyor. Soru çözdükçe senin sonuçların da o sayfada görünür.
+        Soru kitapçığı yıllardır aynı düzende. Her bölümün sayfasında soruyu nasıl çözeceğin ve en sık nerede hata yapıldığı anlatılıyor. Soru çözdükçe o bölümdeki kendi sonuçlarını da orada görürsün.
       </p>
       <ol className="mt-12 grid gap-3 md:grid-cols-2">
         {ydsBlueprint.bands.map((band) => {

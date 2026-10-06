@@ -10,7 +10,7 @@ export function AccountLink({ className }: { className?: string }) {
   }, []);
   return (
     <Link href={signedIn ? "/bugun" : "/giris"} className={className}>
-      {signedIn ? "Bugün" : "Giriş"}
+      {signedIn ? "Bugün" : "Giriş yap"}
     </Link>
   );
 }

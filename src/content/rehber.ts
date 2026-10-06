@@ -11,113 +11,151 @@ export type Rehber = {
 export const rehber: Rehber[] = [
   {
     section: "vocabulary",
-    measures: "Altı soru. Çoğu akademik kelime ve eşdizim. Kelimeyi tanımak yetmez; cümlenin istediği işi görmesi gerekir.",
+    measures:
+      "6 soru. Çoğunlukla akademik kelimeler ve birlikte kullanılan kalıplar sorulur. Kelimenin anlamını bilmek yetmez; cümleye oturması gerekir.",
     steps: [
-      "Boşluğu kapatıp cümleyi bir kez oku. Ne istendiğini kendi cümlenle söyle.",
-      "Şıkları tek tek anlam diye değil, cümlenin içine koyarak dene.",
-      "İki şık yakınsa, biri işi büyütür biri küçültür. Cümlenin yönü hangisini istiyor, ona bak.",
+      "Şıklara bakmadan cümleyi oku ve boşluğa ne gelmesi gerektiğini kendi sözlerinle söyle.",
+      "Her şıkkı tek tek boşluğa koyup cümleyi baştan oku.",
+      "İki şık birbirine yakınsa, cümlenin olumlu mu olumsuz mu bir anlam istediğine bak.",
     ],
-    misses: ["Sözlük anlamı tutunca hemen işaretlemek.", "Eşdizimi tek kelime sanmak. contingent on bir kalıptır, contingent tek başına değil."],
-    tip: "Yakın anlamlı şık, doğru şık değildir. Cümle hangisinin işini istiyorsa o kalır.",
+    misses: [
+      "Sözlük anlamı uyuyor diye hemen işaretlemek.",
+      "Kalıbı tek kelime sanmak. Örneğin “contingent on” birlikte kullanılır; “contingent” tek başına aynı anlamı vermez.",
+    ],
+    tip: "Anlamı yakın olan şık her zaman doğru şık değildir. Cümleye en iyi oturan kelimeyi seç.",
   },
   {
     section: "grammar",
-    measures: "On soru, yapı. Zaman, bağlaç, ilgi cümlesi, edilgen, edat. Kuralı ezberlemek yetmez; cümle hangi işi istiyor, onu görmek gerekir.",
+    measures:
+      "10 soru. Zamanlar, bağlaçlar, ilgi cümleleri, edilgen yapı ve edatlar sorulur. Kuralı bilmek yetmez; cümlenin hangi yapıyı istediğini görmen gerekir.",
     steps: [
-      "Fiilin zamanına ve öznenin tekil mi çoğul mu olduğuna bak.",
-      "Bağlaç varsa, iki yan birbirini sürdürüyor mu, tersine mi çeviriyor, ayır.",
-      "Edatı fiille birlikte oku. into hareket ister, on yer ister.",
+      "Önce fiilin zamanına ve öznenin tekil mi çoğul mu olduğuna bak.",
+      "Bağlaç soruluyorsa, iki cümlenin birbirini destekleyip desteklemediğini ya da zıt mı olduğunu belirle.",
+      "Edatı fiille birlikte düşün: “into” bir yere girişi, “on” bir şeyin üstünü anlatır.",
     ],
-    misses: ["Kuralı hatırlayıp cümlenin geri kalanını okumamak.", "Bağlacı kelime sanmak. however yönü çevirir, so sonuç bağlar."],
-    tip: "Şıkkı yerine koyduktan sonra cümleyi sesli okur gibi geç. Takılıyorsa yapı tutmamıştır.",
+    misses: [
+      "Kuralı hatırlayıp cümlenin kalanını okumadan işaretlemek.",
+      "Bağlaçların anlamını karıştırmak: “however” zıtlık bildirir, “so” sonuç bildirir.",
+    ],
+    tip: "Şıkkı yerine koyduktan sonra cümleyi içinden sesli okur gibi oku. Bir yerde takılıyorsan yapı uymuyordur.",
   },
   {
     section: "cloze",
-    measures: "İki paragraf, on boşluk. Boşluk tek başına çözülmez. Paragrafın nereye gittiğini görmeden şık seçilmez.",
+    measures:
+      "2 paragraf, 10 boşluk. Boşluklar tek başına çözülmez; önce paragrafın ne anlattığını anlaman gerekir.",
     steps: [
-      "Paragrafı boşluklara takılmadan bir kez oku.",
-      "Boşluğun öncesi ile sonrası aynı yönde mi, ters mi, ona bak.",
-      "Zamir varsa, kimi gösterdiğini bir önceki cümlede bul.",
+      "Boşluklara takılmadan paragrafı baştan sona bir kez oku.",
+      "Boşluktan önceki ve sonraki cümle aynı yönde mi ilerliyor, yoksa zıt mı, buna bak.",
+      "Zamir varsa, neyi ya da kimi gösterdiğini bir önceki cümlede bul.",
     ],
-    misses: ["Kelimeyi tanıyınca işaretlemek.", "Yalnız boşluğun solundaki üç kelimeye bakmak.", "Bağlacın iki cümle arasındaki işini atlamak."],
-    tip: "Boşluğu doldurmadan önce paragrafın derdini bir cümleyle söyle. Şık o cümleye hizmet etmiyorsa elenir.",
+    misses: [
+      "Tanıdık kelimeyi görünce hemen işaretlemek.",
+      "Yalnızca boşluğun hemen önündeki birkaç kelimeye bakmak.",
+      "Bağlacın iki cümle arasında kurduğu ilişkiyi gözden kaçırmak.",
+    ],
+    tip: "Boşluğu doldurmadan önce paragrafın ne anlattığını tek cümleyle özetle. Bu özete uymayan şıkları ele.",
   },
   {
     section: "sentence",
-    measures: "On soru. Cümlenin sonu ya da ortası boştur. Eksik parça, cümlenin kurduğu ilişkiyi sürdürmelidir.",
+    measures:
+      "10 soru. Cümlenin bir kısmı boş bırakılır. Seçtiğin parça, cümlenin geri kalanıyla anlam ilişkisini korumalıdır.",
     steps: [
-      "Verilen parçadaki bağa bak: çünkü, ama, öyle ki, oysa.",
-      "Şıklara geçmeden, boşluğa kendi sözlerinle ne geleceğini söyle.",
-      "Doğru gibi duran şık yeni bir konu açıyorsa elenir.",
+      "Verilen parçadaki bağlaca bak: because, but, so that, whereas gibi.",
+      "Şıklara geçmeden boşluğa ne gelmesi gerektiğini kendi sözlerinle söyle.",
+      "Dil bilgisi olarak doğru olsa da konuyu değiştiren şıkkı ele.",
     ],
-    misses: ["Şık düzgün İngilizce diye seçmek.", "Karşıtlık varken sebep yazmak.", "Cümlenin başındaki iddiayı unutup sona bakmak."],
-    tip: "Önce ilişkiyi adlandır: sebep, karşıtlık, sonuç, koşul. Şık o adı taşımıyorsa bakma.",
+    misses: [
+      "Şık düzgün bir İngilizce cümle diye seçmek.",
+      "Zıtlık gereken yerde sebep bildiren şıkkı seçmek.",
+      "Cümlenin başındaki fikri unutup yalnızca sonuna odaklanmak.",
+    ],
+    tip: "Önce iki parça arasındaki ilişkiyi belirle: sebep mi, zıtlık mı, sonuç mu, koşul mu? Bu ilişkiyi kurmayan şıkları hiç düşünme.",
   },
   {
     section: "translation",
-    measures: "Altı soru, iki yön. İngilizceden Türkçeye ve Türkçeden İngilizceye. Kelimesi kelimesine değil, cümlenin yükünü taşımak gerekir.",
+    measures:
+      "6 soru: İngilizceden Türkçeye ve Türkçeden İngilizceye. Kelimesi kelimesine değil, anlamı eksiksiz aktaran şıkkı bulman gerekir.",
     steps: [
-      "Kaynak cümlede zorunluluk, zaman ve özneyi işaretle.",
-      "Şıkta bunlardan biri kaymışsa, gerisi düzgün olsa da elenir.",
-      "Türkçe cümlede -meli, -madan, diye gibi ince işleri İngilizcede ayrı ara.",
+      "Kaynak cümlede zamanı, özneyi ve “-meli, -ebilir” gibi kipleri işaretle.",
+      "Bunlardan biri şıkta değişmişse, gerisi ne kadar düzgün olursa olsun o şıkkı ele.",
+      "Türkçedeki “-madan, -dığı için, diye” gibi ekleri İngilizce şıkta tek tek ara.",
     ],
-    misses: ["Güzel duran cümleyi seçmek.", "Olumsuzu olumluya çevirmek.", "Amaç ile yasağı karıştırmak."],
-    tip: "Çeviri şıkkında bir kelime fazla ya da eksikse, o kelime genellikle cümlenin yönünü değiştirmiştir.",
+    misses: [
+      "Kulağa en güzel gelen cümleyi seçmek.",
+      "Olumsuz bir cümleyi olumlu çeviren şıkkı fark etmemek.",
+      "Amaç bildiren yapıyı yasak bildiren yapıyla karıştırmak.",
+    ],
+    tip: "Bir şıkta fazladan ya da eksik bir kelime varsa dikkat et; çoğu zaman cümlenin anlamını değiştiren o kelimedir.",
   },
   {
     section: "reading",
-    measures: "Beş metin, yirmi soru. Puanın çeyreği buradadır. Metin okunmadan soru çözülmez. Ayrıntı, çıkarım ve ana fikir aynı metnin içinde ayrı işlerdir.",
+    measures:
+      "5 metin, 20 soru. Puanın dörtte biri buradan gelir. Ayrıntı, çıkarım ve ana fikir soruları aynı metinden gelse de farklı beceriler ister.",
     steps: [
-      "Soruyu okumadan metni bir kez geç. Kim ne yapmış, bir cümleyle tut.",
-      "Ayrıntı sorusu satırda yazar. Çıkarım sorusu yazmaz; metnin bıraktığı boşluktadır.",
-      "Except ve not sorusunda dört şık metindedir. Metinde olmayanı ara.",
+      "Soruları okumadan önce metni bir kez oku ve ana fikri tek cümleyle aklında tut.",
+      "Ayrıntı sorusunun cevabı metinde açıkça yazar. Çıkarım sorusunun cevabı yazmaz; metinden çıkarman gerekir.",
+      "“Hangisi söylenemez” tipi sorularda dört şık metinde geçer. Metinde olmayanı ara.",
     ],
-    misses: ["Metinde geçen kelimeyi görünce şıkkı seçmek.", "Çıkarımı ayrıntı sanmak.", "Bir metindeki cevabı öteki metne taşımak."],
-    tip: "Okuma kötü deme. Ayrıntıyı tutup çıkarımı kaçırıyor olabilirsin. İkisi aynı puanı yer, aynı iş değildir.",
+    misses: [
+      "Metinde geçen bir kelimeyi şıkta görünce o şıkkı seçmek.",
+      "Çıkarım sorusunu ayrıntı sorusu gibi çözmeye çalışmak.",
+      "Bir metnin cevabını başka bir metnin sorusuna taşımak.",
+    ],
+    tip: "“Okumam kötü” deme. Belki ayrıntı sorularını yapıyor ama çıkarım sorularında puan kaybediyorsundur. Hangisi olduğunu bilmek, neye çalışacağını gösterir.",
   },
   {
     section: "dialogue",
-    measures: "Beş kısa konuşma. Eksik söz, konuşanın niyetine uymalıdır. Nezaket, ret, rica ve düzeltme birbirine benzemez.",
+    measures:
+      "5 kısa konuşma. Boşluğa gelecek söz, konuşan kişinin niyetine uymalıdır. Rica etmek, reddetmek ve düzeltmek farklı şeylerdir.",
     steps: [
-      "Konuşanların kim olduğuna ve ne istediğine bak.",
-      "Bir önceki cümle soruysa, cevap o soruya değsin.",
-      "Şık kibar duruyor diye seçme. Konuşma onu istemiyorsa elenir.",
+      "Konuşanların kim olduğuna ve ne istediklerine bak.",
+      "Önceki cümle bir soruysa, seçtiğin şık o soruyu cevaplamalı.",
+      "Şık kibar diye seçme; konuşmanın akışına uymuyorsa ele.",
     ],
-    misses: ["Konuyu sürdüren ama niyeti kaçıran şık.", "Soruya cevap vermeyip yeni bir laf açmak."],
-    tip: "Boşluktan sonraki cümle ipucudur. Adam teşekkür ediyorsa, önceki söz kabuldür, ret değil.",
+    misses: ["Konuyu sürdüren ama konuşanın niyetini kaçıran şıkkı seçmek.", "Soruyu cevaplamayıp yeni bir konu açan şıkkı seçmek."],
+    tip: "Boşluktan sonraki cümle en büyük ipucudur. Karşıdaki kişi teşekkür ediyorsa, önceki söz bir kabuldür, ret değil.",
   },
   {
     section: "restatement",
-    measures: "Dört soru. Verilen cümleye en yakın anlam aranır. Aynı kelimelerle kurulmuş şık genellikle tuzaktır.",
+    measures:
+      "4 soru. Verilen cümleye anlamca en yakın cümle istenir. Aynı kelimelerle kurulmuş şıklar çoğu zaman tuzaktır.",
     steps: [
-      "Cümlenin yükünü bir kez kendi sözünle yaz: kim, neyi, hangi şartla.",
-      "Şıkta özne, zaman ya da olumsuz kaymışsa elenir.",
-      "Eş anlamlı kelime, cümlenin işi değiştiyse işe yaramaz.",
+      "Cümlenin anlamını kendi sözlerinle özetle: kim, neyi, hangi koşulda yapıyor?",
+      "Şıkta özne, zaman ya da olumsuzluk değişmişse o şıkkı ele.",
+      "Eş anlamlı kelime kullanılmış olması yetmez; cümlenin anlamı da aynı kalmalı.",
     ],
-    misses: ["Aynı kelimeyi görünce güvenmek.", "Az ile çoğu, zorunluluk ile ihtimali karıştırmak."],
-    tip: "Yakın cümle, aynı kelimelerin dizilişi değildir. İş aynı kalsın, söz değişsin.",
+    misses: [
+      "Aynı kelimeleri görünce o şıkka güvenmek.",
+      "“Az” ile “çok”u, “zorunlu” ile “mümkün”ü karıştırmak.",
+    ],
+    tip: "Anlamca yakın cümle, aynı kelimelerin farklı sırayla dizilmesi değildir. Kelimeler değişebilir ama anlam aynı kalmalı.",
   },
   {
     section: "paragraph",
-    measures: "Dört soru. Paragrafta bir cümle yoktur. Gelen cümle, öncekiyle sonrakini birbirine bağlamalıdır.",
+    measures:
+      "4 soru. Paragraftan bir cümle çıkarılmıştır. Boşluğa gelen cümle, önceki ve sonraki cümleyi birbirine bağlamalıdır.",
     steps: [
-      "Boşluğun iki yanındaki cümleleri art arda oku.",
-      "Arada sebep mi var, örnek mi, karşıtlık mı, onu söyle.",
-      "Yeni bir konu açan ya da paragrafı bitiren şık, ortaya gelmez.",
+      "Boşluğun önündeki ve arkasındaki cümleleri art arda oku.",
+      "Aralarında nasıl bir ilişki var, belirle: sebep mi, örnek mi, zıtlık mı?",
+      "Yeni bir konu açan ya da paragrafı bitiren cümle ortaya gelmez.",
     ],
-    misses: ["Tek başına doğru bir cümleyi seçmek.", "Paragrafın son cümlesini ortaya koymak."],
-    tip: "Şıkkı yerine koyunca iki yanındaki cümle hâlâ konuşuyor mu, ona bak. Konuşmuyorsa şık yabancı.",
+    misses: ["Tek başına doğru olan bir cümleyi seçmek.", "Paragrafın sonuç cümlesini ortaya yerleştirmek."],
+    tip: "Şıkkı yerine koyduktan sonra paragrafı baştan oku. Akış kopuyorsa o şık yanlıştır.",
   },
   {
     section: "irrelevant",
-    measures: "Beş soru. Beş cümleden biri paragrafın derdine uymaz. O cümle tek başına yanlış olmak zorunda değildir; yeri yoktur.",
+    measures:
+      "5 soru. Beş cümleden biri paragrafın konusuna uymaz. Bu cümle kendi içinde yanlış değildir; sadece o paragrafa ait değildir.",
     steps: [
-      "Beş cümleyi bir paragraf gibi oku.",
-      "Hangi cümle çıkarılınca akış bozulmadan sürüyor, onu bul.",
-      "Zamir ve bağlaç, çıkan cümleye mi yoksa kalanlara mı bakıyor, kontrol et.",
+      "Beş cümleyi tek bir paragraf gibi oku.",
+      "Hangi cümleyi çıkarınca akışın bozulmadığını bul.",
+      "Zamir ve bağlaçların hangi cümleye bağlandığını kontrol et.",
     ],
-    misses: ["En ilgisiz kelimeyi taşıyan cümleyi seçmek.", "Konuya değen ama sırayı bozan cümleyi içeride bırakmak."],
-    tip: "Bozan cümle genellikle doğru bir bilgidir. Yanlış olan, orada durmasıdır.",
+    misses: [
+      "En alakasız kelimeyi içeren cümleyi seçmek.",
+      "Konuyla ilgili ama sırayı bozan cümleyi gözden kaçırmak.",
+    ],
+    tip: "Akışı bozan cümle genellikle doğru bir bilgi içerir. Sorun bilginin kendisinde değil, orada durmasındadır.",
   },
 ];
 

@@ -38,11 +38,11 @@ export default async function GuideSectionPage({ params }: Props) {
             Rehber
           </Link>
           {" · "}
-          {band.from}–{band.to}
+          {band.to - band.from + 1} soru
         </p>
         <h1 className="display mt-3">{band.title}</h1>
         <p className="mt-4 max-w-xl leading-8 text-muted">{note.measures}</p>
-        <h2 className="mt-10 text-3xl">Nereye bakılır</h2>
+        <h2 className="mt-10 text-3xl">Nasıl çözülür?</h2>
         <ol className="mt-4 space-y-3">
           {note.steps.map((step, index) => (
             <li key={step} className="flex gap-3 text-sm leading-6">
@@ -51,7 +51,7 @@ export default async function GuideSectionPage({ params }: Props) {
             </li>
           ))}
         </ol>
-        <h2 className="mt-10 text-3xl">Nerede kaçar</h2>
+        <h2 className="mt-10 text-3xl">Sık yapılan hatalar</h2>
         <ul className="mt-4 space-y-2 text-sm leading-6 text-muted">
           {note.misses.map((miss) => (
             <li key={miss}>{miss}</li>
@@ -60,35 +60,35 @@ export default async function GuideSectionPage({ params }: Props) {
       </div>
       <aside className="space-y-4">
         <div className="rounded-[28px] border border-line bg-card p-6">
-          <p className="text-xs uppercase tracking-[0.16em] text-gold">Not</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-gold">İpucu</p>
           <p className="mt-3 leading-7">{note.tip}</p>
         </div>
         <div className="rounded-[28px] border border-line bg-card p-6">
-          <p className="text-xs uppercase tracking-[0.16em] text-gold">Sende</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-gold">Senin sonuçların</p>
           {stats && stats.answered > 0 ? (
             <>
               <p className="mt-3 font-serif text-4xl">
                 {stats.correct}/{stats.answered}
               </p>
               <p className="mt-2 text-sm leading-6 text-muted">
-                Bu bölümde çözdüğün sorular. {stats.wrong > 0 ? `${stats.wrong} tanesi kaçtı. Tam sınavda bu, ${(Math.round(stats.wrong * 125) / 100).toLocaleString("tr-TR")} puanın yerinde kalması demektir.` : "Henüz yanlışın yok."}
+                Bu bölümde çözdüğün soruların doğru sayısı. {stats.wrong > 0 ? `${stats.wrong} yanlışın var; gerçek sınavda bu, ${(Math.round(stats.wrong * 125) / 100).toLocaleString("tr-TR")} puan kaybı demek.` : "Henüz yanlışın yok."}
               </p>
             </>
           ) : (
-            <p className="mt-3 text-sm leading-6 text-muted">Bu bölümden henüz soru yok. Teşhis onu açar.</p>
+            <p className="mt-3 text-sm leading-6 text-muted">Bu bölümden henüz soru çözmedin. Seviye testini çözünce sonuçların burada görünür.</p>
           )}
           {readingSkills.length > 0 ? (
             <ul className="mt-4 space-y-2 text-sm">
               {readingSkills.map((row) => (
                 <li key={row.id} className="flex justify-between gap-3">
                   <span>{row.name}</span>
-                  <span className="text-muted">{row.mastery}</span>
+                  <span className="text-muted">%{row.mastery}</span>
                 </li>
               ))}
             </ul>
           ) : null}
           <Link href={profile ? "/bugun" : "/teshis"} className="mt-5 inline-block rounded-full bg-pine px-4 py-2 text-sm text-cream">
-            {profile ? "Bugünün listesine dön" : "Teşhisi başlat"}
+            {profile ? "Bugünün çalışmasına dön" : "Seviye testine başla"}
           </Link>
         </div>
       </aside>

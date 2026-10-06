@@ -9,7 +9,7 @@ import type { CheckoutPlan } from "@/modules/billing/entitlement";
 
 export const metadata: Metadata = {
   title: "Fiyat",
-  description: `Seviye ölçümü ücretsiz. 90 gün ${brand.prices.lab90} TL, 180 gün ${brand.prices.lab180} TL, sınav sprinti ${brand.prices.sprint} TL.`,
+  description: `Seviye testi ücretsiz. 90 gün ${brand.prices.lab90} TL, 180 gün ${brand.prices.lab180} TL, 60 günlük yoğun paket ${brand.prices.sprint} TL.`,
   alternates: { canonical: "/fiyat" },
 };
 
@@ -19,12 +19,12 @@ function tl(amount: number) {
 
 function applyNote(applyFrom: string | undefined, applyUntil: string | undefined, lateApply: string | undefined) {
   if (!applyUntil) return null;
-  if (applyFrom && daysUntil(applyFrom) > 0) return `Başvuru ${formatDay(applyFrom)} tarihinde açılır.`;
+  if (applyFrom && daysUntil(applyFrom) > 0) return `Başvurular ${formatDay(applyFrom)} tarihinde başlıyor.`;
   const left = daysUntil(applyUntil);
-  const late = lateApply ? ` Geç başvuru ${formatDay(lateApply)}.` : "";
-  if (left > 0) return `Başvuru ${formatDay(applyUntil)} gece yarısına kadar açık.${late}`;
-  if (left === 0) return `Başvuru bugün gece yarısına kadar açık.${late}`;
-  if (lateApply && daysUntil(lateApply) >= 0) return `Normal başvuru kapandı. Geç başvuru ${formatDay(lateApply)}.`;
+  const late = lateApply ? ` Geç başvuru: ${formatDay(lateApply)}.` : "";
+  if (left > 0) return `Son başvuru: ${formatDay(applyUntil)}.${late}`;
+  if (left === 0) return `Son başvuru bugün.${late}`;
+  if (lateApply && daysUntil(lateApply) >= 0) return `Normal başvuru süresi bitti. Geç başvuru: ${formatDay(lateApply)}.`;
   return null;
 }
 
@@ -47,21 +47,21 @@ export default async function PricingPage() {
       price: brand.prices.lab90,
       unit: "90 gün",
       featured: true,
-      points: ["Günlük soru sınırı yok", "Deneme sınırı yok", "Süre bitince biter, her ay yenilenmez"],
+      points: ["Günlük soru sınırı yok", "Sınırsız deneme", "Tek seferlik ödeme, otomatik yenilenmez"],
     },
     {
       plan: "lab_180",
       title: "180 gün",
       price: brand.prices.lab180,
       unit: "6 ay",
-      points: ["90 günle aynı iş", "Sınavın tarihi daha ilerideyse", "Süre bitince biter"],
+      points: ["90 günlük paketin tüm özellikleri", "Sınavın daha ileri bir tarihteyse", "Tek seferlik ödeme, otomatik yenilenmez"],
     },
     {
       plan: "sprint",
-      title: "Sınav sprinti",
+      title: "Yoğun paket",
       price: brand.prices.sprint,
       unit: "60 gün",
-      points: ["Sınava 30 ile 60 gün kala", "60 gün boyunca soru sınırı yok", "Deneme sınırı yok"],
+      points: ["Sınavına 1–2 ay kaldıysa", "60 gün boyunca soru sınırı yok", "Sınırsız deneme"],
     },
   ];
 
@@ -69,16 +69,16 @@ export default async function PricingPage() {
     <section className="landing mx-auto w-full max-w-6xl px-4 py-12 sm:px-5 sm:py-20">
       <p className="text-xs uppercase tracking-[0.18em] text-gold">Fiyat</p>
       <h1 className="display-xl mt-4 max-w-3xl font-serif">
-        Seviyeni ölçmek <span className="grad">bedava.</span>
+        Seviye testi <span className="grad">ücretsiz.</span>
       </h1>
       <p className="mt-4 max-w-2xl text-base leading-8 text-muted sm:text-lg">
-        24 soruluk ölçüm ücretsiz. Çıkan sayı resmi puanın değildir; 80 soruluk sınavın kısasıdır. Ölçümden sonra, çalışmaya başlayınca günde {brand.freeDailyQuestions} soru ve{" "}
-        {brand.freeSimulators} deneme hakkı var. Ücretli pakette bu sınır kalkar. Kartından her ay para çekilmez; aldığın süre bitince paket de biter.
+        24 soruluk seviye testi ücretsiz. Sonrasında her gün {brand.freeDailyQuestions} soru çözebilir ve{" "}
+        {brand.freeSimulators} tam deneme yapabilirsin. Ücretli pakette bu sınırlar kalkar. Abonelik yoktur: bir kez ödersin, süre bitince paket kendiliğinden sona erer.
       </p>
 
       <div data-rise className="glass mt-10 rounded-[28px] border border-line p-5 sm:p-6">
-        <h2 className="text-2xl">Sıradaki sınavlar</h2>
-        <p className="mt-2 text-sm leading-6 text-muted">ÖSYM’nin 2026 sınav takviminden. Tarih değişirse osym.gov.tr geçerlidir.</p>
+        <h2 className="text-2xl">Yaklaşan sınavlar</h2>
+        <p className="mt-2 text-sm leading-6 text-muted">Tarihler ÖSYM’nin 2026 sınav takviminden alınmıştır. Bir değişiklik olursa osym.gov.tr’deki bilgi geçerlidir.</p>
         <ul className="mt-5 divide-y divide-line">
           {upcoming.map((sitting) => {
             const note = applyNote(sitting.applyFrom, sitting.applyUntil, sitting.lateApply);
@@ -101,7 +101,7 @@ export default async function PricingPage() {
         </ul>
         {finished.length > 0 ? (
           <p className="border-t border-line pt-4 text-sm leading-6 text-muted">
-            {finished.map((row) => `${row.sitting.name}, ${formatDay(row.sitting.date)} tarihinde yapıldı`).join(". ")}. 2026 takviminde bunlar için başka tarih yok.
+            {finished.map((row) => `${row.sitting.name} ${formatDay(row.sitting.date)} tarihinde yapıldı`).join(". ")}. 2026 takviminde bu sınavlar için başka oturum yok.
           </p>
         ) : null}
         <p className="mt-3 text-sm">
@@ -116,9 +116,9 @@ export default async function PricingPage() {
           <h2 className="text-2xl">Ücretsiz</h2>
           <p className="mt-6 font-serif text-4xl">0 TL</p>
           <ul className="mt-6 space-y-2 text-sm leading-6 text-muted">
-            <li>24 soruluk ölçüm</li>
-            <li>Sonra günde {brand.freeDailyQuestions} soru</li>
-            <li>{brand.freeSimulators} deneme</li>
+            <li>24 soruluk seviye testi</li>
+            <li>Her gün {brand.freeDailyQuestions} soru</li>
+            <li>{brand.freeSimulators} tam deneme</li>
           </ul>
         </article>
         {offers.map((offer) => (
@@ -146,14 +146,14 @@ export default async function PricingPage() {
                   pendingLabel="Açılıyor…"
                   className={offer.featured ? "rounded-full bg-cream px-4 py-2 text-sm text-pine-deep" : "rounded-full border border-line px-4 py-2 text-sm"}
                 >
-                  Geliştirmede aç
+                  Test için etkinleştir
                 </PendingButton>
               </form>
             ) : null}
           </article>
         ))}
       </div>
-      {live ? <p className="mt-8 text-sm text-muted">Ödeme iyzico ile alınır. Paket, ödeme bildirimi gelince açılır.</p> : null}
+      {live ? <p className="mt-8 text-sm text-muted">Ödemeler iyzico ile güvenle alınır. Paketin, ödeme onaylanır onaylanmaz açılır.</p> : null}
     </section>
   );
 }

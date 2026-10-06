@@ -118,21 +118,21 @@ export async function createSession(input: {
     picked = selectDiagnostic(pool, blueprint);
     await recordEvent("diagnostic_started", input.profileId);
   } else if (input.mode === "simulator") {
-    if (exam === "ydt") return { error: "YDT tam denemesi kitapçık sırası tamamlanınca açılır. Teşhis ve günün işi duruyor." };
+    if (exam === "ydt") return { error: "YDT denemesi çok yakında burada. O zamana kadar seviye testini çözebilir, günlük çalışmana devam edebilirsin." };
     const completed = await completedSimulators({ profileId: input.profileId, guestId });
     if (!canStartSimulator({ pro: access.pro, completed, limit: brand.freeSimulators })) {
       await recordEvent("paywall_viewed", input.profileId, { reason: "simulator" });
-      return { paywall: true, error: "Ücretsiz deneme hakkın doldu." };
+      return { paywall: true, error: "Ücretsiz deneme hakkını kullandın." };
     }
     picked = selectMock(pool);
-    if (picked.length !== 80) return { error: "Tam deneme için 80 yayımlanmış soru gerekli." };
+    if (picked.length !== 80) return { error: "Deneme şu an hazırlanamadı. Biraz sonra tekrar dene." };
     await recordEvent("simulator_started", input.profileId);
   } else {
     const requested = input.itemIds ?? [];
     const todayCount = input.profileId ? await answeredToday(input.profileId) : 0;
     if (!canStartPractice({ pro: access.pro, answeredToday: todayCount, limit: brand.freeDailyQuestions })) {
       await recordEvent("paywall_viewed", input.profileId, { reason: "practice" });
-      return { paywall: true, error: "Bugünkü ücretsiz soru hakkın doldu." };
+      return { paywall: true, error: "Bugünkü 10 ücretsiz sorunu çözdün. Yarın yeni sorular seni bekliyor." };
     }
     const allowance = practiceAllowance({
       pro: access.pro,
@@ -152,7 +152,7 @@ export async function createSession(input: {
             preferredSections: ["cloze", "sentence"],
             difficulty: 3,
           });
-    if (picked.length === 0) return { error: "Şu an çözebileceğin yayımlanmış soru kalmadı." };
+    if (picked.length === 0) return { error: "Şu an çözebileceğin yeni soru kalmadı. Yeni sorular eklendikçe burada görünecek." };
     await recordEvent("daily_plan_started", input.profileId);
   }
   const db = await getDb();
@@ -253,10 +253,10 @@ export async function saveAnswer(input: {
   guestId: string;
 }) {
   const session = await ownedSession(input.sessionId, input.profileId, input.guestId);
-  if (!session || session.status !== "active") return { error: "Oturum kapalı." };
+  if (!session || session.status !== "active") return { error: "Bu test bitti; artık cevap değiştiremezsin." };
   if (session.mode === "simulator" && session.endsAt && session.endsAt.getTime() < Date.now()) {
     await submitSession(input.sessionId, input.profileId, input.guestId);
-    return { error: "Süre doldu.", submitted: true };
+    return { error: "Süre doldu, sonucun hazırlanıyor.", submitted: true };
   }
   const db = await getDb();
   const [choiceRows, existing, membership] = await Promise.all([
@@ -273,8 +273,8 @@ export async function saveAnswer(input: {
       .limit(1),
   ]);
   const choice = choiceRows[0];
-  if (!choice || choice.itemId !== input.itemId || !membership[0]) return { error: "Şık bulunamadı." };
-  if (session.mode === "practice" && existing[0]) return { error: "Bu soru zaten cevaplandı." };
+  if (!choice || choice.itemId !== input.itemId || !membership[0]) return { error: "Cevabın kaydedilemedi. Sayfayı yenileyip tekrar dene." };
+  if (session.mode === "practice" && existing[0]) return { error: "Bu soruyu zaten cevapladın." };
   const correct = choice.correct;
   if (existing[0]) {
     await db
@@ -445,8 +445,8 @@ export async function submitSession(sessionId: string, profileId: string | null,
     await bumpStreak(profileId);
   }
   if (profileId && loaded.session.mode === "diagnostic") {
-    const answered = report.correct + report.wrong;
-    const estimate = exam === "ydt" ? estimateNet(report.correct, report.wrong, answered) : estimateFromAccuracy(report.correct, answered);
+    const total = report.correct + report.wrong + report.blank;
+    const estimate = exam === "ydt" ? estimateNet(report.correct, report.wrong, total) : estimateFromAccuracy(report.correct, total);
     await db
       .update(profiles)
       .set({ estimatedLow: estimate.low, estimatedHigh: estimate.high })
@@ -580,10 +580,14 @@ export async function claimGuestSessions(profileId: string) {
     .where(and(eq(sessions.profileId, profileId), eq(sessions.mode, "diagnostic"), eq(sessions.status, "submitted")));
   let correct = 0;
   let wrong = 0;
+  let blank = 0;
   for (const session of diags) {
     const answerRows = await db.select().from(answers).where(eq(answers.sessionId, session.id));
     for (const answer of answerRows) {
-      if (answer.correct == null) continue;
+      if (answer.correct == null) {
+        blank += 1;
+        continue;
+      }
       if (answer.correct) correct += 1;
       else wrong += 1;
       await applyMastery(profileId, answer.itemId, answer.correct);
@@ -591,7 +595,8 @@ export async function claimGuestSessions(profileId: string) {
   }
   if (correct + wrong > 0) {
     const exam = asExam(diags.at(-1)?.exam);
-    const estimate = exam === "ydt" ? estimateNet(correct, wrong, correct + wrong) : estimateFromAccuracy(correct, correct + wrong);
+    const total = correct + wrong + blank;
+    const estimate = exam === "ydt" ? estimateNet(correct, wrong, total) : estimateFromAccuracy(correct, total);
     await db.update(profiles).set({ estimatedLow: estimate.low, estimatedHigh: estimate.high }).where(eq(profiles.id, profileId));
   }
 }

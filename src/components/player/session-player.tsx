@@ -133,7 +133,7 @@ export function SessionPlayer({
     <div className="mx-auto grid min-h-screen max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[220px_1fr]">
       <aside className="h-fit rounded-2xl border border-line bg-card p-3">
         <div className="mb-3 flex items-center justify-between text-sm">
-          <span>{mode === "simulator" ? "Deneme" : mode === "diagnostic" ? "Teşhis" : "Pratik"}</span>
+          <span>{mode === "simulator" ? "Deneme" : mode === "diagnostic" ? "Seviye testi" : "Günlük çalışma"}</span>
           {clock ? <span className="font-mono text-pine">{clock}</span> : null}
         </div>
         <div className="grid grid-cols-5 gap-1">
@@ -144,19 +144,19 @@ export function SessionPlayer({
               onClick={() => setIndex(rowIndex)}
               className={`h-8 rounded text-xs ${rowIndex === index ? "bg-pine text-cream" : selected[row.id] ? "bg-moss/15 text-moss" : "bg-paper"} ${flags[row.id] ? "ring-1 ring-clay" : ""}`}
             >
-              {row.slot ?? rowIndex + 1}
+              {rowIndex + 1}
             </button>
           ))}
         </div>
         <button type="button" disabled={finishing} onClick={() => void finish()} className="mt-4 w-full rounded-full bg-pine px-3 py-2 text-sm text-cream disabled:opacity-70">
-          {finishing ? "Kaydediliyor…" : "Bitir"}
+          {finishing ? "Sonucun hesaplanıyor…" : "Bitir ve sonucu gör"}
         </button>
       </aside>
       <article className="rounded-2xl border border-line bg-card p-6">
         <div className="mb-4 flex items-center justify-between gap-3 text-sm text-muted">
           <span>{blueprintFor(asExam(exam)).bands.find((band) => band.section === item.section)?.title}</span>
           <button type="button" onClick={toggleFlag} className="rounded-full border border-line px-3 py-1">
-            {flags[item.id] ? "İşaretli" : "İşaretle"}
+            {flags[item.id] ? "İşareti kaldır" : "Sonra dön"}
           </button>
         </div>
         {instruction ? <p className="mb-4 text-sm text-muted">{instruction}</p> : null}
@@ -203,9 +203,9 @@ export function SessionPlayer({
         </ol>
         {reveal ? (
           <div className="mt-5 rounded-xl bg-paper p-4 text-sm leading-6">
-            <p className="font-medium">{reveal.correct ? "Doğru." : "Bu şık tutmadı."}</p>
+            <p className="font-medium">{reveal.correct ? "Doğru!" : "Doğru cevap yeşil çerçeveli şık."}</p>
             <p className="mt-2">{reveal.explanation}</p>
-            {reveal.note ? <p className="mt-2 text-muted">Neden tutmadı: {distractorText(reveal.note)}</p> : null}
+            {reveal.note ? <p className="mt-2 text-muted">Senin seçtiğin şıkta sorun: {distractorText(reveal.note)}</p> : null}
           </div>
         ) : null}
         <div className="mt-6 flex justify-between">

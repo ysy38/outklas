@@ -92,9 +92,9 @@ export function slowestSection(report: ScoreReport): SectionScore | null {
 }
 
 export function weakestSection(report: ScoreReport): SectionScore | null {
-  const attempted = report.bySection.filter((row) => row.correct + row.wrong > 0);
-  if (attempted.length === 0) return null;
-  return attempted.reduce((weak, row) => {
+  const missed = report.bySection.filter((row) => row.wrong > 0);
+  if (missed.length === 0) return null;
+  return missed.reduce((weak, row) => {
     const weakRate = weak.correct / (weak.correct + weak.wrong);
     const rowRate = row.correct / (row.correct + row.wrong);
     return rowRate < weakRate ? row : weak;

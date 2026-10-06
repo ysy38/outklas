@@ -29,33 +29,37 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   const report = scoreSession(blueprint.scoring, scoreItems);
   const slow = slowestSection(report);
   const weak = weakestSection(report);
+  const total = report.correct + report.wrong + report.blank;
   const answered = report.correct + report.wrong;
   const estimate =
-    loaded.session.mode === "diagnostic"
+    loaded.session.mode === "diagnostic" && answered > 0
       ? exam === "ydt"
-        ? estimateNet(report.correct, report.wrong, answered)
-        : estimateFromAccuracy(report.correct, answered)
+        ? estimateNet(report.correct, report.wrong, total)
+        : estimateFromAccuracy(report.correct, total)
       : null;
+  const emptyDiagnostic = loaded.session.mode === "diagnostic" && answered === 0;
   const title = (section: string) => blueprint.bands.find((band) => band.section === section)?.title ?? section;
   const missed = (wrong: number) =>
     exam === "ydt"
-      ? `${wrong} yanlış, yaklaşık ${(Math.round((wrong / 4) * 100) / 100).toLocaleString("tr-TR")} net götürür`
-      : `${wrong} kaçtı, ${(Math.round(wrong * 125) / 100).toLocaleString("tr-TR")} puan yerinde kaldı`;
+      ? `${wrong} yanlış, ${(Math.round((wrong / 4) * 100) / 100).toLocaleString("tr-TR")} net kaybı`
+      : `${wrong} yanlış, ${(Math.round(wrong * 125) / 100).toLocaleString("tr-TR")} puan kaybı`;
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 sm:px-5">
       <p className="text-sm text-muted">
-        {loaded.session.mode === "diagnostic" ? "Teşhis tahmini" : loaded.session.mode === "practice" ? "Bugünün işi bitti" : exam === "ydt" ? "YDT neti" : "Deneme"}
+        {loaded.session.mode === "diagnostic" ? (exam === "ydt" ? "Tahmini netin" : "Tahmini puanın") : loaded.session.mode === "practice" ? "Bugünkü çalışman tamam" : exam === "ydt" ? "Deneme netin" : "Deneme puanın"}
       </p>
-      <h1 className="display mt-2">{estimate ? `${estimate.low}–${estimate.high}` : report.score}</h1>
+      <h1 className="display mt-2">{emptyDiagnostic ? "Sonuç yok" : estimate ? `${estimate.low}–${estimate.high}` : report.score}</h1>
       <p className="mt-3 text-muted">
         {report.correct} doğru, {report.wrong} yanlış, {report.blank} boş.
-        {estimate
-          ? exam === "ydt"
-            ? " Bu bir net tahminidir. YKS yerleştirme puanı değildir."
-            : " Bu resmi puan değildir. 24 soru, 80 soruluk sınavın kısasıdır."
-          : exam === "ydt"
-            ? " Net, doğru sayısından yanlışın dörtte biri düşülerek bulunur."
-            : " Puan, doğru sayısının 1,25 katıdır. Yanlış bu çarpıma girmez."}
+        {emptyDiagnostic
+          ? " Hiç soru cevaplamadığın için puan tahmini yapamadık. Testi yeniden başlatıp soruları cevaplarsan sonucunu görürsün."
+          : estimate
+            ? exam === "ydt"
+              ? " Bu, 80 soruluk sınavda alabileceğin netin tahmini aralığıdır. YKS yerleştirme puanı değildir."
+              : " Bu, 80 soruluk sınavda alabileceğin puanın tahmini aralığıdır. Resmi puan değildir."
+            : exam === "ydt"
+              ? " Net, doğru sayından yanlışlarının dörtte biri çıkarılarak hesaplanır."
+              : " Puan, doğru sayının 1,25 katıdır. Yanlışlar doğrularını götürmez."}
       </p>
       <ul className="mt-6 space-y-2 text-sm">
         {report.bySection.map((row) => (
@@ -76,7 +80,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
       </ul>
       {weak ? (
         <p className="mt-4 text-sm">
-          En çok kaçırdığın bölüm:{" "}
+          En çok puan kaybettiğin bölüm:{" "}
           {rehberBySection(weak.section) ? (
             <Link href={`/rehber/${weak.section}`} className="text-pine">
               {title(weak.section)}
@@ -87,15 +91,15 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
           .
         </p>
       ) : null}
-      {slow ? <p className="text-sm">En yavaş çözdüğün bölüm: {title(slow.section)}.</p> : null}
+      {slow ? <p className="text-sm">En çok vakit harcadığın bölüm: {title(slow.section)}.</p> : null}
       <div className="mt-8 flex gap-3">
         {profile ? (
             <Link href="/bugun" className="rounded-full bg-pine px-4 py-2 text-cream">
-            {profile.streak > 0 ? `Seri ${profile.streak} gün` : "Bugünün işi"}
+            {profile.streak > 0 ? `${profile.streak} gündür aralıksız çalışıyorsun` : "Bugünkü çalışmana geç"}
           </Link>
         ) : (
           <Link href="/giris" className="rounded-full bg-pine px-4 py-2 text-cream">
-            Planı kaydet
+            Hesap aç, sonucunu kaydet
           </Link>
         )}
         <Link href="/" className="rounded-full border border-line px-4 py-2">

@@ -113,7 +113,7 @@ function adminEmails(): string[] {
 
 export async function registerAccount(email: string, password: string): Promise<{ error?: string }> {
   const normalized = email.trim().toLowerCase();
-  if (!normalized.includes("@") || password.length < 6) return { error: "E-posta ve en az 6 karakterlik bir parola gerekli." };
+  if (!normalized.includes("@") || password.length < 6) return { error: "Geçerli bir e-posta ve en az 6 karakterlik bir şifre gir." };
   if (await supabaseEnabled()) {
     const { createSupabaseServer } = await import("./supabase");
     const supabase = await createSupabaseServer();
@@ -124,7 +124,7 @@ export async function registerAccount(email: string, password: string): Promise<
   }
   const db = await getDb();
   const existing = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.email, normalized)).limit(1);
-  if (existing[0]) return { error: "Bu e-posta ile bir hesap zaten var." };
+  if (existing[0]) return { error: "Bu e-postayla açılmış bir hesap var. Giriş yap sekmesinden devam edebilirsin." };
   const id = randomUUID();
   await db.insert(profiles).values({
     id,
@@ -151,7 +151,7 @@ export async function loginAccount(email: string, password: string): Promise<{ e
   const db = await getDb();
   const rows = await db.select().from(profiles).where(eq(profiles.email, normalized)).limit(1);
   const profile = rows[0];
-  if (!profile || !verifyPassword(password, profile.passwordHash)) return { error: "E-posta veya parola hatalı." };
+  if (!profile || !verifyPassword(password, profile.passwordHash)) return { error: "E-posta ya da şifre yanlış. Tekrar dener misin?" };
   const jar = await cookies();
   jar.set(sessionCookie, sign(profile.id), { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
   await markSignedIn();
