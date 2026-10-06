@@ -22,7 +22,7 @@ const publicLinks = [
 
 export function PublicHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-line/80 bg-paper/85 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-line/70 bg-paper/70 shadow-[0_20px_50px_-36px_rgba(18,32,40,0.45)] backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-5">
         <Link href="/" className="flex min-w-0 items-center gap-2 font-serif text-lg tracking-tight sm:gap-2.5 sm:text-xl">
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-pine text-sm text-cream">Y</span>

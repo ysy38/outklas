@@ -46,6 +46,10 @@
   --color-gold: var(--gold);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   overflow-x: clip;
@@ -69,6 +73,121 @@ body {
   }
   100% {
     transform: translateX(420%);
+  }
+}
+
+.display-xl {
+  font-size: clamp(2.75rem, 8vw, 5.4rem);
+  line-height: 0.96;
+  letter-spacing: -0.045em;
+}
+
+.landing {
+  position: relative;
+  isolation: isolate;
+}
+
+.landing::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 52rem;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 42rem 28rem at 88% 8%, color-mix(in srgb, var(--pine) 18%, transparent), transparent 70%),
+    radial-gradient(ellipse 36rem 24rem at 8% 22%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 68%);
+}
+
+.glass {
+  background: color-mix(in srgb, var(--card) 68%, transparent);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 30px 80px -48px color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+.lift {
+  transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1), border-color 0.45s ease, box-shadow 0.45s ease;
+}
+
+.lift:hover {
+  transform: translateY(-8px);
+  border-color: color-mix(in srgb, var(--pine) 45%, var(--line));
+}
+
+.ribbon {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.ribbon-track {
+  display: flex;
+  width: max-content;
+  gap: 2.75rem;
+  animation: ribbon 36s linear infinite;
+}
+
+@keyframes ribbon {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-rise] {
+      animation: rise-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 22%;
+    }
+  }
+}
+
+.bar-grow {
+  transform-origin: left;
+  animation: bar-grow 1.05s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rise-in {
+  animation: rise-in 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.rise-in-late {
+  animation-delay: 0.14s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .ribbon-track,
+  .bar-grow,
+  .rise-in {
+    animation: none;
+  }
+
+  .lift:hover {
+    transform: none;
   }
 }
 
