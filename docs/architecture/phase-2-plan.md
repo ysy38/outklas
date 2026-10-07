@@ -18,7 +18,7 @@ Faz 2, geçmiş ÖSYM sınavlarını **yalnızca analiz için** yerelde işler v
 | Sistem araçları | `tesseract`, `pdftoppm`, `pdfinfo`, `mutool`, `gs`, ImageMagick yok; `sudo` parola istiyor. Python 3.8 + pip --user var. | Kullanıcı alanında Node yığını: `pdfjs-dist` (render + metin katmanı), `@napi-rs/canvas` (pdfjs'in kendi sürümüyle aynı 0.1.x), `tesseract.js` (WASM, `eng+tur`). Sistem paketi gerekmez. |
 | Kaynak PDF'ler | Kasım 2024: 18 sayfa, metin katmanı yok (sayfa başı ~80 karakter, yalnızca tarayıcı izi). Mart 2024: 46 sayfa, yeniden dizilmiş tarama. Ekim 2023 ve 2025 Mart: metin katmanı var. | Pilot Kasım 2024. OCR doğruluğu için "metin katmanlı ikiz" yok; ölçüm yöntemi §9'da. |
 | Gemini anahtarı | `.env.example` içine gerçek bir anahtar yazılmıştı (commit edilmemişti). | Anahtar gitignore'lu `.env.local` dosyasına taşındı (izin 600), `.env.example` boş bırakıldı. Değer hiçbir yerde yazdırılmadı. |
-| Gemini modelleri | `ListModels` ile alındı. `gemini-2.5-*` bu anahtar için kapalı (404). `gemini-3.1-pro-preview` **ücretsiz katmanda kota 0** (429). `gemini-3.8-flash` 240 sn içinde yanıt vermedi. `gemini-3.5-flash` (~1,5 sn) ve `gemini-3.1-flash-lite` (~6 sn) çalışıyor. | Varsayılanlar: Analyzer, Verifier, Generator = `gemini-3.5-flash`; Judge = `gemini-3.1-flash-lite` (Generator'dan farklı model; ücretli katmanda Pro'ya çekilmeli). Hepsi env ile değişir. |
+| Gemini modelleri | `ListModels` ile alındı. `gemini-2.5-*` bu anahtar için kapalı (404). `gemini-3.1-pro-preview` **ücretsiz katmanda kota 0** (429). Pilot günü (7 Ekim) tüm `*-flash` modelleri saatlerce 503 ("high demand") döndü; `gemini-3.5-flash-lite` ve `gemma-4-31b-it` çalıştı (sütun başı ~30–40 sn, sık 500/503 yeniden denemeleriyle). | Varsayılanlar (`pipeline/ai/config.ts`): Analyzer = `gemini-3.5-flash-lite`, Verifier = `gemma-4-31b-it` (bilerek farklı model ailesi: kör çözüm Analyzer'dan bağımsız olsun), Generator = `gemini-3.5-flash`, Judge = `gemini-3.1-flash-lite`. Hepsi env ile değişir; `AI_MAX_RETRIES` yeniden deneme sayısını ayarlar. |
 | Ücretsiz katman | Anahtar ücretsiz katmanda. Google'ın şartlarına göre ücretsiz katmanda gönderilen içerik ürün geliştirme için kullanılabilir. | Pilot kitapçık zaten kamuya açık bir sınav; yine de **kullanıcı kararı gerekiyor** (§12). Maliyet ve kota için tüm AI yanıtları girdi hash'iyle önbelleklenir. |
 | Faz 1 graph'ı | 155 düğüm, 280 kenar, 113 eşleme. Misconception, distractor_type, connector, discourse_relation, question_type düğümleri var. `vocabulary` ve `topic` türünde düğüm yok. | Analiz yalnızca mevcut düğümlere bağlanır. Bilinmeyen kavram ve kelimeler **öneri** olur (`analysis.node_proposals`), kanonik düğüm oluşturulmaz. |
 | Katmanlama | UI → `src/server/*` → `src/modules/*` → `src/db/*`. Next uygulaması `src/` dışını import etmiyor. | Saf analiz mantığı `src/modules/analysis/`, Drizzle şeması `src/db/analysis-schema.ts`, IO ve AI içeren offline kod `pipeline/` altında. `src/` hiçbir zaman `pipeline/`'ı import etmez (test ile zorlanır). |
@@ -41,15 +41,15 @@ pipeline/                       OFFLINE. Next uygulaması import etmez.
     gemini.ts                   GeminiProvider (fetch, enjekte edilebilir transport, retry, timeout)
     service.ts                  createAIService(): Analyzer + Verifier gerçek, diğerleri NotImplemented
     cache.ts                    istek hash'i → yanıt önbelleği (.data/analysis/cache/ai)
-    prompts/                    analyzer.v1.ts, verifier-ocr.v1.ts, verifier-solve.v1.ts (versiyonlu)
+    prompts/                    analyzer.v2.ts, verifier.v1.ts (verifier-ocr.v1 + verifier-solve.v1), schema.ts (versiyonlu)
   lib/
     artifacts.ts                aşama dizinleri, sha256, değişmez yazım, manifest, girdi hash'iyle önbellek
     pdf.ts                      pdfjs yükleme, sayfa render
   extract/                      saf: görüntü ön işleme, sütun bölme, OCR temizliği, segmentasyon, yeniden kurma, doğrulama
   stages/                       her aşama bir dosya; girdi artefaktı → çıktı artefaktı
-  sources.ts                    kaynak belge kayıtları (dosya adı, sha256, sınav, lisans alanları; içerik yok)
-  cli.ts                        npm run analysis:<aşama> giriş noktası
-src/modules/analysis/           SAF domain: Zod analiz sözleşmesi, doğrulama, soru aileleri, DNA toplama, QuestionSpec tipi (taslak)
+  cli.ts                        npm run analysis -- <aşama> giriş noktası (npm run analysis:pilot = hepsi)
+src/modules/analysis/           SAF domain: Zod analiz sözleşmesi (contract), doğrulama (validate), yüzey özellikleri (surface),
+                                DNA + soru aileleri + desen madenciliği (dna), kaynak kayıtları ve lisans kuralları (sources), QuestionSpec tipi (spec)
 src/db/analysis-schema.ts       Drizzle: pgSchema("analysis")
 src/db/analysis-import.ts       doğrulanmış analiz → metinsiz satırlar → SQL (knowledge-sync ile aynı desen)
 supabase/migrations/<ts>_analysis_schema.sql
@@ -74,7 +74,7 @@ interface Explainer { … } interface Tutor { … }                          // 
 ```
 
 - Sağlayıcı seçimi `AI_PROVIDER` (varsayılan `gemini`). OpenAI/Claude eklemek = yeni `AIProvider` + config satırı; roller değişmez.
-- Her rolün prompt'u ayrı dosya ve ayrı versiyon kimliği taşır (`analyzer.v1`). Generator ile Judge aynı modeli kullanamaz: config yükleyicisi `GENERATOR_MODEL === JUDGE_MODEL` olursa uyarı verir (Faz 3'te hata olacak).
+- Her rolün prompt'u ayrı dosya ve ayrı versiyon kimliği taşır (`analyzer.v2`). Analyzer'ın yanıt şemasında her referans alanı, o alanın izin verdiği düğümlerin `enum`'u (kısıtlı çözümleme); v1'de model bu alanlara serbest metin yazıyordu (30 yanıtın 27'si Zod'dan geçmedi). Generator ile Judge aynı modeli kullanamaz: config yükleyicisi `GENERATOR_MODEL === JUDGE_MODEL` olursa uyarı verir (Faz 3'te hata olacak).
 - Çıktılar her zaman Zod ile doğrulanır; ham LLM çıktısına güvenilmez.
 - Önbellek anahtarı: sağlayıcı + model + prompt versiyonu + istek gövdesinin sha256'sı. Aynı girdi ikinci kez faturalanmaz.
 
@@ -103,7 +103,7 @@ Her aşama `.data/analysis/<belge>/<aşama>/` altına yazar ve bir `manifest.jso
 
 | # | Aşama (`npm run analysis:<x>`) | Girdi | Çıktı (yerel) | Not |
 |---|---|---|---|---|
-| 0 | `sources` | `sources/*.pdf` | `pipeline/sources.ts` kayıtlarının hash doğrulaması; DB için SQL | PDF'e dokunulmaz (salt okunur, sha256 doğrulanır) |
+| 0 | (ayrı aşama yok) | `sources/*.pdf` | — | Kayıtlar `src/modules/analysis/sources.ts` içinde; `render` PDF'i salt okunur açar ve sha256 kayıtla uyuşmazsa durur. Kaynak satırları `import` ile DB'ye gider. |
 | 1 | `render` | PDF | `render/page-NN.png` (300 dpi) | |
 | 2 | `ocr` | sayfa PNG | `ocr/page-NN-{left,right}.json` (kelime, güven, kutu) + `.txt` | Kırmızı kanal → filigran bastırma; orta çizgiden sütun bölme; `eng+tur`. **Değişmez, hash'li.** |
 | 3 | `ocr-verify` | sayfa PNG + ham OCR | `ocr-verify/page-NN-{left,right}.json` | Gemini Verifier görüntüden yeniden okur; ham OCR'a dokunmaz. Model, prompt versiyonu ve kullanım kaydedilir. |
@@ -116,7 +116,8 @@ Her aşama `.data/analysis/<belge>/<aşama>/` altına yazar ve bir `manifest.jso
 | 10 | `import` | metinsiz satırlar | yerel PGlite veya `--sql` | Supabase'e MCP `execute_sql` / `DATABASE_URL` ile |
 | 11 | `report` | DB (+ yerel inceleme kuyruğu sayıları) | `docs/analysis/<belge>-dna.md` (metinsiz, commit edilir) | deterministik |
 | — | `review` | tüm artefaktlar | `.data/analysis/<belge>/review.md` | 80 sorunun okunabilir tam incelemesi (soru metni içerir, yerel) |
-| — | `pilot` | — | — | 1→11'i sırayla çalıştırır |
+| — | `metrics` | tüm artefaktlar + `manual/*.json` | `metrics/metrics.json` | 20 pilot metriğinin ölçülebilen kısmı |
+| — | `pilot` | — | — | 1→11 + review + metrics sırayla; `extract` = 1–2 ve 4–7 (AI'sız) |
 
 ## 6. Doğrulama kuralları
 
@@ -160,11 +161,11 @@ Surface özellikleri (sınav, yıl, oturum, numara, tip, şık sayısı, pasaj v
 
 ## 6.1 Soru aileleri
 
-Aile = birincil kavram düğümü (ör. `discourse_relation:concession`). Bir sorunun her birincil kavramı onu o ailenin üyesi yapar. Aile raporu, aynı kavramın hangi soru tiplerinde (cümle tamamlama, cloze, okuma, anlamca yakın, çeviri, paragraf tamamlama) ve hangi çeldirici türleriyle sınandığını gösterir. Faz 4'te mastery'nin "aynı kavram farklı yüzeyde" (transfer) ölçümüne temel olur. Türetme saf fonksiyondur (`families.ts`) ve tekrar çalıştırılabilir.
+Aile = birincil kavram düğümü (ör. `discourse_relation:concession`). Bir sorunun her birincil kavramı onu o ailenin üyesi yapar. Aile raporu, aynı kavramın hangi soru tiplerinde (cümle tamamlama, cloze, okuma, anlamca yakın, çeviri, paragraf tamamlama) ve hangi çeldirici türleriyle sınandığını gösterir. Faz 4'te mastery'nin "aynı kavram farklı yüzeyde" (transfer) ölçümüne temel olur. Türetme saf fonksiyondur (`dna.ts` içinde `deriveFamilies`) ve tekrar çalıştırılabilir.
 
 ## 7. Veritabanı
 
-Yeni migration: `supabase/migrations/20261007110000_analysis_schema.sql`. Yeni Postgres şeması `analysis`. Tüm tablolarda RLS açık, politika yok; `anon` ve `authenticated` rollerinden şema yetkisi geri alınır; şema Data API'nin açık şemaları listesinde değil. Mevcut `public` tablolarına dokunulmaz. Knowledge graph'a FK'ler `ON DELETE RESTRICT`.
+Yeni migration: `supabase/migrations/20261007174824_analysis_schema.sql`. Yeni Postgres şeması `analysis`. Tüm tablolarda RLS açık, politika yok; `anon` ve `authenticated` rollerinden şema yetkisi geri alınır; şema Data API'nin açık şemaları listesinde değil. Mevcut `public` tablolarına dokunulmaz. Knowledge graph'a FK'ler `ON DELETE RESTRICT`.
 
 | Tablo | Amaç | Önemli kolonlar |
 |---|---|---|
@@ -191,7 +192,7 @@ Yeni migration: `supabase/migrations/20261007110000_analysis_schema.sql`. Yeni P
 
 **Taşınacak:** `sources/YDS-INTELLIGENCE-SPECIFICATION-v1.0.md` → `docs/specs/product-intelligence-spec.md`; `sources/YDS Intelligence — Knowledge Graph, Taxonomy & Database Architecture Specification.md` → `docs/specs/knowledge-graph-db-spec.md` (Faz 0 §8 Karar 7'deki adlar).
 
-**Yeni:** `docs/source-policy.md`, `docs/decisions/0001-llm-is-content-intelligence-not-adaptive-engine.md`, `docs/decisions/0002-gemini-behind-provider-abstraction.md`, `docs/analysis/yds-2024-11-dna.md` (üretilen), `docs/analysis/phase-2-pilot-report.md`, `supabase/migrations/20261007110000_analysis_schema.sql`, `src/db/analysis-schema.ts`, `src/db/analysis-import.ts`, `src/db/drift.ts`, `src/db/analysis-db.test.ts`, `src/modules/analysis/{contract,validate,families,dna,surface,spec}.ts` + testleri, `pipeline/**`.
+**Yeni:** `docs/source-policy.md`, `docs/decisions/0001-llm-is-content-intelligence-not-adaptive-engine.md`, `docs/decisions/0002-gemini-behind-provider-abstraction.md`, `docs/analysis/yds-2024-11-dna.md` (üretilen), `docs/analysis/phase-2-pilot-report.md`, `supabase/migrations/20261007174824_analysis_schema.sql`, `src/db/analysis-schema.ts`, `src/db/analysis-import.ts`, `src/db/drift.ts`, `src/db/analysis-db.test.ts`, `src/modules/analysis/{contract,validate,families,dna,surface,spec}.ts` + testleri, `pipeline/**`.
 
 **Yeniden kullanılanlar:** `knowledgeNodes` / `knowledgeEdges` / `parseRef` / `ref` (Faz 1), `ydsBlueprint` + `bandForSlot`, `migratePglite` (test ve yerel DB), `knowledge-sync.ts`'teki SQL üretme deseni (`lit`, `values`), `scripts/knowledge-sync.ts`'teki PGlite / postgres-js seçimi.
 
@@ -199,7 +200,7 @@ Yeni migration: `supabase/migrations/20261007110000_analysis_schema.sql`. Yeni P
 
 | Metrik | Nasıl ölçülür | Sınır |
 |---|---|---|
-| OCR doğruluğu | (a) Elle örneklem: render edilmiş sayfa görüntüsüyle son metnin karşılaştırılması, kelime ve karakter hatası sayımı. (b) Ham tesseract ile Gemini okuması arasındaki CER (bağımsız iki okuma; uyum bir alt sınır göstergesi). (c) Kalibrasyon: metin katmanlı bir ÖSYM kitapçığı sayfası (Ekim 2023) aynı OCR hattından geçirilip metin katmanına karşı CER. | Kasım 2024'ün metin katmanlı ikizi yok; (a) örneklem, (b) ve (c) dolaylı. |
+| OCR doğruluğu | (a) Elle örneklem: sayfa görüntüsüyle son metnin karşılaştırılması, kelime hatası sayımı (`manual/ocr-check.json`). (b) Ham Tesseract ile model okuması arasındaki soru bazlı CER (bağımsız iki okuma; uyum bir alt sınır göstergesi). ~~(c) Ekim 2023 metin katmanına karşı kalibrasyon~~ — denendi ve bırakıldı: o PDF'in gövde fontu (Arial) gömülü değil, pdf.js render'ında harf aralıkları bozuk; ölçüm OCR'ı değil render hatasını ölçüyordu. | Kasım 2024'ün metin katmanlı ikizi yok; (a) örneklem, (b) dolaylı. |
 | Segmentasyon | 1–80 tam, her soruda 5 şık, pasaj bağlantıları beklenen bantlarla aynı (17–26 cloze, 43–62 okuma, 72–75 paragraf, 76–80 anlam bütünlüğü). | Kesin. |
 | Soru tipi | Analyzer tipi vs blueprint bandı. | Kesin (blueprint resmi düzen). |
 | Cevap | Analyzer doğru şıkkı ve Verifier kör çözümü vs cevap anahtarı (sayfa 18). | Kesin (anahtar OCR'ı elle doğrulanır). |
@@ -208,7 +209,7 @@ Yeni migration: `supabase/migrations/20261007110000_analysis_schema.sql`. Yeni P
 
 ## 10. Yeni env değişkenleri
 
-`AI_PROVIDER` (varsayılan `gemini`), `GEMINI_API_KEY`, `ANALYZER_MODEL`, `VERIFIER_MODEL`, `GENERATOR_MODEL`, `JUDGE_MODEL`. Hepsi yalnızca yerel `.env.local`; Vercel ortamına **eklenmez** (uygulama AI kullanmaz). Varsayılanlar `pipeline/ai/config.ts` içinde.
+`AI_PROVIDER` (varsayılan `gemini`), `GEMINI_API_KEY`, `ANALYZER_MODEL`, `VERIFIER_MODEL`, `GENERATOR_MODEL`, `JUDGE_MODEL`, `AI_MAX_RETRIES` (varsayılan 6). Hepsi yalnızca yerel `.env.local`; Vercel ortamına **eklenmez** (uygulama AI kullanmaz). Varsayılanlar `pipeline/ai/config.ts` içinde.
 
 ## 11. Testler
 
@@ -226,3 +227,22 @@ Yeni migration: `supabase/migrations/20261007110000_analysis_schema.sql`. Yeni P
 2. **DB'ye soru bazlı DNA:** Faz 0 Karar 1 seçenek A uygulanıyor (metinsiz soru bazlı özellikler Supabase `analysis` şemasında). Hukuki görüş önerisi geçerli.
 3. **Öneri kuyruğu:** Kabul edilen önerileri seed'e kim ve hangi sıklıkla taşıyacak (Faz 1 kuralı: insan eliyle `seed.ts` → `knowledge:sync`)?
 4. **`pdfcoffee` kaynaklı dosyalar:** Kaynağı belirsiz; `license_status = unknown`. ÖSYM'nin resmi yayınıyla değiştirilmesi öneriliyor.
+5. **Model "recitation" reddi:** Verifier, telifli metni kelimesi kelimesine yazdırmayı sağlayıcı filtresiyle (`finishReason = RECITATION`) sütunların bir kısmında reddediyor; özellikle uzun okuma pasajlarında. Bu filtre aşılmaya çalışılmıyor; o sütunlar tek okumaya (Tesseract) düşüyor ve `single_reading` ile işaretleniyor. Bağımsız ikinci okuma için yerel bir ikinci OCR motoru (ör. farklı Tesseract modeli / PaddleOCR) mı eklensin, yoksa bu sorular insan incelemesine mi bırakılsın?
+
+## 13. Uygulama sırasında plandan sapmalar (7 Ekim, uzlaştırma)
+
+- **Kaynak kayıtları** `pipeline/sources.ts` yerine `src/modules/analysis/sources.ts` içinde (DB içe aktarması ve testler de kullanıyor; IO içermiyor). Ayrı `sources` aşaması yok; hash doğrulaması `render` içinde.
+- **Aileler** ayrı `families.ts` değil, `dna.ts` içinde (`deriveFamilies`, `mineDna`).
+- **Sütun bölme:** ÖSYM sayfalarındaki orta çizgi açık gri; koyuluk eşiğiyle bulunamadı ve sağ sütunun ilk harfleri kesiliyordu. Çizgi artık en uzun kesintisiz dikey koşuyla bulunuyor (`findGutter`); OCR v2 olarak yeniden çalıştırıldı, eski çıktı arşivlendi (değişmez aşama kuralı).
+- **Kitapçıkta bölüm talimatı yok:** Kasım 2024 taramasında bölüm başlıkları/talimatları basılı değil; soru numaraları tek başına satırda. Segmentasyon numara dizisine, bölümler blueprint'e dayanıyor. Tesseract "11"i "1" okuyabiliyor; segmentasyon ve anahtar ayrıştırma bunu konumla düzeltiyor.
+- **İkinci okuma (`ocr-verify`):** Sağlayıcı sütunu reddederse (`declined`), geçersiz JSON dönerse (`invalid`) veya harf/rakam sayısı Tesseract'tan %15'ten fazla saparsa (`incomplete`) o sütun için Tesseract satırları kullanılır, satırlar kaynakla etiketlenir ve soru `single_reading` ile işaretlenir. Bu işaret tek başına **engelleyici değil, uyarıdır** (`warningFlags`): 80 sorunun 45'i en az bir tek-okumalı satır içeriyor; hepsini engellemek pilotu okuma bölümü dışında bırakırdı. Tek okumalı metin yine yapısal kontrollerden, Tesseract güven eşiklerinden ve cevap anahtarına karşı kör çözümden geçer.
+- **Tesseract güveni** yalnızca metni bağımsız bir okumanın doğrulamadığı yerde (`tesseractOnly`) işaret üretir; iki okuma uyuşuyorsa düşük kelime güveni tek başına incelemeye göndermez.
+- **Dolgu satırları:** Model, sütun sonundaki noktalı dolguyu art arda `----` satırları olarak yazıyor; üç ve daha uzun koşular atılır (tek bir `----` korunur).
+- **Aşama önbelleği** artık aşamanın kod dosyalarının hash'ini de içeriyor (kod değişince aşama yeniden çalışır).
+- **Kalibrasyon** (§9 c) bırakıldı; gerekçe §9'da.
+- **Komutlar:** `npm run analysis -- <aşama> [--doc <slug>] [--force]`, `npm run analysis:pilot`.
+- **Pipeline'ın kendi PGlite dizini** (`.data/analysis/pglite`, `PGLITE_DIR` ile değiştirilebilir). Uygulamanın `.data/pglite` dizini iki sürecin aynı anda açması sonucu bozuldu; silinmedi, `.data/pglite.broken-2026-10-07` olarak kenara alındı. Uygulama bir sonraki `npm run dev`'de dizini yeniden oluşturur.
+- **Migration adı** canlının atadığı sürümle eşitlendi: `20261007110000_analysis_schema.sql` → `20261007174824_analysis_schema.sql` (yerel migrator dosya adını izliyor).
+- **İçe aktarma SQL'i sıkıştırıldı:** `DATABASE_URL`/psql olmadan canlıya MCP üzerinden gönderilebilmesi için düğüm referansları soru ve facet başına tek dizi (`unnest … WITH ORDINALITY`) olarak yazılıyor (98,8 KB). Üretilen satırlar eski üreticiyle parmak izi düzeyinde aynı; canlı ile yerel arasında 10 tablonun 10'unda md5 eşleşmesi doğrulandı (sıralama `collate "C"`).
+- **Metrik düzeltmeleri:** kelime metriği nesneyi değil referans/lemmayı sayıyor; yakın-tekrar karşılaştırması pasajı paylaşan sorularda yalnız soru kökü + şıkları, diğerlerinde pasaj dahil tüm metni kullanıyor (76–80'deki yanlış "tekrar" alarmları bunun sonucuydu).
+- **Sonuç (pilot, Kasım 2024):** 80 sorudan 53'ü kabul edildi ve canlıya yazıldı, 25 inceleme kuyruğunda, 2 analiz şemadan geçmedi. Ayrıntı `docs/analysis/phase-2-pilot-report.md`.
