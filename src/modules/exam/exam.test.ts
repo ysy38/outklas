@@ -38,9 +38,9 @@ describe("blueprint", () => {
     expect(ydtBlueprint.bands.find((band) => band.section === "vocabulary")?.to).toBe(5);
   });
 
-  it("asks for 24 diagnostic items", () => {
+  it("asks for 40 diagnostic items", () => {
     const total = Object.values(diagnosticQuota).reduce((sum, count) => sum + count, 0);
-    expect(total).toBe(24);
+    expect(total).toBe(40);
   });
 });
 
@@ -114,15 +114,15 @@ describe("select", () => {
     expect(studyPool([...seed, ...pack]).some((item) => item.section === "cloze" && !item.id.startsWith("pack-"))).toBe(false);
   });
 
-  it("builds a 24-item diagnostic with shared passages", () => {
+  it("builds a 40-item diagnostic with shared passages", () => {
     const picked = selectDiagnostic(pool());
-    expect(picked).toHaveLength(24);
+    expect(picked).toHaveLength(40);
     const cloze = picked.filter((item) => item.section === "cloze");
     expect(new Set(cloze.map((item) => item.stimulusId)).size).toBe(1);
-    expect(cloze).toHaveLength(3);
+    expect(cloze).toHaveLength(5);
     const reading = picked.filter((item) => item.section === "reading");
-    expect(reading).toHaveLength(6);
-    expect(new Set(reading.map((item) => item.stimulusId)).size).toBe(2);
+    expect(reading).toHaveLength(10);
+    expect(new Set(reading.map((item) => item.stimulusId)).size).toBe(3);
   });
 
   it("requires a complete 1–80 mock", () => {

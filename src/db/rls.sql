@@ -19,6 +19,7 @@ ALTER TABLE vocabulary ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vocab_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE item_skills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE item_vocabulary ENABLE ROW LEVEL SECURITY;
+ALTER TABLE drill_answers ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY profiles_own ON profiles
   FOR ALL TO authenticated
@@ -50,6 +51,11 @@ CREATE POLICY mastery_own ON mastery
   WITH CHECK (profile_id = (SELECT auth.uid()));
 
 CREATE POLICY reviews_own ON reviews
+  FOR ALL TO authenticated
+  USING (profile_id = (SELECT auth.uid()))
+  WITH CHECK (profile_id = (SELECT auth.uid()));
+
+CREATE POLICY drill_answers_own ON drill_answers
   FOR ALL TO authenticated
   USING (profile_id = (SELECT auth.uid()))
   WITH CHECK (profile_id = (SELECT auth.uid()));

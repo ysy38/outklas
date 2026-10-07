@@ -5,7 +5,7 @@ import { brand } from "@/brand";
 import { asExam, blueprintFor, type ExamCode, type SectionId } from "@/modules/exam/blueprint";
 import { estimateFromAccuracy, estimateNet, scoreSession, type ScoreItem } from "@/modules/exam/score";
 import { selectDiagnostic, selectItems, selectMock, studyPool, type PoolItem } from "@/modules/exam/select";
-import { canStartPractice, canStartSimulator, isPro, practiceAllowance, type CheckoutPlan, type PlanCode } from "@/modules/billing/entitlement";
+import { canStartSimulator, tierFor, type CheckoutPlan, type PlanCode, type Tier } from "@/modules/billing/entitlement";
 import { nextMastery } from "@/modules/learning/mastery";
 import { buildPlan, daysUntilExam, nextStreak, type DailyPlan } from "@/modules/learning/plan";
 import { nextReview } from "@/modules/learning/review";
@@ -56,30 +56,20 @@ export async function recordEvent(name: string, profileId: string | null, payloa
   });
 }
 
-export async function entitlementFor(profileId: string | null) {
-  if (process.env.DEV_PRO === "1") return { pro: true, plan: "pro" as const };
-  if (!profileId) return { pro: false, plan: "free" as const };
+export async function entitlementFor(profileId: string | null): Promise<{ tier: Tier; pro: boolean; plan: string; periodEnd: Date | null }> {
+  if (process.env.DEV_PRO === "1") return { tier: "kamp", pro: true, plan: "kamp", periodEnd: null };
+  if (!profileId) return { tier: "free", pro: false, plan: "free", periodEnd: null };
   const db = await getDb();
   const rows = await db.select().from(subscriptions).where(eq(subscriptions.profileId, profileId)).limit(1);
   const row = rows[0];
-  const pro = isPro({
+  const tier = tierFor({
     devPro: false,
     plan: (row?.plan as PlanCode | undefined) ?? null,
     status: row?.status ?? null,
     periodEnd: row?.periodEnd ?? null,
     now: new Date(),
   });
-  return { pro, plan: row?.plan ?? "free" };
-}
-
-async function answeredToday(profileId: string): Promise<number> {
-  const db = await getDb();
-  const rows = await db
-    .select({ id: answers.id })
-    .from(answers)
-    .innerJoin(sessions, eq(sessions.id, answers.sessionId))
-    .where(and(eq(answers.profileId, profileId), eq(sessions.mode, "practice"), gte(answers.createdAt, startOfToday())));
-  return rows.length;
+  return { tier, pro: tier === "kamp", plan: row?.plan ?? "free", periodEnd: tier === "free" ? null : (row?.periodEnd ?? null) };
 }
 
 async function completedSimulators(owner: { profileId?: string | null; guestId?: string }): Promise<number> {
@@ -122,24 +112,18 @@ export async function createSession(input: {
     const completed = await completedSimulators({ profileId: input.profileId, guestId });
     if (!canStartSimulator({ pro: access.pro, completed, limit: brand.freeSimulators })) {
       await recordEvent("paywall_viewed", input.profileId, { reason: "simulator" });
-      return { paywall: true, error: "Ücretsiz deneme hakkını kullandın." };
+      return { paywall: true, error: "Ücretsiz deneme hakkını kullandın. Sınırsız deneme Kişisel YDS Kampı’nda açık." };
     }
     picked = selectMock(pool);
     if (picked.length !== 80) return { error: "Deneme şu an hazırlanamadı. Biraz sonra tekrar dene." };
     await recordEvent("simulator_started", input.profileId);
   } else {
     const requested = input.itemIds ?? [];
-    const todayCount = input.profileId ? await answeredToday(input.profileId) : 0;
-    if (!canStartPractice({ pro: access.pro, answeredToday: todayCount, limit: brand.freeDailyQuestions })) {
+    if (!access.pro) {
       await recordEvent("paywall_viewed", input.profileId, { reason: "practice" });
-      return { paywall: true, error: "Bugünkü 10 ücretsiz sorunu çözdün. Yarın yeni sorular seni bekliyor." };
+      return { paywall: true, error: "Günlük program Kişisel YDS Kampı’nda açılır." };
     }
-    const allowance = practiceAllowance({
-      pro: access.pro,
-      answeredToday: todayCount,
-      limit: brand.freeDailyQuestions,
-      requested: requested.length || 8,
-    });
+    const allowance = requested.length || 8;
     const allowed = new Set(pool.map((item) => item.id));
     const fromPlan = requested.filter((id) => allowed.has(id)).slice(0, allowance);
     picked =
@@ -357,7 +341,7 @@ async function applyMastery(profileId: string, itemId: string, correct: boolean)
   }
 }
 
-export async function touchReview(profileId: string, targetType: "item" | "vocab", targetId: string, correct: boolean) {
+export async function touchReview(profileId: string, targetType: "item" | "vocab" | "word" | "connector", targetId: string, correct: boolean) {
   const db = await getDb();
   const id = `${profileId}:${targetType}:${targetId}`;
   const current = await db.select().from(reviews).where(eq(reviews.id, id)).limit(1);
@@ -524,11 +508,7 @@ export async function ensureDailyPlan(profileId: string, dailyMinutes: number, t
   return plan;
 }
 
-const accessDays: Record<CheckoutPlan, number> = {
-  lab_90: brand.accessDays.lab90,
-  lab_180: brand.accessDays.lab180,
-  sprint: brand.accessDays.sprint,
-};
+const accessDays: Record<CheckoutPlan, number> = brand.accessDays;
 
 export async function devActivate(profileId: string, plan: CheckoutPlan) {
   const db = await getDb();

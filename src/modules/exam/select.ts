@@ -1,4 +1,4 @@
-import { diagnosticQuota, ydsBlueprint, type Blueprint, type SectionId } from "./blueprint";
+import { diagnosticQuota, diagnosticReadingGroups, ydsBlueprint, type Blueprint, type SectionId } from "./blueprint";
 
 export type PoolItem = {
   id: string;
@@ -51,8 +51,7 @@ export function selectDiagnostic(pool: PoolItem[], blueprint: Blueprint = ydsBlu
       continue;
     }
     if (band.section === "reading") {
-      picked.push(...takeFromStimulus(sectionItems, 4, used));
-      picked.push(...takeFromStimulus(sectionItems, 2, used));
+      for (const size of diagnosticReadingGroups) picked.push(...takeFromStimulus(sectionItems, size, used));
       continue;
     }
     picked.push(...takeLoose(sectionItems, quota, used));

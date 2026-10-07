@@ -2,18 +2,27 @@
 
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
-import { clearPoolCache, getDb, profiles, vocabulary } from "@/db/client";
+import { clearPoolCache, getDb, profiles } from "@/db/client";
 import { publishBlockers } from "@/modules/content/publish";
-import { iyzicoConfigured } from "@/modules/billing/iyzico";
+import { devCheckoutAllowed } from "@/modules/billing/iyzico";
+import type { CheckoutPlan } from "@/modules/billing/entitlement";
 import { currentProfile, loginAccount, logoutAccount, markSignedIn, registerAccount } from "./auth";
-import { claimGuestSessions, createSession, devActivate, ensureDailyPlan, recordEvent, saveAnswer, setFlag, submitSession, touchReview } from "./sessions";
+import { claimGuestSessions, createSession, devActivate, ensureDailyPlan, entitlementFor, recordEvent, saveAnswer, setFlag, submitSession } from "./sessions";
+import { answerDrill } from "./drills";
+import { checkoutHref } from "@/content/offers";
+
+/** Only same-site paths, so the form cannot be used to bounce people to another domain. */
+function nextPath(formData: FormData) {
+  const value = String(formData.get("next") ?? "");
+  return /^\/(?![/\\])/.test(value) ? value : "/bugun";
+}
 
 export async function signInAction(formData: FormData) {
   const result = await loginAccount(String(formData.get("email") ?? ""), String(formData.get("password") ?? ""));
   if (result.error) return result;
   const profile = await currentProfile();
   if (profile) await claimGuestSessions(profile.id);
-  redirect("/bugun");
+  redirect(nextPath(formData));
 }
 
 export async function signUpAction(formData: FormData) {
@@ -24,7 +33,7 @@ export async function signUpAction(formData: FormData) {
     await claimGuestSessions(profile.id);
     await recordEvent("user_registered", profile.id);
   }
-  redirect("/bugun");
+  redirect(nextPath(formData));
 }
 
 export async function signOutAction() {
@@ -64,7 +73,7 @@ export async function startModeAction(mode: "diagnostic" | "practice" | "simulat
   const profile = await currentProfile();
   if (profile) await markSignedIn();
   const created = await createSession({ mode, profileId: profile?.id ?? null, itemIds });
-  if (created.paywall) redirect("/odeme");
+  if (created.paywall) redirect(checkoutHref("kamp", Boolean(profile)));
   if (!created.id) return created;
   redirect(`/oturum/${created.id}`);
 }
@@ -94,15 +103,15 @@ export async function submitAction(sessionId: string) {
   redirect(`/oturum/${sessionId}/sonuc`);
 }
 
-export async function reviewVocabAction(vocabularyId: string, rating: "know" | "again" | "hard") {
+export async function drillAnswerAction(questionId: string, choiceIndex: number) {
   const profile = await currentProfile();
-  if (!profile) redirect("/giris");
-  await touchReview(profile.id, "vocab", vocabularyId, rating === "know");
-  redirect("/kelime");
+  if (!profile) return { error: "Devam etmek için giriş yap." };
+  const access = await entitlementFor(profile.id);
+  return answerDrill({ profileId: profile.id, tier: access.tier, questionId, choiceIndex });
 }
 
-export async function devCheckoutAction(plan: "lab_90" | "lab_180" | "sprint") {
-  if (iyzicoConfigured()) redirect("/odeme?hata=canli");
+export async function devCheckoutAction(plan: CheckoutPlan) {
+  if (!devCheckoutAllowed()) redirect(`/odeme?paket=${plan}`);
   const profile = await currentProfile();
   if (!profile) redirect("/giris");
   await devActivate(profile.id, plan);
@@ -160,11 +169,6 @@ export async function startTodayAction() {
   const plan = await ensureDailyPlan(profile.id, profile.dailyMinutes ?? 30, profile.targetScore, profile.examDate);
   const itemIds = plan.blocks.filter((block) => block.kind === "question").map((block) => block.id);
   const created = await createSession({ mode: "practice", profileId: profile.id, itemIds });
-  if (created.paywall || !created.id) redirect("/odeme");
+  if (created.paywall || !created.id) redirect("/odeme?paket=kamp");
   redirect(`/oturum/${created.id}`);
-}
-
-export async function listVocabulary() {
-  const db = await getDb();
-  return db.select().from(vocabulary);
 }

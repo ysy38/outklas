@@ -38,7 +38,7 @@ describe("exam draft", () => {
       skillIds: draft.skills,
     }));
     expect(selectMock(pool)).toHaveLength(ydsBlueprint.questionCount);
-    expect(selectDiagnostic(pool)).toHaveLength(24);
+    expect(selectDiagnostic(pool)).toHaveLength(40);
   });
 
   it("publishes an original reading and cloze pack", () => {

@@ -181,3 +181,18 @@ CREATE INDEX IF NOT EXISTS sessions_profile_mode ON sessions (profile_id, mode, 
 CREATE INDEX IF NOT EXISTS sessions_guest_mode ON sessions (guest_id, mode, status);
 CREATE INDEX IF NOT EXISTS answers_profile_created ON answers (profile_id, created_at);
 CREATE INDEX IF NOT EXISTS choices_item ON choices (item_id, position);
+
+CREATE TABLE IF NOT EXISTS drill_answers (
+  id uuid PRIMARY KEY,
+  profile_id uuid NOT NULL,
+  kind text NOT NULL,
+  target_id text NOT NULL,
+  question_id text NOT NULL,
+  correct boolean NOT NULL,
+  day text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS drill_answers_day_question ON drill_answers (profile_id, day, question_id);
+CREATE INDEX IF NOT EXISTS drill_answers_profile_kind ON drill_answers (profile_id, kind, day);
+ALTER TABLE drill_answers ENABLE ROW LEVEL SECURITY;

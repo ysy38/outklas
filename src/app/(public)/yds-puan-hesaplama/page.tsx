@@ -115,7 +115,7 @@ export default function ScorePage() {
           ))}
         </div>
         <div data-rise className="mt-10 flex flex-col gap-5 rounded-[28px] border border-line bg-card/70 p-6 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-          <p className="max-w-xl leading-7 text-muted">Tablo kaç doğru gerektiğini söyler, o doğruların hangi bölümden geleceğini söylemez. Onu 24 soruluk ücretsiz ölçüm gösterir.</p>
+          <p className="max-w-xl leading-7 text-muted">Tablo kaç doğru gerektiğini söyler, o doğruların hangi bölümden geleceğini söylemez. Onu 40 soruluk ücretsiz seviye testi gösterir.</p>
           <Link href="/teshis" className="shine shrink-0 rounded-full bg-pine px-6 py-3 text-center text-cream transition hover:-translate-y-0.5">
             Ücretsiz ölçümü başlat →
           </Link>

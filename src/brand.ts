@@ -1,18 +1,21 @@
 export const brand = {
   name: "YDS Lab",
   domain: "ydslab.com",
-  hero: "YDS’yi daha fazla değil, daha doğru çalış.",
-  sub: "Seviyeni ve hedefini ölçer, her gün sana en çok puan kazandıracak çalışmayı gösterir. YDS, e-YDS, YÖKDİL ve e-YÖKDİL için.",
+  hero: "YDS’de kaç alacağını tahmin etmek yerine, önce seviyeni ölç.",
+  sub: "40 soruluk seviye testini çöz. Seviyeni, güçlü ve zayıf olduğun bölümleri ve hedef puanına ulaşmak için kapatman gereken açıkları gör.",
   prices: {
-    lab90: 1490,
-    lab180: 2490,
-    sprint: 1990,
+    gelisim: 499,
+    kamp: 2490,
   },
   accessDays: {
-    lab90: 90,
-    lab180: 180,
-    sprint: 60,
+    gelisim: 90,
+    kamp: 180,
   },
-  freeDailyQuestions: 10,
+  /** Kamp is sold at the launch price until this day; the label on the card shows the date. */
+  launchUntil: "2026-12-31",
+  diagnosticQuestions: 40,
+  diagnosticMinutes: 30,
+  freeDailyWords: 10,
+  freeDailyConnectors: 10,
   freeSimulators: 1,
 } as const;

@@ -1,49 +1,35 @@
-import { and, eq, lte } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { getDb, reviews, vocabLinks, vocabulary } from "@/db/client";
+import { DrillPlayer } from "@/components/drill-player";
+import { hasTools } from "@/modules/billing/entitlement";
 import { currentProfile } from "@/server/auth";
-import { reviewVocabAction } from "@/server/actions";
+import { dailyDrill } from "@/server/drills";
+import { entitlementFor } from "@/server/sessions";
 
-export default async function VocabularyPage() {
+export const metadata = { title: "Günün kelimeleri" };
+
+export default async function WordDrillPage() {
   const profile = await currentProfile();
   if (!profile) redirect("/giris");
-  const db = await getDb();
-  const words = await db.select().from(vocabulary);
-  const links = await db.select().from(vocabLinks);
-  const due = await db.select().from(reviews).where(and(eq(reviews.profileId, profile.id), eq(reviews.targetType, "vocab"), lte(reviews.dueAt, new Date())));
-  const dueIds = new Set(due.map((row) => row.targetId));
-  const queue = [...words.filter((word) => dueIds.has(word.id)), ...words.filter((word) => !dueIds.has(word.id))].slice(0, 8);
+  const access = await entitlementFor(profile.id);
+  const drill = await dailyDrill(profile.id, "word", access.tier);
   return (
-    <section>
-      <h1 className="text-4xl">Kelime</h1>
-      <p className="mt-2 text-sm text-muted">Her kelimeyi ne kadar iyi bildiğini işaretle. Zorlandığın kelimeler daha sık, bildiklerin daha seyrek karşına çıkar.</p>
-      <div className="mt-6 grid gap-4">
-        {queue.map((word) => {
-          const related = links.filter((link) => link.fromId === word.id);
-          return (
-            <article key={word.id} className="rounded-3xl border border-line bg-card p-5">
-              <h2 className="text-2xl uppercase tracking-wide">{word.word}</h2>
-              <p className="mt-1 text-muted">{word.meaningTr}</p>
-              <p className="mt-3 text-sm leading-6">{word.example}</p>
-              {related.length > 0 ? (
-                <p className="mt-2 text-sm text-muted">
-                  {related
-                    .map((link) => `${link.kind === "synonym" ? "eş anlamlısı" : link.kind === "antonym" ? "zıt anlamlısı" : link.kind === "collocation" ? "birlikte kullanıldığı kelime" : link.kind}: ${link.toId}`)
-                    .join(" · ")}
-                </p>
-              ) : null}
-              <div className="mt-4 flex flex-wrap gap-2">
-                {(["know", "again", "hard"] as const).map((rating) => (
-                  <form key={rating} action={reviewVocabAction.bind(null, word.id, rating)}>
-                    <button className="rounded-full border border-line px-3 py-1 text-sm">
-                      {rating === "know" ? "Biliyorum" : rating === "again" ? "Bilmiyorum" : "Zorlandım"}
-                    </button>
-                  </form>
-                ))}
-              </div>
-            </article>
-          );
-        })}
+    <section className="max-w-2xl">
+      <p className="text-xs uppercase tracking-[0.18em] text-gold">Günün kelimeleri</p>
+      <h1 className="display mt-2">Bugünün {drill.limit} kelimesi</h1>
+      <p className="mt-3 text-sm leading-6 text-muted">
+        YDS’de sık çıkan kelimeler. Yanlış yaptığın kelime birkaç gün sonra tekrar gelir; bildiğin kelime giderek daha seyrek karşına çıkar.
+      </p>
+      <div className="mt-6">
+        <DrillPlayer
+          key={drill.questions.map((question) => question.id).join(",")}
+          kind="word"
+          questions={drill.questions}
+          startDone={drill.today.done}
+          startCorrect={drill.today.correct}
+          yesterday={drill.yesterday}
+          limit={drill.limit}
+          unlimited={hasTools(access.tier)}
+        />
       </div>
     </section>
   );

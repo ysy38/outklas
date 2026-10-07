@@ -4,7 +4,7 @@ import { iyzicoConfigured, verifyIyzicoSignature } from "@/modules/billing/iyzic
 
 const payloadSchema = z.object({
   userId: z.string().uuid(),
-  plan: z.enum(["pro", "exam_pass", "lab_90", "lab_180", "sprint"]),
+  plan: z.enum(["gelisim", "kamp", "pro", "exam_pass", "lab_90", "lab_180", "sprint"]),
   status: z.enum(["active", "canceled"]),
   periodEnd: z.string().datetime().optional(),
 });

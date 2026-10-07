@@ -6,8 +6,11 @@ import { ThemeToggle } from "./theme-toggle";
 
 const appLinks: [string, string][] = [
   ["Bugün", "/bugun"],
-  ["Rehber", "/rehber"],
+  ["Rapor", "/rapor"],
   ["Kelime", "/kelime"],
+  ["Bağlaç", "/baglac"],
+  ["Setler", "/setler"],
+  ["Rehber", "/rehber"],
   ["Hatalar", "/hatalar"],
   ["İlerleme", "/ilerleme"],
   ["Deneme", "/deneme"],
@@ -121,18 +124,18 @@ export function PublicFooter() {
 export function AppHeader({ admin = false }: { admin?: boolean }) {
   const links: [string, string][] = [...appLinks, ...(admin ? ([["Yönetim", "/admin"]] as [string, string][]) : []), ["Profil", "/profil"]];
   return (
-    <header className="sticky top-0 z-40 border-b border-line/70 bg-paper/75 backdrop-blur-xl">
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-5">
+    <header className="sticky top-0 z-40 border-b border-line/70 bg-paper/75 backdrop-blur-xl print:hidden">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-5">
         <Logo href="/bugun" />
         <div className="flex items-center gap-3">
-          <nav className="hidden items-center gap-4 text-sm lg:flex">
+          <nav className="hidden items-center gap-4 text-sm xl:flex">
             {links.map(([label, href]) => (
               <Link key={href} href={href} className="link-underline text-muted hover:text-ink">
                 {label}
               </Link>
             ))}
           </nav>
-          <MobileMenu links={links} className="lg:hidden" />
+          <MobileMenu links={links} className="xl:hidden" />
           <ThemeToggle />
         </div>
       </div>

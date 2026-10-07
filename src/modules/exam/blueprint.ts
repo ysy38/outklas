@@ -232,19 +232,23 @@ export const ydtBlueprint: Blueprint = {
   ],
 };
 
+/** Half of each YDS band, rounded so the test is 40 items: the same weights as the real booklet. */
 export const diagnosticQuota: Record<SectionId, number> = {
-  vocabulary: 2,
-  grammar: 3,
-  cloze: 3,
-  sentence: 3,
-  translation: 2,
-  reading: 6,
-  dialogue: 1,
-  restatement: 1,
+  vocabulary: 3,
+  grammar: 5,
+  cloze: 5,
+  sentence: 5,
+  translation: 3,
+  reading: 10,
+  dialogue: 2,
+  restatement: 2,
   situation: 0,
-  paragraph: 1,
-  irrelevant: 2,
+  paragraph: 2,
+  irrelevant: 3,
 };
+
+/** Reading arrives as whole passages: two with four questions, one with two. */
+export const diagnosticReadingGroups = [4, 4, 2] as const;
 
 export function blueprintFor(exam: string | null | undefined): Blueprint {
   return exam === "ydt" ? ydtBlueprint : ydsBlueprint;

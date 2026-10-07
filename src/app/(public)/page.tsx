@@ -36,7 +36,7 @@ const compare = [
 ];
 
 const steps = [
-  { title: "Seviye testi", body: "Hedef puanını belirler, 24 soruluk kısa bir test çözersin. Çıkan sonuç resmi puan değil, tahmindir." },
+  { title: "Seviye testi", body: "Üye olmadan 40 soruluk testi çözersin. Tahmini puanını ve puanını aşağı çeken bölümleri görürsün." },
   { title: "Eksiklerin", body: "Hangi bölümlerde puan kaybettiğini görürsün." },
   { title: "Doğru sorular", body: "Her seferinde o an en çok işine yarayacak sorular seçilir." },
   { title: "Günün görevi", body: "Her gün kısa ve net bir çalışma görevi alırsın." },
@@ -99,10 +99,10 @@ export default function HomePage() {
             YDS · e-YDS · YÖKDİL · e-YÖKDİL
           </p>
           <h1 className="display-xl mt-6 max-w-2xl font-serif">
-            YDS’yi daha fazla değil, <span className="grad">daha doğru</span> çalış.
+            YDS’de kaç alacağını tahmin etmek yerine, <span className="grad">önce seviyeni ölç.</span>
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-8 text-muted">
-            YDS Lab seviyeni ve hedefini ölçer, çözdüğün her soruyu takip eder ve her gün sana en çok puan kazandıracak çalışmayı gösterir. Saatlerce ders, video ya da bitmeyen soru bankası yok.
+            {brand.diagnosticQuestions} soruluk seviye testini çöz. Seviyeni, güçlü ve zayıf olduğun bölümleri ve hedef puanına ulaşmak için kapatman gereken açıkları gör.
           </p>
           <p className="mt-3 max-w-xl text-sm leading-7 text-muted">
             YÖKDİL ve e-YÖKDİL’de de puan aynı şekilde hesaplanır: 80 soru, 180 dakika, her doğru 1,25 puan.{" "}
@@ -116,14 +116,21 @@ export default function HomePage() {
                 pendingLabel="Test hazırlanıyor…"
                 className="shine w-full rounded-full bg-pine px-6 py-3.5 text-cream shadow-[0_16px_40px_-18px_rgba(12,92,98,0.8)] transition hover:-translate-y-0.5 sm:w-auto"
               >
-                Ücretsiz seviye testine başla →
+                Ücretsiz seviyemi ölç →
               </PendingButton>
             </form>
             <a href="#nasil" className="rounded-full border border-line bg-card/60 px-6 py-3.5 text-center backdrop-blur transition hover:border-pine">
               Nasıl çalışıyor?
             </a>
           </div>
-          <p className="mt-4 text-sm text-muted">Kredi kartı gerekmez · Üye olmadan başlarsın · Yaklaşık 15 dakika</p>
+          <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">
+            {["Ücretsiz", "Kayıt zorunluluğu yok", `Yaklaşık ${brand.diagnosticMinutes} dakika`].map((point) => (
+              <li key={point}>
+                <span aria-hidden className="mr-1.5 text-pine">✓</span>
+                {point}
+              </li>
+            ))}
+          </ul>
         </div>
 
         <div className="rise-in rise-in-late" aria-hidden>
@@ -395,8 +402,8 @@ export default function HomePage() {
 
       <section className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-20 sm:px-5 sm:py-28 lg:grid-cols-3">
         <article data-rise className="lift rounded-[28px] border border-line bg-card/80 p-7 backdrop-blur">
-          <h2 className="text-3xl">Kelime çalışması ezber listesi değil.</h2>
-          <p className="mt-3 text-sm leading-7 text-muted">Kartlar, soru çözerken bilmediğin kelimelerden oluşur. Bildiğin kelimeler daha seyrek, unuttukların daha sık karşına çıkar.</p>
+          <h2 className="text-3xl">Her gün 10 kelime, 10 bağlaç.</h2>
+          <p className="mt-3 text-sm leading-7 text-muted">YDS’de en çok puan kaybettiren iki konu. Yanlış yaptıkların birkaç gün sonra tekrar karşına çıkar, bildiklerin giderek seyrekleşir. Dünkü sonucunla bugünkünü yan yana görürsün.</p>
         </article>
         <article data-rise className="lift rounded-[28px] border border-line bg-card/80 p-7 backdrop-blur">
           <h2 className="text-3xl">Puan tahminin her gün güncellenir.</h2>
@@ -405,7 +412,7 @@ export default function HomePage() {
         <article data-rise className="lift glass rounded-[28px] border border-line p-7">
           <h2 className="text-3xl">Başlamak ücretsiz.</h2>
           <p className="mt-3 text-sm leading-7 text-muted">
-            Seviye testinden sonra her gün {brand.freeDailyQuestions} soru ve {brand.freeSimulators} tam deneme de ücretsiz. Sınırsız kullanmak istersen 90 gün {brand.prices.lab90.toLocaleString("tr-TR")} TL. Sınava az kaldıysa 60 günlük yoğun paket {brand.prices.sprint.toLocaleString("tr-TR")} TL.
+            Seviye testi, raporun ilk 3 bulgusu, her gün {brand.freeDailyWords} kelime ve {brand.freeDailyConnectors} bağlaç, {brand.freeSimulators} tam deneme ücretsiz. Kendin çalışacaksan Gelişim Paketi {brand.prices.gelisim} TL; programını biz kuralım dersen Kişisel YDS Kampı {brand.prices.kamp.toLocaleString("tr-TR")} TL. İkisi de tek seferlik ödeme.
           </p>
           <Link href="/fiyat" className="link-underline mt-5 inline-block text-sm text-pine">
             Fiyatlar ve sınav takvimi →
@@ -439,13 +446,13 @@ export default function HomePage() {
           <h2 className="display-xl relative mx-auto mt-5 max-w-4xl font-serif">
             Daha çok saat çalışmana gerek yok. <span className="grad">Neye çalışacağını bilmen yeter.</span>
           </h2>
-          <p className="relative mx-auto mt-6 max-w-lg text-lg text-muted">Seviyeni ölç, hedef puanını belirle, planın hazır olsun.</p>
+          <p className="relative mx-auto mt-6 max-w-lg text-lg text-muted">Önce seviyeni ölç. Puanını neyin aşağı çektiğini gör, sonra yolunu seç.</p>
           <form action={startDiagnosticAction} className="relative mt-9">
             <PendingButton pendingLabel="Test hazırlanıyor…" className="shine w-full rounded-full bg-pine px-7 py-4 text-cream transition hover:-translate-y-0.5 sm:w-auto">
-              Ücretsiz seviye testine başla →
+              Ücretsiz seviyemi ölç →
             </PendingButton>
           </form>
-          <p className="relative mt-4 text-sm text-muted">Kredi kartı gerekmez · Yaklaşık 15 dakika</p>
+          <p className="relative mt-4 text-sm text-muted">Ücretsiz · Kayıt zorunluluğu yok · Yaklaşık {brand.diagnosticMinutes} dakika</p>
         </div>
       </section>
     </div>

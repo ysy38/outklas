@@ -4,9 +4,9 @@ import { useState } from "react";
 import { PendingButton } from "@/components/pending-button";
 import { signInAction, signUpAction } from "@/server/actions";
 
-export function AuthForm() {
+export function AuthForm({ initialMode = "login", next }: { initialMode?: "login" | "register"; next?: string }) {
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register">(initialMode);
   const login = mode === "login";
 
   async function submit(formData: FormData) {
@@ -47,6 +47,7 @@ export function AuthForm() {
         </button>
       </div>
       <form action={submit} className="mt-6 space-y-4">
+        {next ? <input type="hidden" name="next" value={next} /> : null}
         <label className="block text-sm">
           E-posta
           <input

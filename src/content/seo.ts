@@ -11,7 +11,7 @@ export const siteFaqs: readonly Faq[] = [
   {
     question: "YDS'ye nasıl çalışmalıyım?",
     answer:
-      "Daha çok soru çözmek tek başına yetmez. Önce hangi bölümde puan kaybettiğini bul, her gün o açığı kapatacak tek bir işe odaklan, kaçırdığın soruları da belli aralıklarla yeniden çöz. YDS Lab işe 24 soruluk ücretsiz bir seviye testiyle başlar. Aynı yol e-YDS, YÖKDİL ve e-YÖKDİL için de geçerli.",
+      "Daha çok soru çözmek tek başına yetmez. Önce hangi bölümde puan kaybettiğini bul, her gün o açığı kapatacak tek bir işe odaklan, kaçırdığın soruları da belli aralıklarla yeniden çöz. YDS Lab işe 40 soruluk ücretsiz bir seviye testiyle başlar. Aynı yol e-YDS, YÖKDİL ve e-YÖKDİL için de geçerli.",
     place: ["home"],
   },
   {
@@ -35,7 +35,7 @@ export const siteFaqs: readonly Faq[] = [
   {
     question: "YDS kelime nasıl çalışılır?",
     answer:
-      "Uzun ezber listeleri yerine, soru çözerken takıldığın kelimeleri çalışırsın. Bu kelimeler kartlara dönüşür. Bildiğin kelimeler daha seyrek, unuttukların daha sık karşına çıkar.",
+      "Uzun ezber listeleri yerine her gün 10 kelimeyle çalış. Kelimeyi tek başına değil, bir cümlenin içinde gör ve anlamını şıklar arasından seç. Yanlış yaptığın kelime birkaç gün sonra tekrar gelir, bildiğin kelime giderek seyrekleşir. YDS Lab’de bu günlük 10 kelime ücretsizdir.",
     place: ["home"],
   },
   {
@@ -53,7 +53,7 @@ export const siteFaqs: readonly Faq[] = [
   {
     question: "YDS Lab ücretsiz mi?",
     answer:
-      "Başlamak ücretsiz: 24 soruluk seviye testi, her gün 10 soru ve 1 tam deneme için ödeme yapmazsın. Sınırsız kullanmak istersen 90 gün 1.490 TL, 180 gün 2.490 TL. Sınavına 1–2 ay kaldıysa 60 günlük yoğun paket 1.990 TL. Abonelik yoktur, bir kez ödersin.",
+      "Başlamak ücretsiz: 40 soruluk seviye testi, raporunun ilk 3 bulgusu, her gün 10 kelime ve 10 bağlaç sorusu ve 1 tam deneme için ödeme yapmazsın. Kendin çalışmak istersen Gelişim Paketi 90 gün 499 TL. Programını biz kuralım dersen Kişisel YDS Kampı 180 gün 2.490 TL. Abonelik yoktur, bir kez ödersin.",
     place: ["home"],
   },
   {
@@ -83,7 +83,7 @@ export const siteFaqs: readonly Faq[] = [
   {
     question: "Seviye testinin sonucu resmi puan mı?",
     answer:
-      "Hayır. 24 soruluk seviye testi, 80 soruluk sınavda alabileceğin puanı tahmin eder; ÖSYM sonucunun yerini tutmaz. Sorular gerçek sınavdaki bölüm ağırlıklarına göre seçildiği için okuma sorusu burada da çoktur.",
+      "Hayır. 40 soruluk seviye testi, 80 soruluk sınavda alabileceğin puanı tahmin eder; ÖSYM sonucunun yerini tutmaz. Sorular gerçek sınavdaki bölüm ağırlıklarına göre seçildiği için okuma sorusu burada da çoktur.",
     place: ["home", "score"],
   },
   {

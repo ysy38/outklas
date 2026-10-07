@@ -335,3 +335,24 @@ body,
 .border-line {
   transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
 }
+
+@media print {
+  .dark {
+    --paper: #ffffff;
+    --ink: #122028;
+    --muted: #5c6d7a;
+    --line: #d4e2ea;
+    --card: #ffffff;
+    --pine: #0c5c62;
+    --gold: #3c7394;
+    color-scheme: light;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+
+  .print-page + .print-page {
+    break-before: page;
+  }
+}

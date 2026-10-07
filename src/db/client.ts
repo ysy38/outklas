@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
-import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import { ydsBlueprint, type SectionId } from "@/modules/exam/blueprint";
 import { publishBlockers } from "@/modules/content/publish";
@@ -10,7 +10,7 @@ import { hashPassword } from "@/server/password";
 import { examDraft, skillTree, stimuli, vocabDrafts, vocabLinkDrafts, type DraftItem } from "./exam-draft";
 import { packItems, packStimuli } from "./pack-draft";
 import { initSql } from "./init-sql";
-import { answers, choices, events, itemSkills, itemVocabulary, items, mastery, plans, profiles, reviews, sessionItems, sessions, skills, stimuli as stimuliTable, subscriptions, vocabulary, vocabLinks } from "./schema";
+import { answers, choices, drillAnswers, events, itemSkills, itemVocabulary, items, mastery, plans, profiles, reviews, sessionItems, sessions, skills, stimuli as stimuliTable, subscriptions, vocabulary, vocabLinks } from "./schema";
 
 type AppDb = PgliteDatabase;
 
@@ -310,4 +310,4 @@ export async function publishedPool(scope: "study" | "mock" = "study"): Promise<
   return mapped;
 }
 
-export { and, asc, eq, gte, inArray, sql, answers, choices, events, itemSkills, items, mastery, plans, profiles, reviews, sessionItems, sessions, skills, subscriptions, vocabulary, vocabLinks, stimuliTable };
+export { and, asc, desc, eq, gte, inArray, lt, sql, answers, choices, drillAnswers, events, itemSkills, items, mastery, plans, profiles, reviews, sessionItems, sessions, skills, subscriptions, vocabulary, vocabLinks, stimuliTable };

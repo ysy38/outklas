@@ -5,14 +5,25 @@ import { rehberBySection } from "@/content/rehber";
 import { asExam, blueprintFor, type SectionId } from "@/modules/exam/blueprint";
 import { estimateFromAccuracy, estimateNet, scoreSession, slowestSection, weakestSection, type ScoreItem } from "@/modules/exam/score";
 import { answers, getDb } from "@/db/client";
+import { DiagnosticReport } from "@/components/diagnostic-report";
 import { currentProfile, readGuestId } from "@/server/auth";
-import { loadPlayer } from "@/server/sessions";
+import { diagnosticReport } from "@/server/report";
+import { entitlementFor, loadPlayer } from "@/server/sessions";
 
 export default async function ResultPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [profile, guestId] = await Promise.all([currentProfile(), readGuestId()]);
   const loaded = await loadPlayer(id, profile?.id ?? null, guestId ?? "");
   if (!loaded || loaded.session.status !== "submitted") notFound();
+  if (loaded.session.mode === "diagnostic") {
+    const [report, access] = await Promise.all([diagnosticReport(id, profile?.id ?? null, guestId ?? ""), entitlementFor(profile?.id ?? null)]);
+    if (!report) notFound();
+    return (
+      <main className="landing mx-auto max-w-3xl px-4 py-10 sm:px-5">
+        <DiagnosticReport report={report} tier={access.tier} signedIn={Boolean(profile)} />
+      </main>
+    );
+  }
   const db = await getDb();
   const answerRows = await db.select().from(answers).where(eq(answers.sessionId, id));
   const scoreItems: ScoreItem[] = loaded.items.map((item) => {

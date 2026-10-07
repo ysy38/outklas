@@ -54,7 +54,7 @@ export default async function SimulatorPage() {
           </p>
         ) : blocked ? (
           <p className="mt-8">
-            Ücretsiz deneme hakkını kullandın. Yeni deneme çözmek için <Link href="/odeme" className="text-pine">bir paket seç.</Link>
+            Ücretsiz deneme hakkını kullandın. Sınırsız deneme <Link href="/odeme?paket=kamp" className="text-pine">Kişisel YDS Kampı’nda</Link> açık.
           </p>
         ) : (
           <form action={startSimulatorAction} className="mt-8">

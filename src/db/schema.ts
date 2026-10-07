@@ -165,6 +165,17 @@ export const subscriptions = pgTable("subscriptions", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const drillAnswers = pgTable("drill_answers", {
+  id: uuid("id").primaryKey(),
+  profileId: uuid("profile_id").notNull(),
+  kind: text("kind").notNull(),
+  targetId: text("target_id").notNull(),
+  questionId: text("question_id").notNull(),
+  correct: boolean("correct").notNull(),
+  day: text("day").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const events = pgTable("events", {
   id: uuid("id").primaryKey(),
   profileId: uuid("profile_id"),

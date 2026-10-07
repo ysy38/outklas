@@ -1,21 +1,16 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { brand } from "@/brand";
-import { PendingButton } from "@/components/pending-button";
+import { OfferCards } from "@/components/offer-cards";
 import { countdownText, daysUntil, finishedFamilies, formatDay, upcomingSittings } from "@/content/exam-calendar";
-import { devCheckoutAction } from "@/server/actions";
-import { iyzicoConfigured } from "@/modules/billing/iyzico";
 import { currentProfile } from "@/server/auth";
-import type { CheckoutPlan } from "@/modules/billing/entitlement";
+import { entitlementFor } from "@/server/sessions";
 
 export const metadata: Metadata = {
   title: "Fiyat",
-  description: `Seviye testi ücretsiz. 90 gün ${brand.prices.lab90} TL, 180 gün ${brand.prices.lab180} TL, 60 günlük yoğun paket ${brand.prices.sprint} TL.`,
+  description: `Seviye testi ücretsiz. Gelişim Paketi ${brand.prices.gelisim} TL, Kişisel YDS Kampı ${brand.prices.kamp.toLocaleString("tr-TR")} TL. Tek seferlik ödeme, abonelik yok.`,
   alternates: { canonical: "/fiyat" },
 };
-
-function tl(amount: number) {
-  return amount.toLocaleString("tr-TR");
-}
 
 function applyNote(applyFrom: string | undefined, applyUntil: string | undefined, lateApply: string | undefined) {
   if (!applyUntil) return null;
@@ -30,51 +25,36 @@ function applyNote(applyFrom: string | undefined, applyUntil: string | undefined
 
 export default async function PricingPage() {
   const profile = await currentProfile();
-  const live = iyzicoConfigured();
+  const access = await entitlementFor(profile?.id ?? null);
   const upcoming = upcomingSittings();
   const finished = finishedFamilies();
-  const offers: {
-    plan: CheckoutPlan;
-    title: string;
-    price: number;
-    unit: string;
-    points: string[];
-    featured?: boolean;
-  }[] = [
-    {
-      plan: "lab_90",
-      title: "90 gün",
-      price: brand.prices.lab90,
-      unit: "90 gün",
-      featured: true,
-      points: ["Günlük soru sınırı yok", "Sınırsız deneme", "Tek seferlik ödeme, otomatik yenilenmez"],
-    },
-    {
-      plan: "lab_180",
-      title: "180 gün",
-      price: brand.prices.lab180,
-      unit: "6 ay",
-      points: ["90 günlük paketin tüm özellikleri", "Sınavın daha ileri bir tarihteyse", "Tek seferlik ödeme, otomatik yenilenmez"],
-    },
-    {
-      plan: "sprint",
-      title: "Yoğun paket",
-      price: brand.prices.sprint,
-      unit: "60 gün",
-      points: ["Sınavına 1–2 ay kaldıysa", "60 gün boyunca soru sınırı yok", "Sınırsız deneme"],
-    },
-  ];
-
   return (
     <section className="landing mx-auto w-full max-w-6xl px-4 py-12 sm:px-5 sm:py-20">
       <p className="text-xs uppercase tracking-[0.18em] text-gold">Fiyat</p>
       <h1 className="display-xl mt-4 max-w-3xl font-serif">
-        Seviye testi <span className="grad">ücretsiz.</span>
+        Önce seviyeni ölç. <span className="grad">Sonra yolunu seç.</span>
       </h1>
       <p className="mt-4 max-w-2xl text-base leading-8 text-muted sm:text-lg">
-        24 soruluk seviye testi ücretsiz. Sonrasında her gün {brand.freeDailyQuestions} soru çözebilir ve{" "}
-        {brand.freeSimulators} tam deneme yapabilirsin. Ücretli pakette bu sınırlar kalkar. Abonelik yoktur: bir kez ödersin, süre bitince paket kendiliğinden sona erer.
+        {brand.diagnosticQuestions} soruluk seviye testi ücretsiz ve üyelik istemez. Sonucuna göre ya araçları alıp kendin çalışırsın ya da programını biz kurarız. İki paket de tek seferlik ödemedir; abonelik yok.
       </p>
+
+      <div className="mt-10 grid items-stretch gap-4 lg:grid-cols-[0.8fr_2fr]">
+        <article data-rise className="lift glass flex flex-col rounded-3xl border border-line p-6">
+          <p className="text-xs uppercase tracking-[0.16em] text-gold">Şimdilik ücretsiz</p>
+          <h2 className="mt-2 text-2xl">Ücretsiz</h2>
+          <p className="mt-4 font-serif text-4xl">0 TL</p>
+          <ul className="mt-5 flex-1 space-y-2 text-sm leading-6 text-muted">
+            <li>{brand.diagnosticQuestions} soruluk seviye testi</li>
+            <li>Raporun ilk 3 bulgusu</li>
+            <li>Her gün {brand.freeDailyWords} kelime ve {brand.freeDailyConnectors} bağlaç</li>
+            <li>{brand.freeSimulators} tam deneme</li>
+          </ul>
+          <Link href="/teshis" className="mt-5 rounded-full border border-pine px-5 py-3 text-center text-pine transition hover:bg-pine hover:text-cream">
+            Ücretsiz seviyemi ölç →
+          </Link>
+        </article>
+        <OfferCards signedIn={Boolean(profile)} tier={access.tier === "kamp" ? "free" : access.tier} />
+      </div>
 
       <div data-rise className="glass mt-10 rounded-[28px] border border-line p-5 sm:p-6">
         <h2 className="text-2xl">Yaklaşan sınavlar</h2>
@@ -111,49 +91,6 @@ export default async function PricingPage() {
         </p>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <article data-rise className="lift glass rounded-3xl border border-line p-6">
-          <h2 className="text-2xl">Ücretsiz</h2>
-          <p className="mt-6 font-serif text-4xl">0 TL</p>
-          <ul className="mt-6 space-y-2 text-sm leading-6 text-muted">
-            <li>24 soruluk seviye testi</li>
-            <li>Her gün {brand.freeDailyQuestions} soru</li>
-            <li>{brand.freeSimulators} tam deneme</li>
-          </ul>
-        </article>
-        {offers.map((offer) => (
-          <article
-            key={offer.plan}
-            data-rise
-            className={
-              offer.featured
-                ? "lift shine rounded-3xl bg-pine p-6 text-cream shadow-[0_24px_60px_-36px_rgba(20,63,54,0.8)]"
-                : "lift glass rounded-3xl border border-line p-6"
-            }
-          >
-            <h2 className={`text-2xl ${offer.featured ? "text-cream" : ""}`}>{offer.title}</h2>
-            <p className={`mt-6 font-serif text-4xl ${offer.featured ? "text-cream" : ""}`}>
-              {tl(offer.price)} <span className={`text-lg ${offer.featured ? "text-cream/70" : "text-muted"}`}>TL / {offer.unit}</span>
-            </p>
-            <ul className={`mt-6 space-y-2 text-sm leading-6 ${offer.featured ? "text-cream/80" : "text-muted"}`}>
-              {offer.points.map((point) => (
-                <li key={point}>{point}</li>
-              ))}
-            </ul>
-            {profile && !live ? (
-              <form action={devCheckoutAction.bind(null, offer.plan)} className="mt-6">
-                <PendingButton
-                  pendingLabel="Açılıyor…"
-                  className={offer.featured ? "rounded-full bg-cream px-4 py-2 text-sm text-pine-deep" : "rounded-full border border-line px-4 py-2 text-sm"}
-                >
-                  Test için etkinleştir
-                </PendingButton>
-              </form>
-            ) : null}
-          </article>
-        ))}
-      </div>
-      {live ? <p className="mt-8 text-sm text-muted">Ödemeler iyzico ile güvenle alınır. Paketin, ödeme onaylanır onaylanmaz açılır.</p> : null}
     </section>
   );
 }
