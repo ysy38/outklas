@@ -4,6 +4,7 @@ import { getTableConfig, type PgTable } from "drizzle-orm/pg-core";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { knowledgeEdges, knowledgeNodes, legacyMap } from "@/modules/knowledge/seed";
+import { actualShape, expectedShape } from "./drift";
 import { syncKnowledge } from "./knowledge-sync";
 import { knowledgeEdges as edgesTable, knowledgeNodes as nodesTable, knowledgeVersions, legacyNodeMap } from "./knowledge-schema";
 import { migratePglite } from "./migrations";
@@ -55,56 +56,7 @@ describe("knowledge graph database", () => {
 
   it("matches the Drizzle schema", async () => {
     for (const table of [knowledgeVersions, nodesTable, edgesTable, legacyNodeMap] as PgTable[]) {
-      const config = getTableConfig(table);
-      const columns = await rows<{ name: string; type: string; nullable: string; has_default: boolean }>(
-        `select column_name as name, data_type as type, is_nullable as nullable, column_default is not null as has_default
-         from information_schema.columns where table_schema = 'public' and table_name = $1 order by column_name`,
-        [config.name],
-      );
-      expect(columns, config.name).toEqual(
-        config.columns
-          .map((column) => ({
-            name: column.name,
-            type: column.getSQLType().replace(/\(.*\)$/, ""),
-            nullable: column.notNull ? "NO" : "YES",
-            has_default: column.hasDefault,
-          }))
-          .sort((a, b) => (a.name < b.name ? -1 : 1)),
-      );
-
-      const indexes = await rows<{ name: string }>(
-        "select indexname as name from pg_indexes where schemaname = 'public' and tablename = $1 and indexname not like '%_pkey' order by indexname",
-        [config.name],
-      );
-      expect(indexes.map((index) => index.name), config.name).toEqual(
-        [...config.indexes.map((index) => index.config.name), ...config.uniqueConstraints.map((constraint) => constraint.getName())].sort(),
-      );
-
-      const primary = await rows<{ name: string }>(
-        `select a.attname as name from pg_index i join pg_attribute a on a.attrelid = i.indrelid and a.attnum = any(i.indkey)
-         where i.indrelid = $1::regclass and i.indisprimary order by a.attname`,
-        [config.name],
-      );
-      const drizzlePrimary = [...config.columns.filter((column) => column.primary), ...(config.primaryKeys[0]?.columns ?? [])].map((column) => column.name);
-      expect(primary.map((column) => column.name), config.name).toEqual(drizzlePrimary.sort());
-
-      const foreign = await rows<{ link: string }>(
-        `select a.attname || '->' || f.relname || '.' || af.attname as link
-         from pg_constraint c
-         join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
-         join pg_class f on f.oid = c.confrelid
-         join pg_attribute af on af.attrelid = c.confrelid and af.attnum = c.confkey[1]
-         where c.contype = 'f' and c.conrelid = $1::regclass order by link`,
-        [config.name],
-      );
-      expect(foreign.map((key) => key.link), config.name).toEqual(
-        config.foreignKeys
-          .map((key) => {
-            const reference = key.reference();
-            return `${reference.columns[0].name}->${getTableConfig(reference.foreignTable).name}.${reference.foreignColumns[0].name}`;
-          })
-          .sort(),
-      );
+      expect(await actualShape(rows, table), getTableConfig(table).name).toEqual(expectedShape(table));
     }
   });
 
