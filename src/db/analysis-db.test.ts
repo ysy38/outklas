@@ -67,7 +67,7 @@ const dna = toDnaQuestion({ document: "yds-2024-11", question, analysis, answer:
 const bundle: DnaBundle = {
   sources: sourceProviders,
   sourceDocuments,
-  document: { slug: "yds-2024-11", exam: "yds", year: 2024, session: "2024-11", blueprint: "yds-en", questionCount: 80 },
+  document: { slug: "yds-2024-11", exam: "yds", year: 2024, session: "2024-11", blueprint: "yds-en", questionCount: 80, sourceClass: "complete_exam", usableForDistribution: true },
   run: {
     stage: "analyze",
     stageVersion: "1",

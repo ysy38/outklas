@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { ydsBlueprint } from "@/modules/exam/blueprint";
 import { analysisDraft, coerceAnalysisJson, type AnalysisDraft } from "./contract";
-import { deriveFamilies, mineDna, toDnaQuestion } from "./dna";
+import { deriveFamilies, forOverallDistribution, mineDna, toDnaQuestion } from "./dna";
 import { licenseProblems, sourceDocuments, usableForGrounding } from "./sources";
 import { expectedQuestionType, looksTurkish, normalizeForHash, surfaceFeatures, type ReconstructedQuestion } from "./surface";
+import { classifySource, usableForDistribution } from "./acceptance";
 import { analysisScaleThresholds } from "./thresholds";
 import { quotedRun, validateAnalysis } from "./validate";
 
@@ -154,6 +155,17 @@ describe("DNA", () => {
     const families = deriveFamilies(rows);
     expect(families[0].primary).toBe("discourse_relation:concession");
     expect(families[0].questionTypes).toHaveLength(2);
+    const slice = toDnaQuestion({
+      document: "e-yds-topic-vocab",
+      question,
+      analysis: draft(),
+      answer: "A",
+      textSha256: "1".repeat(64),
+      proposals: [],
+      sourceClass: "topic_slice",
+    });
+    expect(forOverallDistribution([row(1, "question_type:sentence_completion", "discourse_relation:concession", 0.3), slice])).toHaveLength(1);
+    expect(forOverallDistribution([slice])[0]?.sourceClass).toBeUndefined();
   });
 });
 
@@ -169,17 +181,27 @@ describe("surface", () => {
 });
 
 describe("scale thresholds", () => {
-  it("defines the batch gate before measurement", () => {
+  it("does not block analysis on complete-exam or 85% extraction yield", () => {
     expect(analysisScaleThresholds).toEqual({
       blindSolve: 0.93,
       schemaFail: 0.02,
       quotingNotes: 0,
       misconceptionsEvidenced: 1,
       questionTypeMatch: 1,
-      segmentation: 1,
       connectorRelationMismatch: 0,
-      extractionOk: 0.85,
     });
+    expect(analysisScaleThresholds).not.toHaveProperty("extractionOk");
+    expect(analysisScaleThresholds).not.toHaveProperty("segmentation");
+  });
+});
+
+describe("source classes", () => {
+  it("treats a 39/80 booklet as an analysable partial exam and keeps topic slices out of YDS distribution", () => {
+    expect(classifySource({ questionsFound: 39, expected: 80, trustworthy: true })).toBe("partial_exam");
+    expect(classifySource({ questionsFound: 80, expected: 80, trustworthy: true })).toBe("complete_exam");
+    expect(classifySource({ topic: true, questionsFound: 22, expected: 22, trustworthy: true })).toBe("topic_slice");
+    expect(usableForDistribution("partial_exam")).toBe(true);
+    expect(usableForDistribution("topic_slice")).toBe(false);
   });
 });
 

@@ -1,3 +1,4 @@
+import type { HumanReviewStatus, SourceClass, ValidationStatus } from "@/modules/analysis/acceptance";
 import { difficultyDimensions, type DifficultyDimension, type OptionLabel, type QuestionFacet } from "@/modules/analysis/contract";
 import type { DnaQuestion } from "@/modules/analysis/dna";
 import type { SourceDocument, SourceProvider } from "@/modules/analysis/sources";
@@ -31,7 +32,16 @@ export type AnalysisRun = {
 export type DnaBundle = {
   sources: SourceProvider[];
   sourceDocuments: SourceDocument[];
-  document: { slug: string; exam: string; year: number; session: string; blueprint: string; questionCount: number };
+  document: {
+    slug: string;
+    exam: string;
+    year: number;
+    session: string;
+    blueprint: string;
+    questionCount: number;
+    sourceClass: SourceClass;
+    usableForDistribution: boolean;
+  };
   run: AnalysisRun;
   questions: DnaQuestion[];
   proposals: { type: string; slug: string; name: string; questions: number[] }[];
@@ -114,10 +124,10 @@ IS DISTINCT FROM (excluded.source_id, excluded.document_type, excluded.title, ex
   excluded.derivative_use, excluded.redistribution_allowed, excluded.text_mining_allowed, excluded.attribution_required, excluded.verified, excluded.verified_at, excluded.verified_by)`);
 
   const doc = bundle.document;
-  statements.push(`INSERT INTO analysis.documents AS doc (source_document_id, exam, year, session, blueprint, question_count)
-SELECT sd.id, ${lit(doc.exam)}, ${lit(doc.year)}, ${lit(doc.session)}, ${lit(doc.blueprint)}, ${lit(doc.questionCount)} FROM analysis.source_documents sd WHERE sd.slug = ${lit(doc.slug)}
-ON CONFLICT (source_document_id) DO UPDATE SET exam = excluded.exam, year = excluded.year, session = excluded.session, blueprint = excluded.blueprint, question_count = excluded.question_count
-WHERE (doc.exam, doc.year, doc.session, doc.blueprint, doc.question_count) IS DISTINCT FROM (excluded.exam, excluded.year, excluded.session, excluded.blueprint, excluded.question_count)`);
+  statements.push(`INSERT INTO analysis.documents AS doc (source_document_id, exam, year, session, blueprint, question_count, source_class, usable_for_distribution)
+SELECT sd.id, ${lit(doc.exam)}, ${lit(doc.year)}, ${lit(doc.session)}, ${lit(doc.blueprint)}, ${lit(doc.questionCount)}, ${lit(doc.sourceClass)}, ${lit(doc.usableForDistribution)} FROM analysis.source_documents sd WHERE sd.slug = ${lit(doc.slug)}
+ON CONFLICT (source_document_id) DO UPDATE SET exam = excluded.exam, year = excluded.year, session = excluded.session, blueprint = excluded.blueprint, question_count = excluded.question_count, source_class = excluded.source_class, usable_for_distribution = excluded.usable_for_distribution
+WHERE (doc.exam, doc.year, doc.session, doc.blueprint, doc.question_count, doc.source_class, doc.usable_for_distribution) IS DISTINCT FROM (excluded.exam, excluded.year, excluded.session, excluded.blueprint, excluded.question_count, excluded.source_class, excluded.usable_for_distribution)`);
 
   const run = bundle.run;
   statements.push(`INSERT INTO analysis.runs AS r (document_id, stage, stage_version, provider, model, prompt_version, schema_version, knowledge_version, input_hash, output_hash, status,
@@ -133,9 +143,10 @@ ON CONFLICT (document_id, stage, input_hash) DO UPDATE SET output_hash = exclude
 
   const questions = [...bundle.questions].sort((a, b) => a.number - b.number);
   statements.push(`INSERT INTO analysis.questions (document_id, run_id, question_number, section, question_type_node_id, translation_direction, answer_position, option_count,
-  structural_format, stimulus_key, stimulus_word_count, stem_word_count, option_word_mean, option_word_max, sentence_count, mean_sentence_length, blank_count, text_sha256, confidence, validated_by)
+  structural_format, stimulus_key, stimulus_word_count, stem_word_count, option_word_mean, option_word_max, sentence_count, mean_sentence_length, blank_count, text_sha256, confidence,
+  extraction_confidence, analysis_confidence, validation_status, human_review_status, validated_by)
 SELECT ${docId}, ${runId}, v.number, v.section, n.id, v.direction, v.answer, v.option_count, v.format, v.stimulus_key, v.stimulus_words, v.stem_words, v.option_mean, v.option_max,
-  v.sentences, v.sentence_length, v.blanks, v.text_sha256, v.confidence, 'rules'
+  v.sentences, v.sentence_length, v.blanks, v.text_sha256, v.analysis_confidence, v.extraction_confidence, v.analysis_confidence, v.validation_status, v.human_review_status, 'rules'
 FROM (VALUES
   ${values(
     questions.map((question) => [
@@ -155,10 +166,13 @@ FROM (VALUES
       lit(question.surface.meanSentenceLength),
       lit(question.surface.blankCount),
       lit(question.textSha256),
-      lit(question.confidence),
+      lit(question.extractionConfidence),
+      lit(question.analysisConfidence),
+      lit(question.validationStatus),
+      lit(question.humanReviewStatus),
     ]),
   )}
-) AS v (number, section, type_type, type_slug, direction, answer, option_count, format, stimulus_key, stimulus_words, stem_words, option_mean, option_max, sentences, sentence_length, blanks, text_sha256, confidence)
+) AS v (number, section, type_type, type_slug, direction, answer, option_count, format, stimulus_key, stimulus_words, stem_words, option_mean, option_max, sentences, sentence_length, blanks, text_sha256, extraction_confidence, analysis_confidence, validation_status, human_review_status)
 JOIN knowledge_nodes n ON n.node_type = v.type_type AND n.slug = v.type_slug`);
 
   statements.push(`INSERT INTO analysis.question_features (question_id, ${difficultyDimensions.join(", ")}, cognitive_demand, transfer_requirement)
@@ -264,6 +278,11 @@ type QuestionRow = {
   mean_sentence_length: string;
   blank_count: number;
   confidence: string;
+  extraction_confidence: string;
+  analysis_confidence: string;
+  validation_status: ValidationStatus;
+  human_review_status: HumanReviewStatus;
+  source_class: SourceClass;
   cognitive_demand: string;
   transfer_requirement: string;
 } & Record<DifficultyDimension, string>;
@@ -275,7 +294,8 @@ export async function readDnaQuestions(query: Query, documentSlug: string): Prom
   const rows = await query<QuestionRow>(
     `select q.question_number as number, q.section, t.node_type || ':' || t.slug as question_type, q.translation_direction, q.answer_position, q.stimulus_key, q.text_sha256,
        q.option_count, q.structural_format, q.stimulus_word_count, q.stem_word_count, q.option_word_mean::text, q.option_word_max, q.sentence_count,
-       q.mean_sentence_length::text, q.blank_count, q.confidence::text, f.cognitive_demand, f.transfer_requirement,
+       q.mean_sentence_length::text, q.blank_count, q.confidence::text, q.extraction_confidence::text, q.analysis_confidence::text, q.validation_status, q.human_review_status,
+       doc.source_class, f.cognitive_demand, f.transfer_requirement,
        ${difficultyDimensions.map((dimension) => `f.${dimension}::text`).join(", ")}
      from ${from} JOIN knowledge_nodes t ON t.id = q.question_type_node_id JOIN analysis.question_features f ON f.question_id = q.id
      where ${where} order by q.question_number`,
@@ -324,7 +344,12 @@ export async function readDnaQuestions(query: Query, documentSlug: string): Prom
     difficulty: Object.fromEntries(difficultyDimensions.map((dimension) => [dimension, Number(row[dimension])])) as Record<DifficultyDimension, number>,
     cognitiveDemand: row.cognitive_demand,
     transferRequirement: row.transfer_requirement,
-    confidence: Number(row.confidence),
+    confidence: Number(row.analysis_confidence ?? row.confidence),
+    extractionConfidence: Number(row.extraction_confidence),
+    analysisConfidence: Number(row.analysis_confidence ?? row.confidence),
+    validationStatus: row.validation_status,
+    humanReviewStatus: row.human_review_status,
+    sourceClass: row.source_class,
     nodes: nodes.filter((node) => node.number === row.number).map(({ facet, ref, rank }) => ({ facet, ref, rank })),
     distractors: distractors.filter((entry) => entry.number === row.number).map(({ number: _number, ...entry }) => entry),
     proposals: proposals.filter((entry) => entry.number === row.number).map(({ type, slug }) => ({ type, slug })),

@@ -1,3 +1,5 @@
+import type { HumanReviewStatus, SourceClass, ValidationStatus } from "@/modules/analysis/acceptance";
+import { usableForDistribution } from "@/modules/analysis/acceptance";
 import type { SectionId } from "@/modules/exam/blueprint";
 import type { NodeRef } from "@/modules/knowledge/graph";
 import { difficultyDimensions, questionFacets, type AnalysisDraft, type DifficultyDimension, type OptionLabel, type QuestionFacet } from "./contract";
@@ -18,6 +20,11 @@ export type DnaQuestion = {
   cognitiveDemand: string;
   transferRequirement: string;
   confidence: number;
+  extractionConfidence: number;
+  analysisConfidence: number;
+  validationStatus: ValidationStatus;
+  humanReviewStatus: HumanReviewStatus;
+  sourceClass: SourceClass;
   nodes: { facet: QuestionFacet; ref: NodeRef; rank: number }[];
   distractors: { position: OptionLabel; type: NodeRef; expresses: NodeRef | null; targeted: NodeRef | null; misconception: NodeRef | null }[];
   proposals: { type: string; slug: string }[];
@@ -32,7 +39,18 @@ export const lemmaSlug = (lemma: string) =>
     .replace(/^_+|_+$/g, "");
 
 /** Maps a validated analysis to the text-free row shape; tested and answer lemmas without a node become vocabulary proposals. */
-export function toDnaQuestion(input: { document: string; question: ReconstructedQuestion; analysis: AnalysisDraft; answer: OptionLabel; textSha256: string; proposals: { type: string; slug: string }[] }): DnaQuestion {
+export function toDnaQuestion(input: {
+  document: string;
+  question: ReconstructedQuestion;
+  analysis: AnalysisDraft;
+  answer: OptionLabel;
+  textSha256: string;
+  proposals: { type: string; slug: string }[];
+  extractionConfidence?: number;
+  validationStatus?: ValidationStatus;
+  humanReviewStatus?: HumanReviewStatus;
+  sourceClass?: SourceClass;
+}): DnaQuestion {
   const { analysis } = input;
   const byFacet: Record<QuestionFacet, (NodeRef | null)[]> = {
     primary_concept: analysis.knowledge.primary_concepts,
@@ -70,6 +88,11 @@ export function toDnaQuestion(input: { document: string; question: Reconstructed
     cognitiveDemand: analysis.pedagogy.cognitive_demand,
     transferRequirement: analysis.pedagogy.transfer_requirement,
     confidence: round3(analysis.confidence),
+    extractionConfidence: round3(input.extractionConfidence ?? 1),
+    analysisConfidence: round3(analysis.confidence),
+    validationStatus: input.validationStatus ?? "accepted",
+    humanReviewStatus: input.humanReviewStatus ?? "unreviewed",
+    sourceClass: input.sourceClass ?? "complete_exam",
     nodes: nodes.sort((a, b) => (a.facet < b.facet ? -1 : a.facet > b.facet ? 1 : a.rank - b.rank)),
     distractors: analysis.distractors
       .map((entry) => ({ position: entry.label, type: entry.type, expresses: entry.expresses, targeted: entry.targeted_concept, misconception: entry.misconception }))
@@ -175,7 +198,11 @@ export type DnaReport = {
 
 const mean = (values: number[]) => (values.length ? round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0);
 
-/** Deterministic: the same rows always give the same report. */
+export function forOverallDistribution(questions: DnaQuestion[]): DnaQuestion[] {
+  return questions.filter((question) => usableForDistribution(question.sourceClass));
+}
+
+/** Deterministic: the same rows always give the same report. Topic slices must be filtered out before overall YDS distribution. */
 export function mineDna(questions: DnaQuestion[]): DnaReport {
   const sorted = [...questions].sort((a, b) => (a.document < b.document ? -1 : a.document > b.document ? 1 : a.number - b.number));
   const concept = (question: DnaQuestion) => refsOf(question, "primary_concept");

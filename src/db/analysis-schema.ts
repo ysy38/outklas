@@ -1,5 +1,6 @@
 import { bigint, boolean, index, integer, jsonb, numeric, pgSchema, primaryKey, smallint, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import type { NodeType } from "@/modules/knowledge/graph";
+import type { HumanReviewStatus, SourceClass, ValidationStatus } from "@/modules/analysis/acceptance";
 import type { DocumentType, LicenseStatus, SourceKind, SourceType } from "@/modules/analysis/sources";
 import { knowledgeNodes, knowledgeVersions } from "./knowledge-schema";
 
@@ -73,6 +74,8 @@ export const analysisDocuments = analysis.table(
     session: text("session").notNull(),
     blueprint: text("blueprint").notNull(),
     questionCount: smallint("question_count").notNull(),
+    sourceClass: text("source_class").$type<SourceClass>().notNull(),
+    usableForDistribution: boolean("usable_for_distribution").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique("analysis_documents_source_unique").on(table.sourceDocumentId)],
@@ -138,6 +141,10 @@ export const analysisQuestions = analysis.table(
     blankCount: smallint("blank_count").notNull(),
     textSha256: text("text_sha256").notNull(),
     confidence: numeric("confidence", { precision: 4, scale: 3 }).notNull(),
+    extractionConfidence: numeric("extraction_confidence", { precision: 4, scale: 3 }).notNull(),
+    analysisConfidence: numeric("analysis_confidence", { precision: 4, scale: 3 }).notNull(),
+    validationStatus: text("validation_status").$type<ValidationStatus>().notNull(),
+    humanReviewStatus: text("human_review_status").$type<HumanReviewStatus>().notNull(),
     validatedBy: text("validated_by").$type<"rules" | "human">().notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

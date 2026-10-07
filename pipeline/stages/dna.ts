@@ -1,5 +1,6 @@
 import { analysisSchemaVersion } from "@/modules/analysis/contract";
 import { deriveFamilies, toDnaQuestion } from "@/modules/analysis/dna";
+import { usableForDistribution } from "@/modules/analysis/acceptance";
 import { sourceDocuments, sourceProviders } from "@/modules/analysis/sources";
 import { normalizeForHash } from "@/modules/analysis/surface";
 import { itemText, quotedRun } from "@/modules/analysis/validate";
@@ -50,6 +51,7 @@ export async function dna(context: StageContext) {
           withheld.push({ number: record.number, type: proposal.type, slug: proposal.slug, reason: "slug repeats item wording" });
           return false;
         });
+        const check = report.questions.find((entry) => entry.number === record.number);
         return toDnaQuestion({
           document: slug,
           question,
@@ -57,6 +59,9 @@ export async function dna(context: StageContext) {
           answer: record.answerKey as "A",
           textSha256: sha256(normalizeForHash(question)),
           proposals: proposals.map(({ type, slug: proposalSlug }) => ({ type, slug: proposalSlug })),
+          extractionConfidence: check?.extractionConfidence ?? 1,
+          validationStatus: record.status === "accepted" ? "accepted" : record.status === "failed" ? "failed" : "needs_review",
+          sourceClass: exam.sourceClass,
         });
       });
 
@@ -73,7 +78,16 @@ export async function dna(context: StageContext) {
       const bundle: DnaBundle = {
         sources: sourceProviders,
         sourceDocuments,
-        document: { slug, exam: exam.code, year: exam.year, session: exam.session, blueprint: exam.blueprint, questionCount: exam.questionCount },
+        document: {
+          slug,
+          exam: exam.code,
+          year: exam.year,
+          session: exam.session,
+          blueprint: exam.blueprint,
+          questionCount: exam.questionCount,
+          sourceClass: exam.sourceClass,
+          usableForDistribution: usableForDistribution(exam.sourceClass),
+        },
         run: {
           stage: "analyze",
           stageVersion: analyzed.stageVersion,
