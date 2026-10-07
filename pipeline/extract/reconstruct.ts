@@ -1,6 +1,7 @@
 import { optionLabels, type OptionLabel } from "@/modules/analysis/contract";
 import { looksTurkish, type ReconstructedQuestion } from "@/modules/analysis/surface";
 import { bandForSlot, type Blueprint } from "@/modules/exam/blueprint";
+import { isChromeLine } from "./inventory";
 import type { Block, Segmentation } from "./segment";
 import type { StreamLine } from "./types";
 
@@ -150,7 +151,12 @@ function splitBlock(block: Block, section: string): Split {
 
 const takesSharedPassage = (section: string | undefined) => section === "cloze" || section === "reading";
 
-/** Turns question blocks into questions; passages shared by a group are attached to every member. */
+const substantialPending = (lines: StreamLine[]) => {
+  const body = lines.filter((line) => !isChromeLine(line.text));
+  return { body, text: joinLines(body, true), chars: joinLines(body, true).replace(/\s/g, "").length };
+};
+
+/** Turns question blocks into questions; passages shared by a group are attached to every member. Never invents missing items. */
 export function reconstruct(segmentation: Segmentation, blueprint: Blueprint): Rebuilt[] {
   const rebuilt: Rebuilt[] = [];
   let passage: { key: string; text: string; lines: StreamLine[] } | null = null;
@@ -162,12 +168,13 @@ export function reconstruct(segmentation: Segmentation, blueprint: Blueprint): R
       warnings.push("outside the blueprint");
       continue;
     }
+    const leftover = substantialPending(pending);
     if (takesSharedPassage(band.section)) {
-      if (pending.length) passage = { key: `p${block.number}`, text: joinLines(pending, true), lines: pending };
+      if (leftover.chars >= 40) passage = { key: `p${block.number}`, text: leftover.text, lines: leftover.body };
       else if (!passage) warnings.push("no passage before this question");
     } else {
       passage = null;
-      if (pending.length) warnings.push(`unattached text before question (${pending.length} lines)`);
+      if (leftover.chars >= 12) warnings.push(`unattached text before question (${leftover.body.length} lines)`);
     }
 
     const split = splitBlock(block, band.section);

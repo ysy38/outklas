@@ -60,10 +60,12 @@ export function clusterLines(glyphs: TextGlyph[]): { y: number; items: TextGlyph
 export function detectColumns(lines: { y: number; items: TextGlyph[] }[], width: number): { columns: 1 | 2; gutterX: number | null } {
   const items = lines.flatMap((line) => line.items);
   if (items.length < 8) return { columns: 1, gutterX: null };
-  const left = items.filter((item) => item.x + item.w / 2 < width * 0.42);
-  const right = items.filter((item) => item.x > width * 0.58);
+  const mid = width * 0.5;
+  const left = items.filter((item) => item.x + item.w / 2 < mid - width * 0.04);
+  const right = items.filter((item) => item.x > mid + width * 0.04);
   if (left.length < 3 || right.length < 3) return { columns: 1, gutterX: null };
   const gutter = (Math.max(...left.map((item) => item.x + item.w)) + Math.min(...right.map((item) => item.x))) / 2;
+  if (!Number.isFinite(gutter) || gutter < width * 0.3 || gutter > width * 0.7) return { columns: 1, gutterX: null };
   return { columns: 2, gutterX: gutter };
 }
 

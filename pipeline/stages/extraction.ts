@@ -1,4 +1,4 @@
-import { blueprintFor } from "@/modules/exam/blueprint";
+import { blueprintForDocument } from "../extract/topic-blueprint";
 import { readJson, readManifest, runStage } from "../lib/artifacts";
 import { checkQuestion, type QuestionCheck } from "../extract/checks";
 import { ocrStream, verifiedStream } from "../extract/cleanup";
@@ -56,7 +56,7 @@ export async function segmentStage(context: StageContext) {
   const layout = exam(context);
   const cleaned = readManifest(slug, "cleanup");
   if (!cleaned) throw new Error("Run the cleanup stage first.");
-  return runStage({ document: slug, stage: "segment", version: "1", inputs: { cleanup: cleaned.outputHash }, params: { questionCount: layout.questionCount }, code: [...code, "pipeline/extract/segment.ts", "pipeline/extract/key.ts"], force: context.force }, async () => {
+  return runStage({ document: slug, stage: "segment", version: "2", inputs: { cleanup: cleaned.outputHash }, params: { questionCount: layout.questionCount, sourceClass: layout.sourceClass }, code: [...code, "pipeline/extract/segment.ts", "pipeline/extract/key.ts"], force: context.force }, async () => {
     const files: Record<string, string> = {};
     const stats: Record<string, unknown> = {};
     for (const reading of readings(context)) {
@@ -82,11 +82,12 @@ export async function reconstructStage(context: StageContext) {
   const layout = exam(context);
   const segmented = readManifest(slug, "segment");
   if (!segmented) throw new Error("Run the segment stage first.");
-  return runStage({ document: slug, stage: "reconstruct", version: "1", inputs: { segment: segmented.outputHash }, params: { blueprint: layout.blueprint }, code: [...code, "pipeline/extract/reconstruct.ts", "src/modules/analysis/surface.ts"], force: context.force }, async () => {
+  return runStage({ document: slug, stage: "reconstruct", version: "2", inputs: { segment: segmented.outputHash }, params: { blueprint: layout.blueprint, sourceClass: layout.sourceClass }, code: [...code, "pipeline/extract/reconstruct.ts", "pipeline/extract/inventory.ts", "src/modules/analysis/surface.ts"], force: context.force }, async () => {
     const files: Record<string, string> = {};
     const stats: Record<string, unknown> = {};
+    const blueprint = blueprintForDocument(context.document);
     for (const reading of readings(context)) {
-      const rebuilt = reconstruct(readJson<Segmentation>(slug, "segment", `blocks-${reading}.json`), blueprintFor(layout.code));
+      const rebuilt = reconstruct(readJson<Segmentation>(slug, "segment", `blocks-${reading}.json`), blueprint);
       files[`questions-${reading}.json`] = json(rebuilt);
       stats[reading] = { questions: rebuilt.length, withWarnings: rebuilt.filter((entry) => entry.warnings.length).length };
     }
@@ -103,9 +104,10 @@ export type KeyDecision = {
 
 export type ValidationReport = {
   primary: Reading;
+  sourceClass: import("@/modules/analysis/acceptance").SourceClass;
   key: KeyDecision;
   questions: (QuestionCheck & { keyAgreed: boolean })[];
-  summary: { ok: number; needsReview: number; failed: number; missing: number[]; meanDisagreement: number | null };
+  summary: { ok: number; needsReview: number; failed: number; missing: number[]; meanDisagreement: number | null; meanExtractionConfidence: number | null };
 };
 
 /** Deterministic extraction validation; the answer key is accepted only where every reading agrees. */
@@ -114,7 +116,7 @@ export async function validateStage(context: StageContext) {
   const layout = exam(context);
   const rebuilt = readManifest(slug, "reconstruct");
   if (!rebuilt) throw new Error("Run the reconstruct stage first.");
-  return runStage({ document: slug, stage: "validate", version: "1", inputs: { reconstruct: rebuilt.outputHash, segment: readManifest(slug, "segment")!.outputHash }, code: [...code, "pipeline/extract/checks.ts", "src/modules/analysis/surface.ts"], force: context.force }, async () => {
+  return runStage({ document: slug, stage: "validate", version: "2", inputs: { reconstruct: rebuilt.outputHash, segment: readManifest(slug, "segment")!.outputHash }, params: { sourceClass: layout.sourceClass }, code: [...code, "pipeline/extract/checks.ts", "src/modules/analysis/acceptance.ts", "src/modules/analysis/surface.ts"], force: context.force }, async () => {
     const available = readings(context);
     const primary = available[0];
     const byReading = Object.fromEntries(available.map((reading) => [reading, readJson<Rebuilt[]>(slug, "reconstruct", `questions-${reading}.json`)])) as Record<Reading, Rebuilt[]>;
@@ -140,8 +142,10 @@ export async function validateStage(context: StageContext) {
       return { ...check, keyAgreed };
     });
     const disagreementsByQuestion = questions.map((question) => question.disagreement).filter((value): value is number => value !== null);
+    const extractionScores = questions.map((question) => question.extractionConfidence);
     const report: ValidationReport = {
       primary,
+      sourceClass: layout.sourceClass,
       key: { answers, readings: available, disagreements, warnings: keys.flatMap((key, index) => key.warnings.map((warning) => `${available[index]}: ${warning}`)) },
       questions,
       summary: {
@@ -150,6 +154,7 @@ export async function validateStage(context: StageContext) {
         failed: questions.filter((question) => question.status === "failed").length,
         missing: segmentation.missing,
         meanDisagreement: disagreementsByQuestion.length ? Math.round((disagreementsByQuestion.reduce((sum, value) => sum + value, 0) / disagreementsByQuestion.length) * 10_000) / 10_000 : null,
+        meanExtractionConfidence: extractionScores.length ? Math.round((extractionScores.reduce((sum, value) => sum + value, 0) / extractionScores.length) * 1000) / 1000 : null,
       },
     };
     const flagCounts: Record<string, number> = {};

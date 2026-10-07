@@ -1,3 +1,4 @@
+import { extractionConfidence } from "@/modules/analysis/acceptance";
 import { optionLabels } from "@/modules/analysis/contract";
 import { looksTurkish, words, type ReconstructedQuestion } from "@/modules/analysis/surface";
 import type { OcrStats, Rebuilt } from "./reconstruct";
@@ -19,6 +20,7 @@ export type QuestionCheck = {
   disagreement: number | null;
   meanConfidence: number | null;
   lowConfidenceShare: number | null;
+  extractionConfidence: number;
 };
 
 export function levenshtein(a: string, b: string): number {
@@ -110,7 +112,7 @@ export function structuralFlags(question: ReconstructedQuestion): string[] {
   const tokens = all.split(/\s+/);
   if (tokens.some((token) => token.replace(/[^\p{L}]/gu, "").length > thresholds.maxTokenLength)) flags.push("merged_words");
   if (tokens.some((token) => /\p{L}[^\p{L}\s'\-.,;:!?()"/]+\p{L}/u.test(token))) flags.push("mixed_token");
-  if (tokens.some((token) => /^[^\p{L}\p{N}()"'\-–.,;:!?/%]+$/u.test(token))) flags.push("junk_token");
+  if (tokens.some((token) => token !== "----" && !/^-+$/.test(token) && /^[^\p{L}\p{N}()"'\-–.,;:!?/%]+$/u.test(token))) flags.push("junk_token");
   if (question.section !== "translation" && /[ğışĞŞİ]/.test(body + all)) flags.push("unexpected_turkish_letter");
   if (/\[\?\]/.test(all)) flags.push("unreadable_word");
   return flags;
@@ -124,7 +126,9 @@ export function ocrConfidence(stats: OcrStats) {
  * Recorded but not blocking on their own: a Tesseract-only passage that passed every structural and confidence check
  * is still checked end to end by the blind solve against the answer key.
  */
-export const warningFlags = new Set(["single_reading"]);
+export const warningFlags = new Set(["single_reading", "no_tesseract_reading"]);
+
+const reconstructWarning = (flag: string) => flag.startsWith("reconstruct: unattached text");
 
 /**
  * Combines both readings: structural flags on the primary text and disagreement against the raw OCR. Tesseract's own
@@ -142,13 +146,19 @@ export function checkQuestion(primary: Rebuilt, ocr: Rebuilt | undefined, segmen
   if (tesseractOnly && confidence.mean !== null && confidence.mean < thresholds.minMeanConfidence) flags.push("low_ocr_confidence");
   if (tesseractOnly && confidence.lowShare !== null && confidence.lowShare > thresholds.maxLowConfidenceShare) flags.push("many_low_confidence_words");
   const fatal = flags.some((flag) => flag === "no_text" || flag.startsWith("empty_option") || flag === "passage_missing");
-  const blocking = flags.filter((flag) => !warningFlags.has(flag));
+  const blocking = flags.filter((flag) => !warningFlags.has(flag) && !reconstructWarning(flag));
+  const status: ExtractionStatus = fatal ? "failed" : blocking.length ? "needs_review" : "ok";
   return {
     number: primary.question.number,
-    status: fatal ? "failed" : blocking.length ? "needs_review" : "ok",
+    status,
     flags,
     disagreement: disagreement === null ? null : Math.round(disagreement * 10_000) / 10_000,
     meanConfidence: confidence.mean === null ? null : Math.round(confidence.mean * 10) / 10,
     lowConfidenceShare: confidence.lowShare === null ? null : Math.round(confidence.lowShare * 1000) / 1000,
+    extractionConfidence: extractionConfidence({
+      status,
+      blockingFlags: blocking.length,
+      warningFlags: flags.filter((flag) => warningFlags.has(flag) || reconstructWarning(flag)).length,
+    }),
   };
 }

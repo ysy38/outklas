@@ -6,8 +6,10 @@ import { findGutter, splitColumns, type Gray } from "./image";
 import { parseAnswerKey } from "./key";
 import { markDialogueBlanks, reconstruct, recoverNumberedSentences, splitInlineOptions } from "./reconstruct";
 import { detectColumns, joinGlyphs, layoutPage, type TextGlyph } from "./text-layer";
-import { parseExamHeader, parseTopicHeader } from "./inventory";
+import { detectExams, parseExamHeader, parseTopicHeader } from "./inventory";
+import { knownYds2013_2021Booklets } from "./known-booklets";
 import { leadingQuestionNumber, questionNumber, segment } from "./segment";
+import type { PageTextLayout, TextLayerExtract } from "./text-layer";
 import type { OcrColumn, StreamLine } from "./types";
 
 const line = (text: string, extra: Partial<StreamLine> = {}): StreamLine => ({ page: 2, column: "left", index: 0, text, gap: false, ...extra });
@@ -102,6 +104,7 @@ describe("segment", () => {
 
   it("splits a typeset stem that starts with the question number", () => {
     expect(leadingQuestionNumber("1. UNICEF is committed.")).toBe(1);
+    expect(leadingQuestionNumber("B) although")).toBeNull();
     expect(leadingQuestionNumber("1. - 6. sorularda, cümlede")).toBeNull();
     expect(leadingQuestionNumber("1. A 21. D")).toBeNull();
     const result = segment([line("1. The cat ---- sat."), line("A) sat"), line("B) sits"), line("C) sitting"), line("D) sit"), line("E) sat down"), line("2. Dogs ----.")], 2);
@@ -112,6 +115,20 @@ describe("segment", () => {
   it("does not treat an out-of-range number as a question", () => {
     const result = segment([line("1"), line("body"), line("40"), line("2"), line("more")], 2);
     expect(result.blocks[0].lines.map((entry) => entry.text)).toEqual(["body", "40"]);
+  });
+
+  it("never invents skipped numbers", () => {
+    const result = segment([line("1. One."), line("A) a"), line("3. Three.")], 3);
+    expect(result.blocks.map((block) => block.number)).toEqual([1, 3]);
+    expect(result.missing).toEqual([2]);
+  });
+
+  it("keeps out-of-order unused numbers from two-column pages and ignores already-used false positives", () => {
+    const early = Array.from({ length: 17 }, (_, index) => line(`${index + 1}. Stem ${index + 1}.`));
+    const result = segment([...early, line("21. Cloze."), line("18. Second."), line("1. roman false positive"), line("19. Third.")], 21);
+    expect(result.blocks.map((block) => block.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 21, 18, 19]);
+    expect(result.missing).toEqual([20]);
+    expect(result.blocks.find((block) => block.number === 21)?.lines[0]?.text).toBe("Cloze.");
   });
 });
 
@@ -124,6 +141,14 @@ describe("answer key", () => {
     expect(key.answers[12]).toBe("B");
     expect(key.answers[80]).toBe("C");
     expect(key.warnings).toEqual(["key position 11 printed as 1"]);
+  });
+
+  it("reads a vertical one-pair-per-line key", () => {
+    const lines = Array.from({ length: 80 }, (_, index) => `${index + 1}. ${"ABCDE"[index % 5]}`);
+    const key = parseAnswerKey(["KEY:", ...lines], 80);
+    expect(Object.keys(key.answers)).toHaveLength(80);
+    expect(key.answers[1]).toBe("A");
+    expect(key.answers[80]).toBe("E");
   });
 });
 
@@ -140,7 +165,7 @@ describe("reconstruct", () => {
     const blocks = [
       { number: 16, lines: [line("The cat ---- on the mat."), ...options("word")], pages: [3] },
       { number: 17, lines: options("first"), pages: [3] },
-      { number: 18, lines: [...options("second"), line("Next passage.", { gap: true })], pages: [3] },
+      { number: 18, lines: [...options("second"), line("Next passage continues with enough invented words to count as a new cloze text.", { gap: true })], pages: [3] },
       { number: 19, lines: options("third"), pages: [3] },
     ];
     const passage = [line("A made-up passage (17)---- with"), line("blanks (18)---- in it.")];
@@ -150,7 +175,7 @@ describe("reconstruct", () => {
     expect(rebuilt[0].question.options.E).toBe("word e");
     expect(rebuilt[1].question).toMatchObject({ section: "cloze", stimulusKey: "p17", stimulus: "A made-up passage (17)---- with blanks (18)---- in it." });
     expect(rebuilt[2].question.stimulusKey).toBe("p17");
-    expect(rebuilt[3].question).toMatchObject({ stimulusKey: "p19", stimulus: "Next passage." });
+    expect(rebuilt[3].question).toMatchObject({ stimulusKey: "p19", stimulus: "Next passage continues with enough invented words to count as a new cloze text." });
     expect(rebuilt[1].fallbackLines).toBe(0);
   });
 
@@ -222,6 +247,49 @@ describe("text layer", () => {
     expect(parseTopicHeader("e-YDS GEÇMİŞ YIL CÜMLE TAMAMLAMA SORULARI")).toBe("cümle tamamlama");
     expect(parseExamHeader("This is a long sentence that is clearly not a booklet title because it keeps going")).toBeNull();
   });
+
+  it("finds the seven user-confirmed 2013–2016 page ranges without wrapping on Q1", () => {
+    const page = (n: number, header = "", numbers: number[] = [], key = false): PageTextLayout => ({
+      page: n,
+      width: 595,
+      height: 842,
+      charCount: header || numbers.length || key ? 200 : 0,
+      hasText: true,
+      columns: numbers.length ? 2 : 1,
+      gutterX: numbers.length ? 300 : null,
+      headerLines: header ? [header] : [],
+      footerLines: [],
+      lines: [
+        ...(header ? [{ page: n, column: "full" as const, index: 0, text: header, gap: true }] : []),
+        ...numbers.map((number, index) => ({ page: n, column: "left" as const, index: index + 1, text: `${number}. The made-up stem ---- here.`, gap: true })),
+        ...(key ? [{ page: n, column: "full" as const, index: 99, text: Array.from({ length: 40 }, (_, i) => `${i + 1}. A`).join(" "), gap: true }] : []),
+      ],
+    });
+    const pages = Array.from({ length: 311 }, (_, index) => page(index + 1));
+    const mark = (start: number, header: string, keyPage: number) => {
+      pages[start - 1] = page(start, header, [1, 2, 3]);
+      pages[start] = page(start + 1, header, [4, 5, 50, 80]);
+      pages[keyPage - 1] = page(keyPage, header, [], true);
+    };
+    mark(2, "2013 İLKBAHAR YDS", 27);
+    mark(28, "2013 SONBAHAR YDS", 50);
+    mark(51, "2014 İLKBAHAR YDS", 74);
+    mark(75, "2014 SONBAHAR YDS", 98);
+    mark(99, "2015 İLKBAHAR YDS", 122);
+    mark(123, "2015 SONBAHAR YDS", 147);
+    mark(148, "2016 İLKBAHAR YDS", 171);
+    mark(259, "2018-YDS Spring/English", 283);
+    mark(287, "2018-YDS Fall/English", 311);
+    const extract: TextLayerExtract = { pageCount: 311, pagesWithText: 311, pages, stream: pages.flatMap((entry) => entry.lines) };
+    const inventory = detectExams(extract, "yds-2013-2021");
+    const seven = knownYds2013_2021Booklets.slice(0, 7);
+    for (const known of seven) {
+      const exam = inventory.exams.find((entry) => entry.slug === known.slug);
+      expect(exam, known.slug).toMatchObject({ pageStart: known.pageStart, pageEnd: known.pageEnd, declaredComplete: true });
+      expect(exam?.sourceClass === "complete_exam" || exam?.sourceClass === "partial_exam").toBe(true);
+    }
+    expect(inventory.exams.filter((exam) => exam.slug.endsWith("-p29") || exam.slug.includes("-p52"))).toEqual([]);
+  });
 });
 
 describe("checks", () => {
@@ -240,6 +308,8 @@ describe("checks", () => {
     expect(wordErrorRate("one two three", "one too three")).toBeCloseTo(1 / 3);
     const ok = { question: question({}), pages: [2], ocr: { words: 10, confidenceSum: 950, lowConfidenceWords: 0 }, fallbackLines: 0, warnings: [] };
     expect(checkQuestion(ok, ok, false).status).toBe("ok");
+    expect(checkQuestion({ ...ok, warnings: ["unattached text before question (2 lines)"] }, ok, false).status).toBe("ok");
+    expect(structuralFlags(question({ stem: "Lee: ----" }))).not.toContain("junk_token");
     const verified = { ...ok, question: question({ stem: "The ---- was very late indeed." }), fallbackLines: 1 };
     const check = checkQuestion(verified, ok, false);
     expect(check.flags).toEqual(expect.arrayContaining(["ocr_disagreement", "single_reading"]));

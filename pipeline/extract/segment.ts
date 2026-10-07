@@ -27,12 +27,14 @@ export function questionNumber(text: string): number | null {
 const instructionRange = /^\d{1,2}\s*[.)]?\s*[-–—]\s*\d{1,2}\s*[.)]/;
 const keyPair = /^\d{1,2}\s*[.)]\s*[A-E]\b/;
 
-/** "17. The cat ---- sat" in a typeset booklet: the number starts the stem line. */
+/** Option lines such as "B) although" must never be read as question 8 (OCR digit map B→8). */
 export function leadingQuestionNumber(text: string): number | null {
   const trimmed = text.trim();
+  if (/^[A-E]\)/.test(trimmed)) return null;
   if (instructionRange.test(trimmed) || keyPair.test(trimmed)) return null;
   const match = /^([\dlI|OoSB]{1,2})[.)]\s+\S/.exec(trimmed);
-  return match ? parseDigits(match[1]) : null;
+  if (!match || !/\d/.test(match[1])) return null;
+  return parseDigits(match[1]);
 }
 
 export function splitLeadingNumber(line: StreamLine): { number: number; rest: StreamLine } | null {
@@ -42,28 +44,27 @@ export function splitLeadingNumber(line: StreamLine): { number: number; rest: St
   return { number, rest: { ...line, text: rest } };
 }
 
-/** Splits the stream at question numbers that arrive in order; a skipped number is reported, never invented. */
+/** Splits the stream at unused question numbers. Out-of-order numbers are kept; skipped numbers are reported, never invented. */
 export function segment(stream: StreamLine[], questionCount: number): Segmentation {
   const preamble: StreamLine[] = [];
   const blocks: Block[] = [];
-  const missing: number[] = [];
   const warnings: string[] = [];
+  const used = new Set<number>();
   let expected = 1;
   for (const line of stream) {
     const leading = splitLeadingNumber(line);
     let number = leading?.number ?? questionNumber(line.text);
     const body = leading?.rest ?? null;
-    if (number !== null && number < 10 && expected === number * 11) {
+    if (number !== null && number < 10 && expected === number * 11 && !used.has(expected)) {
       warnings.push(`question ${expected} printed as ${number} (doubled digit read once)`);
       number = expected;
     }
-    if (number !== null && number >= expected && number <= Math.min(questionCount, expected + 2)) {
-      for (let skipped = expected; skipped < number; skipped += 1) {
-        missing.push(skipped);
-        warnings.push(`question ${skipped} not found before ${number}`);
-      }
+    if (number !== null && number >= 1 && number <= questionCount && !used.has(number)) {
+      if (number !== expected) warnings.push(`question ${number} opened before ${expected}`);
       blocks.push({ number, lines: body && body.text ? [body] : [], pages: [line.page] });
+      used.add(number);
       expected = number + 1;
+      while (used.has(expected) && expected <= questionCount) expected += 1;
       continue;
     }
     const current = blocks[blocks.length - 1];
@@ -73,6 +74,6 @@ export function segment(stream: StreamLine[], questionCount: number): Segmentati
       if (!current.pages.includes(line.page)) current.pages.push(line.page);
     }
   }
-  for (let skipped = expected; skipped <= questionCount; skipped += 1) missing.push(skipped);
+  const missing = Array.from({ length: questionCount }, (_, index) => index + 1).filter((number) => !used.has(number));
   return { preamble, blocks, missing, warnings };
 }

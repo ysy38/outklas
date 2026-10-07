@@ -28,7 +28,7 @@ export async function examSlice(context: StageContext) {
     async () => {
       const stream = streamOnPages(compilationStream(parent), exam.questionPages[0], exam.questionPages[1], exam.answerKeyPage ?? null);
       const files = { "stream-text.json": json(stream) };
-      return { files, stats: { lines: stream.length, pages: exam.questionPages, key: exam.answerKeyPage ?? null, shape: detected?.shape ?? null } };
+      return { files, stats: { lines: stream.length, pages: exam.questionPages, key: exam.answerKeyPage ?? null, sourceClass: detected?.sourceClass ?? exam.sourceClass } };
     },
   );
 }
