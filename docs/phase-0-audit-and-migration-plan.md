@@ -21,7 +21,7 @@ Tarih: 7 Ekim 2026 · Kapsam: salt okuma denetimi. Bu belge dışında hiçbir d
 
 İki dosya neredeyse aynı değil. Ortak satırların neredeyse tamamı boş satır ve ayraç; anlam olarak iki ayrı, birbirini tamamlayan belge bunlar:
 
-| | A: `YDS-INTELLIGENCE-SPECIFICATION-v1.0.md` | B: `YDS Intelligence — Knowledge Graph, Taxonomy & Database Architecture Specification.md` |
+| | A: [`docs/specs/product-intelligence-spec.md`](specs/product-intelligence-spec.md) (eski adı `YDS-INTELLIGENCE-SPECIFICATION-v1.0.md`) | B: [`docs/specs/knowledge-graph-db-spec.md`](specs/knowledge-graph-db-spec.md) (eski adı `YDS Intelligence — Knowledge Graph, Taxonomy & Database Architecture Specification.md`) |
 |---|---|---|
 | Değişiklik zamanı | 7 Ekim 11:44, 3369 satır | 7 Ekim 12:00, 3361 satır |
 | Tür | Ürün vizyonu, intelligence mimarisi, UX, fiyat katmanları, kaynak/lisans stratejisi (115 bölüm) | Uygulama spec'i: tablolar, kolonlar, indeksler, RLS, Drizzle stili, seed sırası, analiz pipeline'ı, Cursor kuralları (98 bölüm) |
@@ -684,7 +684,7 @@ Düğüm bazlı mastery (eski `mastery` satırları `legacy_node_map` ile türet
    - Bütçe tavanı belirlenmeli.
 5. **Pipeline'ın çalıştığı yer.** **Öneri:** Yerel makine (CLI). PDF'ler ve ham metin yerelde kalmak zorunda. CI/bulut yalnızca metinsiz adımlar (import, rapor) için düşünülebilir.
 6. **OCR yöntemi** (2 taranmış PDF): yerel Tesseract (ücretsiz, Türkçe/İngilizce karışık sayfalarda hata payı var) veya vision destekli LLM (daha doğru, maliyetli, metin sağlayıcıya gider). Öneri: önce metin katmanı olan kaynaklarla pilot, OCR'ı sonra kararlaştır.
-7. **`sources/` klasörünün git durumu.** Öneri: `.gitignore` içine `sources/` eklemek ve kanonik spec'leri `docs/specs/` altına taşıyıp commit etmek. B: `docs/specs/knowledge-graph-db-spec.md`, A: `docs/specs/product-intelligence-spec.md`.
+7. **`sources/` klasörünün git durumu.** Öneri: `.gitignore` içine `sources/` eklemek ve kanonik spec'leri `docs/specs/` altına taşıyıp commit etmek. B: `docs/specs/knowledge-graph-db-spec.md`, A: `docs/specs/product-intelligence-spec.md`. **Faz 2'de uygulandı.**
 8. **Knowledge graph istemciye açık mı?** Öneri: şimdilik politika yok (tamamen kapalı). Okuma ihtiyacı doğduğunda `authenticated` için SELECT politikası eklenir.
 9. **Taksonomi adlandırması:** Misconception'ın ayrı tablo değil düğüm olması, `exams` tablosunun ertelenmesi, discourse slug'ları (`result` / `effect`, `sequence` / `time`, `comparison` / `similarity`), `name_tr` kolonunun eklenmesi. Onay veya düzeltme gerekiyor.
 10. **Ölü tablo temizliği** (`vocabulary`, `vocab_links`, `item_vocabulary` ve vocab plan yolu). Öneri: Faz 1'den sonra ayrı PR. `DROP` geri alınamaz; verisi yalnızca seed.
@@ -712,8 +712,7 @@ Aşağıdaki metin bir sonraki ajana olduğu gibi yapıştırılabilir:
 ```text
 You are implementing ONLY "Phase 1 — Taxonomy + Knowledge Graph DB foundation" for YDS Lab at
 /home/mora/projects/tomo. Read docs/phase-0-audit-and-migration-plan.md §7 (Faz 1) first; it is the
-source of truth. Spec reference: sources/YDS Intelligence — Knowledge Graph, Taxonomy & Database
-Architecture Specification.md (§7–§16, §50–§66). Do not implement anything from later phases.
+source of truth. Spec reference: docs/specs/knowledge-graph-db-spec.md (§7–§16, §50–§66). Do not implement anything from later phases.
 
 Preconditions (ask the user if not stated): decisions 2 (migration tooling = supabase/migrations SQL +
 Drizzle types + drift test), 3 (security hotfix yes/no), 8 (no RLS policies on knowledge tables),
