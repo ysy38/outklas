@@ -68,15 +68,16 @@ export type ManualOcrCheck = { reviewer: string; questions: { number: number; wo
 /** Everything measurable for the 20 pilot metrics, computed from the stage artifacts and the optional manual review files. */
 export async function metrics(context: StageContext) {
   const slug = context.document.slug;
-  const stages = Object.fromEntries(["ocr", "segment", "reconstruct", "validate", "analyze", "dna", "import"].map((stage) => [stage, readManifest(slug, stage)]));
-  for (const [stage, manifest] of Object.entries(stages)) if (!manifest) throw new Error(`Run the ${stage} stage first.`);
+  const stages = Object.fromEntries(["ocr", "text-extract", "segment", "reconstruct", "validate", "analyze", "dna", "import"].map((stage) => [stage, readManifest(slug, stage)]));
+  if (!stages.segment || !stages.reconstruct || !stages.validate || !stages.analyze || !stages.dna || !stages.import) throw new Error("Run segment through import first.");
+  if (!stages.ocr && !stages["text-extract"] && !readManifest(slug, "cleanup")) throw new Error("Run ocr or text-extract first.");
   const manual = ["ocr-check.json", "analysis-review.json", "live-duplicates.json"].map((name) => (existsSync(manualFile(slug, name)) ? sha256(readFileSync(manualFile(slug, name))) : "none"));
   return runStage(
     {
       document: slug,
       stage: "metrics",
       version: "1",
-      inputs: { ...Object.fromEntries(Object.entries(stages).map(([stage, manifest]) => [stage, manifest!.outputHash])), manual: manual.join(",") },
+      inputs: { ...Object.fromEntries(Object.entries(stages).map(([stage, manifest]) => [stage, manifest?.outputHash ?? "none"])), manual: manual.join(",") },
       code: ["pipeline/stages/metrics.ts"],
       force: true,
     },
@@ -138,7 +139,8 @@ export async function metrics(context: StageContext) {
         items: questions.length,
         primaryReading: report.primary,
         "1_ocr": {
-          tesseract: stages.ocr!.stats,
+          source: stages.ocr ? "ocr" : "text-layer",
+          tesseract: stages.ocr?.stats ?? null,
           crossReadingCer: { questions: disagreements.length, mean: mean(disagreements), median: quantile(disagreements, 0.5), p90: quantile(disagreements, 0.9), max: disagreements.length ? Math.max(...disagreements) : null, aboveThreshold: report.questions.filter((question) => question.flags.includes("ocr_disagreement")).length },
           manual: ocrCheck && {
             reviewer: ocrCheck.reviewer,
@@ -183,8 +185,8 @@ export async function metrics(context: StageContext) {
         },
         "11_misconceptions": { ...facet((record) => analysis(record).misconceptions), onDistractors: accepted.reduce((sum, record) => sum + analysis(record).distractors.filter((entry) => entry.misconception).length, 0) },
         "12_confidence": {
-          bins: [0.5, 0.6, 0.7, 0.8, 0.9, 1.01].map((upper, index, all) => ({ range: `${index ? all[index - 1] : 0}-${Math.min(upper, 1)}`, count: analysed.filter((record) => record.draft!.confidence < upper && record.draft!.confidence >= (index ? all[index - 1] : 0)).length })),
-          mean: mean(analysed.map((record) => record.draft!.confidence)),
+          bins: [0.5, 0.6, 0.7, 0.8, 0.9, 1.01].map((upper, index, all) => ({ range: `${index ? all[index - 1] : 0}-${Math.min(upper, 1)}`, count: analysed.filter((record) => (record.analysis ?? record.draft)!.confidence < upper && (record.analysis ?? record.draft)!.confidence >= (index ? all[index - 1] : 0)).length })),
+          mean: mean(analysed.map((record) => (record.analysis ?? record.draft)!.confidence)),
           modelNeedsReview: analysed.filter((record) => record.draft!.needs_review).length,
         },
         "13_human_review": {

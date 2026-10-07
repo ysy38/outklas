@@ -3,6 +3,40 @@ import { nodeTypes, type NodeRef, type NodeType } from "@/modules/knowledge/grap
 
 export const analysisSchemaVersion = "1";
 
+const lemmaPattern = /^[a-z][a-z' -]*$/;
+const slugPattern = /^[a-z0-9]+(_[a-z0-9]+)*$/;
+
+function slugify(value: string): string {
+  return value
+    .toLocaleLowerCase("en")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+/** Repairs common model-output slips (uppercase lemmas, hyphenated proposal slugs) before Zod. */
+export function coerceAnalysisJson(value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+  const draft = structuredClone(value) as Record<string, unknown>;
+  const knowledge = draft.knowledge as { vocabulary?: { lemma?: string }[] } | undefined;
+  if (Array.isArray(knowledge?.vocabulary)) {
+    for (const item of knowledge.vocabulary) {
+      if (typeof item.lemma === "string" && !lemmaPattern.test(item.lemma)) {
+        item.lemma = item.lemma
+          .toLocaleLowerCase("en")
+          .replace(/[^a-z' -]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+    }
+  }
+  if (Array.isArray(draft.proposals)) {
+    for (const proposal of draft.proposals as { slug?: string }[]) {
+      if (typeof proposal.slug === "string" && !slugPattern.test(proposal.slug)) proposal.slug = slugify(proposal.slug);
+    }
+  }
+  return draft;
+}
+
 export const optionLabels = ["A", "B", "C", "D", "E"] as const;
 export type OptionLabel = (typeof optionLabels)[number];
 

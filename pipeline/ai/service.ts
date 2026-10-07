@@ -2,7 +2,7 @@ import { appendFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import type { z } from "zod";
 import { dataRoot } from "../lib/artifacts";
-import { analysisDraft, blindSolution, transcription } from "@/modules/analysis/contract";
+import { analysisDraft, blindSolution, coerceAnalysisJson, transcription } from "@/modules/analysis/contract";
 import { cachedGenerate } from "./cache";
 import { loadAIConfig, type AIConfig } from "./config";
 import { GeminiProvider } from "./gemini";
@@ -42,7 +42,7 @@ function parse<T>(text: string, schema: z.ZodType<T>): { ok: true; value: T } | 
   } catch {
     return { ok: false, error: "output is not valid JSON" };
   }
-  const result = schema.safeParse(json);
+  const result = schema.safeParse(coerceAnalysisJson(json));
   return result.success
     ? { ok: true, value: result.data }
     : { ok: false, error: result.error.issues.slice(0, 8).map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ") };

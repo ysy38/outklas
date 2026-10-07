@@ -4,8 +4,10 @@ import { charErrorRate, checkQuestion, structuralFlags, wordErrorRate } from "./
 import { cleanText, ocrStream, verifiedStream } from "./cleanup";
 import { findGutter, splitColumns, type Gray } from "./image";
 import { parseAnswerKey } from "./key";
-import { reconstruct, splitInlineOptions } from "./reconstruct";
-import { questionNumber, segment } from "./segment";
+import { markDialogueBlanks, reconstruct, recoverNumberedSentences, splitInlineOptions } from "./reconstruct";
+import { detectColumns, joinGlyphs, layoutPage, type TextGlyph } from "./text-layer";
+import { parseExamHeader, parseTopicHeader } from "./inventory";
+import { leadingQuestionNumber, questionNumber, segment } from "./segment";
 import type { OcrColumn, StreamLine } from "./types";
 
 const line = (text: string, extra: Partial<StreamLine> = {}): StreamLine => ({ page: 2, column: "left", index: 0, text, gap: false, ...extra });
@@ -98,6 +100,15 @@ describe("segment", () => {
     expect(result.warnings[0]).toMatch(/question 11 printed as 1/);
   });
 
+  it("splits a typeset stem that starts with the question number", () => {
+    expect(leadingQuestionNumber("1. UNICEF is committed.")).toBe(1);
+    expect(leadingQuestionNumber("1. - 6. sorularda, cümlede")).toBeNull();
+    expect(leadingQuestionNumber("1. A 21. D")).toBeNull();
+    const result = segment([line("1. The cat ---- sat."), line("A) sat"), line("B) sits"), line("C) sitting"), line("D) sit"), line("E) sat down"), line("2. Dogs ----.")], 2);
+    expect(result.blocks.map((block) => block.number)).toEqual([1, 2]);
+    expect(result.blocks[0].lines[0].text).toBe("The cat ---- sat.");
+  });
+
   it("does not treat an out-of-range number as a question", () => {
     const result = segment([line("1"), line("body"), line("40"), line("2"), line("more")], 2);
     expect(result.blocks[0].lines.map((entry) => entry.text)).toEqual(["body", "40"]);
@@ -155,13 +166,61 @@ describe("reconstruct", () => {
     );
     expect(rebuilt[0].question.options).toEqual({ A: "I", B: "II", C: "III", D: "IV", E: "V" });
     expect(rebuilt[0].question.stimulusKey).toBe("q76");
-    expect(rebuilt[0].warnings).toEqual(["numbered options read from a garbled line"]);
+    expect(rebuilt[0].warnings).toEqual([]);
     expect(rebuilt[0].fallbackLines).toBe(1);
   });
 
   it("detects the translation direction", () => {
     const rebuilt = reconstruct({ preamble: [], blocks: [{ number: 37, lines: [line("Bu cümle çok güzel ve anlaşılır bir örnektir."), ...options("an English option")], pages: [6] }], missing: [], warnings: [] }, ydsBlueprint);
     expect(rebuilt[0].question.translationDirection).toBe("tr_en");
+  });
+});
+
+describe("dialogue and numbered-sentence recovery", () => {
+  it("turns a speaker line plus a bare dash into a blank", () => {
+    const marked = markDialogueBlanks([line("Lee:"), line("–"), line("Christine:"), line("– That is interesting.")]);
+    expect(marked.map((entry) => entry.text)).toEqual(["Lee:", "----", "Christine:", "– That is interesting."]);
+    expect(markDialogueBlanks([line("Lee:"), line("Christine:"), line("– Later.")]).map((entry) => entry.text)).toEqual(["Lee:", "----", "Christine:", "– Later."]);
+    const optionLines = ["A", "B", "C", "D", "E"].map((label) => line(`${label}) reply ${label.toLowerCase()}`));
+    const rebuilt = reconstruct(
+      { preamble: [], blocks: [{ number: 63, lines: [...marked, ...optionLines], pages: [13] }], missing: [], warnings: [] },
+      ydsBlueprint,
+    );
+    expect(rebuilt[0].question.stem).toContain("----");
+    expect(structuralFlags(rebuilt[0].question)).not.toContain("blank_count_0");
+  });
+
+  it("normalises look-alike roman numerals in irrelevant items", () => {
+    expect(recoverNumberedSentences("(I) One. (Il) Two. (lll) Three. (lV) Four. (V) Five.")).toBe("(I) One. (II) Two. (III) Three. (IV) Four. (V) Five.");
+  });
+});
+
+describe("text layer", () => {
+  it("clusters glyphs into two columns left-then-right", () => {
+    const glyph = (str: string, x: number, y: number): TextGlyph => ({ str, x, y, w: 40, h: 10 });
+    const page = layoutPage(1, 400, 600, [
+      glyph("left-a", 20, 40),
+      glyph("right-a", 240, 40),
+      glyph("left-b", 20, 60),
+      glyph("right-b", 240, 60),
+      glyph("left-c", 20, 80),
+      glyph("right-c", 240, 80),
+      glyph("left-d", 20, 100),
+      glyph("right-d", 240, 100),
+    ]);
+    expect(page.columns).toBe(2);
+    expect(page.lines.map((entry) => entry.text)).toEqual(["left-a", "left-b", "left-c", "left-d", "right-a", "right-b", "right-c", "right-d"]);
+    expect(joinGlyphs([glyph("hel", 10, 10), glyph("lo", 28, 10)])).toBe("hello");
+    expect(detectColumns([], 400)).toEqual({ columns: 1, gutterX: null });
+  });
+
+  it("reads exam titles without treating them as item text", () => {
+    expect(parseExamHeader("2013 İLKBAHAR YDS")).toMatchObject({ kind: "yds", year: 2013, session: "2013-spring" });
+    expect(parseExamHeader("e-YDS 12.05.2018")).toMatchObject({ kind: "e_yds", year: 2018, session: "2018-05-12" });
+    expect(parseTopicHeader("e-YDS GEÇMİŞ YIL KELİME SORULARI")).toBe("kelime");
+    expect(parseTopicHeader("e-YDS GEÇMİŞ YIL PREPOSITION 4. Lorem ipsum dolor sit amet")).toBe("preposition");
+    expect(parseTopicHeader("e-YDS GEÇMİŞ YIL CÜMLE TAMAMLAMA SORULARI")).toBe("cümle tamamlama");
+    expect(parseExamHeader("This is a long sentence that is clearly not a booklet title because it keeps going")).toBeNull();
   });
 });
 

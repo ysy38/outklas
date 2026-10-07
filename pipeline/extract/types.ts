@@ -33,7 +33,7 @@ export type Transcription = {
   uncertain: string[];
 };
 
-export type Reading = "ocr" | "verified";
+export type Reading = "ocr" | "verified" | "text";
 
 export type StreamLine = {
   page: number;

@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { ydsBlueprint } from "@/modules/exam/blueprint";
-import { analysisDraft, type AnalysisDraft } from "./contract";
+import { analysisDraft, coerceAnalysisJson, type AnalysisDraft } from "./contract";
 import { deriveFamilies, mineDna, toDnaQuestion } from "./dna";
 import { licenseProblems, sourceDocuments, usableForGrounding } from "./sources";
 import { expectedQuestionType, looksTurkish, normalizeForHash, surfaceFeatures, type ReconstructedQuestion } from "./surface";
+import { analysisScaleThresholds } from "./thresholds";
 import { quotedRun, validateAnalysis } from "./validate";
 
 const question: ReconstructedQuestion = {
@@ -41,6 +42,17 @@ const draft = (patch: Partial<AnalysisDraft> = {}): AnalysisDraft =>
 const blind = { answer: "A" as const, confidence: 0.9, rationale: "the clauses contrast expectation and outcome" };
 const input = { question, expectedType: "question_type:sentence_completion" as const, answerKey: "A" as const, blind, extractionFlags: [] };
 
+describe("coerceAnalysisJson", () => {
+  it("lowercases lemmas and slugifies proposal slugs so Q28/Q40-style output can parse", () => {
+    const coerced = coerceAnalysisJson({
+      knowledge: { vocabulary: [{ lemma: "UNESCO", pos: "noun", role: "tested", ref: null }] },
+      proposals: [{ type: "topic", slug: "World-Heritage", name: "World Heritage", reason: "missing" }],
+    }) as { knowledge: { vocabulary: { lemma: string }[] }; proposals: { slug: string }[] };
+    expect(coerced.knowledge.vocabulary[0].lemma).toBe("unesco");
+    expect(coerced.proposals[0].slug).toBe("world_heritage");
+  });
+});
+
 describe("validateAnalysis", () => {
   it("accepts a consistent analysis", () => {
     const result = validateAnalysis({ ...input, draft: draft() });
@@ -56,19 +68,54 @@ describe("validateAnalysis", () => {
     expect(result.status).toBe("accepted");
   });
 
-  it("blocks key and blind-solve disagreements, low confidence and extraction problems", () => {
+  it("blocks key and blind-solve disagreements and extraction problems", () => {
     const result = validateAnalysis({ ...input, blind: { ...blind, answer: "B" }, extractionFlags: ["ocr_disagreement"], draft: draft({ correct_option: "B", confidence: 0.5 }) });
     expect(result.status).toBe("needs_review");
-    expect(result.flags.filter((flag) => flag.severity === "block").map((flag) => flag.code)).toEqual(["answer_key_mismatch", "blind_solve_mismatch", "low_confidence", "extraction_needs_review"]);
+    expect(result.flags.filter((flag) => flag.severity === "block").map((flag) => flag.code)).toEqual(["answer_key_mismatch", "blind_solve_mismatch", "extraction_needs_review"]);
+    expect(result.analysis.confidence).toBeLessThan(0.5);
   });
 
-  it("blocks notes that quote the item and accepts the translation parent type only as a warning", () => {
+  it("strips quoted n-grams from notes and accepts the translation parent type only as a warning", () => {
     const quoting = draft({ learning_objective: "notice that the imaginary villagers still preferred the old ferry" });
-    expect(validateAnalysis({ ...input, draft: quoting }).flags).toContainEqual({ code: "quotes_item", severity: "block", detail: "learning_objective" });
-    expect(quotedRun("the imaginary villagers still preferred the old", question.stem)).toBe("the imaginary villagers still preferred the");
+    const stripped = validateAnalysis({ ...input, draft: quoting });
+    expect(stripped.flags.map((flag) => flag.code)).not.toContain("quotes_item");
+    expect(quotedRun(stripped.analysis.learning_objective, question.stem)).toBeNull();
+    expect(quotedRun("the imaginary villagers still preferred the old", question.stem)).toBe("the imaginary villagers still preferred");
     const translation = validateAnalysis({ ...input, expectedType: "question_type:translation_en_tr", draft: draft({ question_type: "question_type:translation" }) });
     expect(translation.flags[0]).toMatchObject({ code: "question_type_mismatch", severity: "warn" });
     expect(translation.analysis.question_type).toBe("question_type:translation_en_tr");
+  });
+
+  it("keeps misconceptions only when a distractor evidences them and derives confidence from flags", () => {
+    const overAssigned = validateAnalysis({
+      ...input,
+      draft: draft({
+        misconceptions: ["misconception:collocation_by_meaning_only", "misconception:concession_vs_contrast"],
+        distractors: draft().distractors.map((entry) => ({
+          ...entry,
+          misconception: entry.label === "B" ? "misconception:concession_vs_contrast" : "misconception:collocation_by_meaning_only",
+        })),
+      }),
+    });
+    expect(overAssigned.analysis.misconceptions).toEqual(["misconception:concession_vs_contrast"]);
+    expect(overAssigned.analysis.distractors.find((entry) => entry.label === "B")?.misconception).toBe("misconception:concession_vs_contrast");
+    expect(overAssigned.analysis.distractors.filter((entry) => entry.label !== "B").every((entry) => entry.misconception === null)).toBe(true);
+    expect(overAssigned.analysis.confidence).toBeLessThan(0.9);
+    expect(overAssigned.flags.map((flag) => flag.code)).toContain("misconception_unevidenced");
+  });
+
+  it("relabels whereas from concession to contrast using the Phase 1 graph", () => {
+    const whereas = validateAnalysis({
+      ...input,
+      draft: draft({
+        knowledge: { ...draft().knowledge, vocabulary: [{ lemma: "whereas", pos: "conjunction", role: "answer", ref: "connector:whereas" }], discourse_relations: ["discourse_relation:concession"], primary_concepts: ["discourse_relation:concession"] },
+        answer_expresses: ["connector:whereas", "discourse_relation:concession"],
+      }),
+    });
+    expect(whereas.analysis.answer_expresses).toEqual(expect.arrayContaining(["connector:whereas", "discourse_relation:contrast"]));
+    expect(whereas.analysis.answer_expresses).not.toContain("discourse_relation:concession");
+    expect(whereas.analysis.knowledge.discourse_relations).toEqual(["discourse_relation:contrast"]);
+    expect(whereas.flags.map((flag) => flag.code)).toContain("connector_relation_aligned");
   });
 
   it("requires exactly the four wrong options as distractors", () => {
@@ -118,6 +165,21 @@ describe("surface", () => {
     expect(looksTurkish("The results were surprising.")).toBe(false);
     expect(normalizeForHash({ ...question, stem: question.stem.toUpperCase() })).toBe(normalizeForHash(question));
     expect(surfaceFeatures(question)).toMatchObject({ optionCount: 5, blankCount: 1, stimulusWordCount: 0 });
+  });
+});
+
+describe("scale thresholds", () => {
+  it("defines the batch gate before measurement", () => {
+    expect(analysisScaleThresholds).toEqual({
+      blindSolve: 0.93,
+      schemaFail: 0.02,
+      quotingNotes: 0,
+      misconceptionsEvidenced: 1,
+      questionTypeMatch: 1,
+      segmentation: 1,
+      connectorRelationMismatch: 0,
+      extractionOk: 0.85,
+    });
   });
 });
 

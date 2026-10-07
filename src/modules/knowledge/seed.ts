@@ -458,3 +458,12 @@ export const legacyMap: LegacyMapping[] = [
   ),
   ...connectors.map((connector) => map("connector", connector.id, `connector:${connectorSlug(connector.id)}`)),
 ];
+
+const connectorDiscourse = new Map(
+  knowledgeEdges.filter((entry) => entry.type === "expressed_by").map((entry) => [entry.to, entry.from] as const),
+);
+
+/** Phase 1 graph: the discourse relation a connector expresses, or null if the node is not a connector. */
+export function discourseForConnector(connector: NodeRef): NodeRef | null {
+  return connectorDiscourse.get(connector) ?? null;
+}

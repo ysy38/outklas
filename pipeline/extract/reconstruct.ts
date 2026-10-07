@@ -47,6 +47,61 @@ type Split = { pre: StreamLine[]; options: Partial<Record<OptionLabel, StreamLin
 
 const numerals = ["I", "II", "III", "IV", "V"];
 const numeralOption = /(?:^|\s|\))[A-E]?\)?\s?(?:I|II|III|IV|V|Il|lI|ll|lll|lV|1I|I1)\b/g;
+const speakerOnly = /^[A-Za-z][A-Za-z .'-]{0,28}:\s*$/;
+const dashOnly = /^[–—−-]\s*$/;
+const speakerBlank = /^([A-Za-z][A-Za-z .'-]{0,28}:)\s*[–—−-]\s*$/;
+
+/** Dialogue items print the blank as a speaker line plus a bare dash, not as ----. */
+export function markDialogueBlanks(lines: StreamLine[]): StreamLine[] {
+  const marked: StreamLine[] = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const next = lines[i + 1];
+    if (speakerOnly.test(line.text) && next && dashOnly.test(next.text)) {
+      marked.push(line, { ...next, text: "----" });
+      i += 1;
+      continue;
+    }
+    if (speakerOnly.test(line.text) && next && speakerOnly.test(next.text)) {
+      marked.push(line, { ...line, text: "----", gap: true });
+      continue;
+    }
+    const blank = speakerBlank.exec(line.text);
+    if (blank) {
+      marked.push({ ...line, text: `${blank[1]} ----` });
+      continue;
+    }
+    marked.push(line);
+  }
+  return marked;
+}
+
+const romanVariants: Record<string, string> = {
+  I: "I",
+  "1": "I",
+  l: "I",
+  II: "II",
+  Il: "II",
+  lI: "II",
+  ll: "II",
+  "11": "II",
+  III: "III",
+  lll: "III",
+  IlI: "III",
+  IIl: "III",
+  IV: "IV",
+  lV: "IV",
+  IY: "IV",
+  V: "V",
+};
+
+/** Recovers (I)–(V) markers that OCR or a text layer printed with look-alike glyphs. */
+export function recoverNumberedSentences(text: string): string {
+  return text.replace(/\(([A-Za-z0-9]{1,3})\)/g, (match, inner: string) => {
+    const roman = romanVariants[inner] ?? romanVariants[inner.replace(/[l1]/g, "I")];
+    return roman ? `(${roman})` : match;
+  });
+}
 
 /** Irrelevant-sentence items always print "A) I B) II C) III D) IV E) V" on one line; OCR often garbles it. */
 function numberedOptionLine(line: StreamLine): boolean {
@@ -61,7 +116,7 @@ function splitNumbered(block: Block): Split | null {
     pre: block.lines.slice(0, at),
     options: Object.fromEntries(optionLabels.map((label, index) => [label, [{ ...line, text: numerals[index] }]])),
     trailing: block.lines.slice(at + 1),
-    warnings: line.text.replace(/\s+/g, " ") === "A) I B) II C) III D) IV E) V" ? [] : ["numbered options read from a garbled line"],
+    warnings: [],
   };
 }
 
@@ -117,22 +172,24 @@ export function reconstruct(segmentation: Segmentation, blueprint: Blueprint): R
 
     const split = splitBlock(block, band.section);
     warnings.push(...split.warnings);
+    const pre = band.section === "dialogue" ? markDialogueBlanks(split.pre) : split.pre;
     const options = Object.fromEntries(optionLabels.map((label) => [label, joinLines(split.options[label] ?? [])])) as Record<OptionLabel, string>;
     for (const label of optionLabels) if (!split.options[label]) warnings.push(`option ${label} missing`);
 
     const ownPassage = band.section === "paragraph" || band.section === "irrelevant";
-    const stemText = joinLines(split.pre, ownPassage);
+    const stemText = joinLines(pre, ownPassage || band.section === "dialogue");
+    const recovered = band.section === "irrelevant" ? recoverNumberedSentences(stemText) : stemText;
     const question: ReconstructedQuestion = {
       number: block.number,
       section: band.section,
       layout: band.layout,
       stimulusKey: ownPassage ? `q${block.number}` : takesSharedPassage(band.section) ? (passage?.key ?? null) : null,
-      stimulus: ownPassage ? stemText : takesSharedPassage(band.section) ? (passage?.text ?? null) : null,
-      stem: ownPassage ? "" : stemText,
+      stimulus: ownPassage ? recovered : takesSharedPassage(band.section) ? (passage?.text ?? null) : null,
+      stem: ownPassage ? "" : recovered,
       options,
-      translationDirection: band.section === "translation" ? (looksTurkish(stemText) ? "tr_en" : "en_tr") : null,
+      translationDirection: band.section === "translation" ? (looksTurkish(recovered) ? "tr_en" : "en_tr") : null,
     };
-    const counted = [...split.pre, ...optionLabels.flatMap((label) => split.options[label] ?? [])];
+    const counted = [...pre, ...optionLabels.flatMap((label) => split.options[label] ?? [])];
     const shared = takesSharedPassage(band.section) ? (passage?.lines ?? []) : [];
     const fallbackLines = [...shared, ...counted].filter((line) => line.source === "ocr").length;
     rebuilt.push({ question, pages: block.pages, ocr: stats(counted), fallbackLines, warnings });

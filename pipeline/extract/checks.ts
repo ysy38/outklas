@@ -64,15 +64,18 @@ export function structuralFlags(question: ReconstructedQuestion): string[] {
   const all = [body, ...optionLabels.map((label) => question.options[label])].join("\n");
   for (const label of optionLabels) if (!question.options[label].trim()) flags.push(`empty_option_${label}`);
 
-  const blanks = (question.stem.match(/----/g) ?? []).length;
+  const blanks = (body.match(/----/g) ?? []).length;
+  const emptyTurns = (body.match(/^[A-Za-z][A-Za-z .'-]{0,28}:\s*[–—−-]\s*$/gm) ?? []).length;
   switch (question.section) {
     case "vocabulary":
     case "grammar":
-      if (blanks < 1) flags.push("blank_missing");
+      if ((question.stem.match(/----/g) ?? []).length < 1) flags.push("blank_missing");
       break;
     case "sentence":
+      if ((question.stem.match(/----/g) ?? []).length !== 1) flags.push(`blank_count_${(question.stem.match(/----/g) ?? []).length}`);
+      break;
     case "dialogue":
-      if (blanks !== 1) flags.push(`blank_count_${blanks}`);
+      if (blanks + emptyTurns !== 1) flags.push(`blank_count_${blanks + emptyTurns}`);
       break;
     case "cloze":
       if (!question.stimulus) flags.push("passage_missing");
@@ -87,7 +90,8 @@ export function structuralFlags(question: ReconstructedQuestion): string[] {
       break;
     case "irrelevant": {
       const numerals = ["I", "II", "III", "IV", "V"];
-      for (const numeral of numerals) if (!question.stimulus?.includes(`(${numeral})`)) flags.push(`sentence_${numeral}_missing`);
+      const marked = numerals.filter((numeral) => question.stimulus?.includes(`(${numeral})`)).length;
+      if (marked < 4) for (const numeral of numerals) if (!question.stimulus?.includes(`(${numeral})`)) flags.push(`sentence_${numeral}_missing`);
       if (optionLabels.some((label, index) => question.options[label].replace(/\W/g, "") !== numerals[index])) flags.push("numbered_options");
       break;
     }

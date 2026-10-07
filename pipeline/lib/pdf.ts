@@ -2,16 +2,21 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { createCanvas } from "@napi-rs/canvas";
 import { getDocument, type PDFDocumentProxy } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { documentBySlug, type SourceDocument } from "@/modules/analysis/sources";
 import { sha256 } from "./artifacts";
-import type { SourceDocument } from "@/modules/analysis/sources";
 
 export const sourcesDir = () => process.env.SOURCES_DIR ?? path.join(process.cwd(), "sources");
 
+export function pdfIdentity(document: SourceDocument): Pick<SourceDocument, "file" | "sha256"> {
+  return document.parentSlug ? documentBySlug(document.parentSlug) : document;
+}
+
 /** Reads the original PDF read-only and refuses to continue if it no longer matches the registered hash. */
 export function readSourcePdf(document: SourceDocument): Uint8Array {
-  const bytes = readFileSync(path.join(sourcesDir(), document.file));
+  const identity = pdfIdentity(document);
+  const bytes = readFileSync(path.join(sourcesDir(), identity.file));
   const hash = sha256(bytes);
-  if (hash !== document.sha256) throw new Error(`${document.file} changed: expected ${document.sha256}, got ${hash}`);
+  if (hash !== identity.sha256) throw new Error(`${identity.file} changed: expected ${identity.sha256}, got ${hash}`);
   return new Uint8Array(bytes);
 }
 

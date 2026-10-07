@@ -18,25 +18,34 @@ function exam(context: StageContext) {
   return value;
 }
 
-const readings = (context: StageContext): Reading[] => (readManifest(context.document.slug, "ocr-verify") ? ["verified", "ocr"] : ["ocr"]);
+function readings(context: StageContext): Reading[] {
+  const slug = context.document.slug;
+  if (readManifest(slug, "cleanup")?.files["stream-text.json"] || readManifest(slug, "text-extract")) return ["text"];
+  return readManifest(slug, "ocr-verify") ? ["verified", "ocr"] : ["ocr"];
+}
 
 /** OCR cleanup: both readings become normalised line streams; the raw OCR and Gemini artifacts stay untouched. */
 export async function cleanup(context: StageContext) {
   const slug = context.document.slug;
   const ocr = readManifest(slug, "ocr");
-  if (!ocr) throw new Error("Run the ocr stage first.");
+  const text = readManifest(slug, "text-extract");
+  if (!ocr && !text) throw new Error("Run the ocr or text-extract stage first.");
   const verify = readManifest(slug, "ocr-verify");
   return runStage(
-    { document: slug, stage: "cleanup", version: "2", inputs: { ocr: ocr.outputHash, verify: verify?.outputHash ?? "none" }, code: [...code, "pipeline/extract/cleanup.ts"], force: context.force },
+    { document: slug, stage: "cleanup", version: "3", inputs: { ocr: ocr?.outputHash ?? "none", verify: verify?.outputHash ?? "none", text: text?.outputHash ?? "none" }, code: [...code, "pipeline/extract/cleanup.ts"], force: context.force },
     async () => {
-      const columns = Object.keys(ocr.files)
-        .filter((name) => /^page-\d+-(left|right|full)\.json$/.test(name))
-        .map((name) => readJson<OcrColumn>(slug, "ocr", name));
-      const files: Record<string, string> = { "stream-ocr.json": json(ocrStream(columns)) };
-      if (verify) {
-        const transcriptions = Object.keys(verify.files).map((name) => readJson<Transcription>(slug, "ocr-verify", name));
-        files["stream-verified.json"] = json(verifiedStream(transcriptions, columns));
+      const files: Record<string, string> = {};
+      if (ocr) {
+        const columns = Object.keys(ocr.files)
+          .filter((name) => /^page-\d+-(left|right|full)\.json$/.test(name))
+          .map((name) => readJson<OcrColumn>(slug, "ocr", name));
+        files["stream-ocr.json"] = json(ocrStream(columns));
+        if (verify) {
+          const transcriptions = Object.keys(verify.files).map((name) => readJson<Transcription>(slug, "ocr-verify", name));
+          files["stream-verified.json"] = json(verifiedStream(transcriptions, columns));
+        }
       }
+      if (text) files["stream-text.json"] = json(readJson<StreamLine[]>(slug, "text-extract", "stream.json"));
       return { files, stats: Object.fromEntries(Object.entries(files).map(([name, content]) => [name, (JSON.parse(content) as unknown[]).length])) };
     },
   );
@@ -51,7 +60,9 @@ export async function segmentStage(context: StageContext) {
     const files: Record<string, string> = {};
     const stats: Record<string, unknown> = {};
     for (const reading of readings(context)) {
-      const stream = readJson<StreamLine[]>(slug, "cleanup", `stream-${reading}.json`);
+      const streamFile = reading === "text" && !readManifest(slug, "cleanup")?.files["stream-text.json"] ? "stream.json" : `stream-${reading}.json`;
+      const stage = reading === "text" && streamFile === "stream.json" ? "text-extract" : "cleanup";
+      const stream = readJson<StreamLine[]>(slug, stage, streamFile);
       const questions = stream.filter((line) => line.page !== layout.answerKeyPage);
       const segmentation = segment(questions, layout.questionCount);
       const key = parseAnswerKey(
@@ -119,11 +130,8 @@ export async function validateStage(context: StageContext) {
     }
 
     const questions = byReading[primary].map((entry) => {
-      const check = checkQuestion(
-        entry,
-        byReading.ocr.find((other) => other.question.number === entry.question.number),
-        segmentation.missing.includes(entry.question.number),
-      );
+      const ocrReading = primary === "text" ? entry : byReading.ocr?.find((other) => other.question.number === entry.question.number);
+      const check = checkQuestion(entry, ocrReading, segmentation.missing.includes(entry.question.number));
       const keyAgreed = Boolean(answers[entry.question.number]);
       if (!keyAgreed) {
         check.flags.push("answer_key_disagreement");

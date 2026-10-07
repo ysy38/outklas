@@ -12,12 +12,34 @@ export type Segmentation = {
 
 const digitLike: Record<string, string> = { l: "1", I: "1", "|": "1", O: "0", o: "0", S: "5", B: "8" };
 
+function parseDigits(raw: string): number | null {
+  const value = Number(raw.replace(/[lI|OoSB]/g, (char) => digitLike[char]));
+  return Number.isInteger(value) && value > 0 ? value : null;
+}
+
 /** A question number printed on its own line, e.g. "17" or "17.". Common OCR digit confusions are tolerated. */
 export function questionNumber(text: string): number | null {
   const compact = text.replace(/\s+/g, "");
   if (!/^[\dlI|OoSB]{1,2}[.)]?$/.test(compact) || !/\d/.test(compact)) return null;
-  const value = Number(compact.replace(/[.)]$/, "").replace(/[lI|OoSB]/g, (char) => digitLike[char]));
-  return Number.isInteger(value) && value > 0 ? value : null;
+  return parseDigits(compact.replace(/[.)]$/, ""));
+}
+
+const instructionRange = /^\d{1,2}\s*[.)]?\s*[-–—]\s*\d{1,2}\s*[.)]/;
+const keyPair = /^\d{1,2}\s*[.)]\s*[A-E]\b/;
+
+/** "17. The cat ---- sat" in a typeset booklet: the number starts the stem line. */
+export function leadingQuestionNumber(text: string): number | null {
+  const trimmed = text.trim();
+  if (instructionRange.test(trimmed) || keyPair.test(trimmed)) return null;
+  const match = /^([\dlI|OoSB]{1,2})[.)]\s+\S/.exec(trimmed);
+  return match ? parseDigits(match[1]) : null;
+}
+
+export function splitLeadingNumber(line: StreamLine): { number: number; rest: StreamLine } | null {
+  const number = leadingQuestionNumber(line.text);
+  if (number == null) return null;
+  const rest = line.text.replace(/^[\dlI|OoSB]{1,2}[.)]\s+/, "");
+  return { number, rest: { ...line, text: rest } };
 }
 
 /** Splits the stream at question numbers that arrive in order; a skipped number is reported, never invented. */
@@ -28,7 +50,9 @@ export function segment(stream: StreamLine[], questionCount: number): Segmentati
   const warnings: string[] = [];
   let expected = 1;
   for (const line of stream) {
-    let number = questionNumber(line.text);
+    const leading = splitLeadingNumber(line);
+    let number = leading?.number ?? questionNumber(line.text);
+    const body = leading?.rest ?? null;
     if (number !== null && number < 10 && expected === number * 11) {
       warnings.push(`question ${expected} printed as ${number} (doubled digit read once)`);
       number = expected;
@@ -38,7 +62,7 @@ export function segment(stream: StreamLine[], questionCount: number): Segmentati
         missing.push(skipped);
         warnings.push(`question ${skipped} not found before ${number}`);
       }
-      blocks.push({ number, lines: [], pages: [line.page] });
+      blocks.push({ number, lines: body && body.text ? [body] : [], pages: [line.page] });
       expected = number + 1;
       continue;
     }

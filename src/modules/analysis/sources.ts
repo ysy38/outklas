@@ -45,6 +45,9 @@ export type SourceDocument = {
   pageCount: number;
   license: License;
   exam?: AnalysisExam;
+  /** Child booklet sliced from a compilation PDF; PDF bytes and hash live on the parent. */
+  parentSlug?: string;
+  extractSha256?: string;
 };
 
 export const sourceProviders: SourceProvider[] = [
@@ -150,6 +153,22 @@ export const sourceDocuments: SourceDocument[] = [
     language: "en",
     pageCount: 101,
     license: osymLicense,
+  },
+  {
+    slug: "yds-2018-2",
+    source: "unknown_publisher",
+    file: "2013-2021-YDS-CIKMIŞ-SORULAR.pdf",
+    sha256: "5e9d8a32ae879a6ef92fe03e41f83e719423add2cfd4f1a89c3bb14cc267d0ef",
+    parentSlug: "yds-2013-2021",
+    extractSha256: "5e9d8a32ae879a6ef92fe03e41f83e719423add2cfd4f1a89c3bb14cc267d0ef",
+    documentType: "exam_booklet",
+    title: "YDS 2018 Sonbahar, English booklet (text layer, from compilation)",
+    authors: ["ÖSYM"],
+    publicationYear: 2018,
+    language: "en",
+    pageCount: 25,
+    license: osymLicense,
+    exam: { code: "yds", year: 2018, session: "2018-fall", blueprint: "yds-en", questionCount: 80, questionPages: [287, 310], answerKeyPage: 311 },
   },
   {
     slug: "yds-question-bank",

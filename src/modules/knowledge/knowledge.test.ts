@@ -5,7 +5,7 @@ import { examDraft, skillTree } from "@/db/exam-draft";
 import { packItems } from "@/db/pack-draft";
 import { sections } from "@/modules/exam/blueprint";
 import { ref, validateGraph, type LegacyKind, type NodeType } from "./graph";
-import { connectorSlug, knowledgeEdges, knowledgeNodes, legacyMap } from "./seed";
+import { connectorSlug, discourseForConnector, knowledgeEdges, knowledgeNodes, legacyMap } from "./seed";
 
 const typed = (type: NodeType) => knowledgeNodes.filter((node) => node.type === type);
 
@@ -65,6 +65,8 @@ describe("knowledge seed", () => {
       expect(knowledgeEdges.filter((e) => e.type === "expressed_by" && e.to === target)).toHaveLength(1);
       expect(knowledgeEdges.filter((e) => e.type === "has_pattern" && e.from === target)).toHaveLength(1);
     }
+    expect(discourseForConnector("connector:whereas")).toBe("discourse_relation:contrast");
+    expect(discourseForConnector("connector:although")).toBe("discourse_relation:concession");
   });
 
   it("puts every skill, grammar point, discourse relation and cognitive skill under exactly one domain", () => {
