@@ -1,6 +1,7 @@
--- Applied on the Supabase project. The Next.js server connects as the
--- database owner and bypasses these policies. The public API key must not
--- read answer keys or another person's rows.
+-- Applied on the Supabase project (see supabase/migrations). The Next.js
+-- server connects as the database owner and bypasses these policies. The
+-- public API key must not read answer keys or another person's rows, and
+-- must never write: role, subscriptions and drill quotas grant privileges.
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
@@ -20,57 +21,48 @@ ALTER TABLE vocab_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE item_skills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE item_vocabulary ENABLE ROW LEVEL SECURITY;
 ALTER TABLE drill_answers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_meta ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY profiles_own ON profiles
-  FOR ALL TO authenticated
-  USING (id = (SELECT auth.uid()))
-  WITH CHECK (id = (SELECT auth.uid()));
+  FOR SELECT TO authenticated
+  USING (id = (SELECT auth.uid()));
 
 CREATE POLICY sessions_own ON sessions
-  FOR ALL TO authenticated
-  USING (profile_id = (SELECT auth.uid()))
-  WITH CHECK (profile_id = (SELECT auth.uid()));
+  FOR SELECT TO authenticated
+  USING (profile_id = (SELECT auth.uid()));
 
 CREATE POLICY session_items_own ON session_items
-  FOR ALL TO authenticated
+  FOR SELECT TO authenticated
   USING (
-    EXISTS (SELECT 1 FROM sessions s WHERE s.id = session_id AND s.profile_id = (SELECT auth.uid()))
-  )
-  WITH CHECK (
     EXISTS (SELECT 1 FROM sessions s WHERE s.id = session_id AND s.profile_id = (SELECT auth.uid()))
   );
 
+-- answers.correct is stored before a test is submitted; it must stay hidden until then.
 CREATE POLICY answers_own ON answers
-  FOR ALL TO authenticated
-  USING (profile_id = (SELECT auth.uid()))
-  WITH CHECK (profile_id = (SELECT auth.uid()));
+  FOR SELECT TO authenticated
+  USING (
+    profile_id = (SELECT auth.uid())
+    AND EXISTS (SELECT 1 FROM sessions s WHERE s.id = session_id AND s.status = 'submitted')
+  );
 
 CREATE POLICY mastery_own ON mastery
-  FOR ALL TO authenticated
-  USING (profile_id = (SELECT auth.uid()))
-  WITH CHECK (profile_id = (SELECT auth.uid()));
+  FOR SELECT TO authenticated
+  USING (profile_id = (SELECT auth.uid()));
 
 CREATE POLICY reviews_own ON reviews
-  FOR ALL TO authenticated
-  USING (profile_id = (SELECT auth.uid()))
-  WITH CHECK (profile_id = (SELECT auth.uid()));
+  FOR SELECT TO authenticated
+  USING (profile_id = (SELECT auth.uid()));
 
 CREATE POLICY drill_answers_own ON drill_answers
-  FOR ALL TO authenticated
-  USING (profile_id = (SELECT auth.uid()))
-  WITH CHECK (profile_id = (SELECT auth.uid()));
+  FOR SELECT TO authenticated
+  USING (profile_id = (SELECT auth.uid()));
 
 CREATE POLICY plans_own ON plans
-  FOR ALL TO authenticated
-  USING (profile_id = (SELECT auth.uid()))
-  WITH CHECK (profile_id = (SELECT auth.uid()));
+  FOR SELECT TO authenticated
+  USING (profile_id = (SELECT auth.uid()));
 
 CREATE POLICY subscriptions_own ON subscriptions
-  FOR ALL TO authenticated
-  USING (profile_id = (SELECT auth.uid()))
-  WITH CHECK (profile_id = (SELECT auth.uid()));
+  FOR SELECT TO authenticated
+  USING (profile_id = (SELECT auth.uid()));
 
-CREATE POLICY events_own ON events
-  FOR ALL TO authenticated
-  USING (profile_id = (SELECT auth.uid()))
-  WITH CHECK (profile_id = (SELECT auth.uid()));
+-- events: no policy. question_answered payloads carry correctness for unsubmitted tests.
