@@ -1,11 +1,15 @@
 import { analysisSchemaVersion, type AnalysisDraft, type BlindSolution } from "@/modules/analysis/contract";
 import { expectedQuestionType } from "@/modules/analysis/surface";
 import { validateAnalysis, type Flag, type Proposal, type ValidationStatus } from "@/modules/analysis/validate";
-import { blueprintFor } from "@/modules/exam/blueprint";
+import { blueprintForDocument } from "../extract/topic-blueprint";
 import { knowledgeVersion } from "@/modules/knowledge/seed";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { loadAIConfig } from "../ai/config";
+import { dataRoot } from "../lib/artifacts";
 import { analyzerPromptVersion } from "../ai/prompts/analyzer.v2";
 import { solvePromptVersion } from "../ai/prompts/verifier.v1";
+import { AIRequestError } from "../ai/gemini";
 import { AIOutputError, createAIService } from "../ai/service";
 import type { AIResult, Usage } from "../ai/types";
 import { readJson, readManifest, runStage } from "../lib/artifacts";
@@ -46,8 +50,11 @@ export async function analyze(context: StageContext) {
   const validated = readManifest(slug, "validate");
   if (!rebuilt || !validated) throw new Error("Run the validate stage first.");
   const config = loadAIConfig();
-  const ai = createAIService(config);
-  const blueprint = blueprintFor(exam.code);
+  const smokeFile = path.join(dataRoot(), "gemini-smoke", "result.json");
+  const smokeOk = existsSync(smokeFile) && (JSON.parse(readFileSync(smokeFile, "utf8")) as { ok?: boolean }).ok === true;
+  const disabled = !config.apiKey || process.env.AI_DISABLED === "1" || !smokeOk;
+  const ai = disabled ? null : createAIService(config);
+  const blueprint = blueprintForDocument(context.document);
   const examLabel = `${exam.code.toUpperCase()} ${exam.session}`;
 
   return runStage(
@@ -70,17 +77,20 @@ export async function analyze(context: StageContext) {
     async () => {
       const report = readJson<ValidationReport>(slug, "validate", "report.json");
       const questions = readJson<Rebuilt[]>(slug, "reconstruct", `questions-${report.primary}.json`);
-      const records = await mapLimit(questions, 3, async ({ question }): Promise<AnalysisRecord> => {
+      const records = await mapLimit(questions, 1, async ({ question }): Promise<AnalysisRecord> => {
         const check = report.questions.find((entry) => entry.number === question.number)!;
         const expectedType = expectedQuestionType(question.number, blueprint, question.translationDirection);
         const answerKey = report.key.answers[question.number] ?? null;
         const base = { number: question.number, extraction: { status: check.status, flags: check.flags }, expectedType, answerKey, proposals: [], models: {}, requests: [], usage: zero, cached: true };
         if (check.status === "failed") return { ...base, status: "failed", flags: [{ code: "extraction_failed", severity: "block" }] };
+        if (check.status !== "ok") return { ...base, status: "needs_review", flags: [{ code: "extraction_needs_review", severity: "block" }] };
+        if (!ai) return { ...base, status: "needs_review", flags: [{ code: "ai_skipped", severity: "warn" }], cached: true };
 
         let analyzed: AIResult<AnalysisDraft>;
         try {
           analyzed = await ai.analyzer.analyze({ question, questionType: expectedType ?? "unknown", answerKey: answerKey ?? "unknown", examLabel });
         } catch (error) {
+          if (error instanceof AIRequestError) return { ...base, status: "needs_review", flags: [{ code: "ai_unavailable", severity: "warn" }], error: error.message, cached: false };
           if (!(error instanceof AIOutputError)) throw error;
           return { ...base, status: "failed", flags: [{ code: "analysis_invalid", severity: "block" }], error: error.message };
         }
@@ -88,7 +98,8 @@ export async function analyze(context: StageContext) {
         try {
           blind = await ai.verifier.solve(question);
         } catch (error) {
-          if (!(error instanceof AIOutputError)) throw error;
+          if (error instanceof AIOutputError || error instanceof AIRequestError) blind = null;
+          else throw error;
         }
         const result = validateAnalysis({
           draft: analyzed.value,
@@ -96,7 +107,7 @@ export async function analyze(context: StageContext) {
           expectedType,
           answerKey: answerKey as AnalysisDraft["correct_option"] | null,
           blind: blind?.value ?? null,
-          extractionFlags: check.status === "needs_review" ? check.flags : [],
+          extractionFlags: [],
         });
         for (const code of check.flags.filter((flag) => warningFlags.has(flag))) result.flags.push({ code, severity: "warn" });
         context.log(`q${question.number}: ${result.status}${result.flags.some((flag) => flag.severity === "block") ? ` (${result.flags.filter((flag) => flag.severity === "block").map((flag) => flag.code).join(", ")})` : ""}`);

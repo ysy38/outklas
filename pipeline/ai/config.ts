@@ -3,16 +3,26 @@ import type { AIRole } from "./types";
 export type ModelRole = Extract<AIRole, "analyzer" | "verifier" | "generator" | "judge">;
 
 /**
- * The only place model names live. Chosen from ListModels and live probes on 2026-10-07 (free tier: every flash model
- * answered 503 for hours); see docs/architecture/phase-2-plan.md §2. The verifier is a different model family on purpose,
- * so its blind solve is independent of the analyzer.
+ * The only place model names live. Chosen from ListModels and live probes on 2026-10-07; see
+ * docs/architecture/phase-2-plan.md §2 and docs/analysis/phase-2.1-report.md. Analyzer and verifier
+ * stay on different models so the blind solve is independent of the analysis pass.
  */
 export const modelDefaults: Record<ModelRole, string> = {
-  analyzer: "gemini-3.5-flash-lite",
-  verifier: "gemma-4-31b-it",
-  generator: "gemini-3.5-flash",
+  analyzer: "gemini-3.1-flash-lite",
+  verifier: "gemini-flash-lite-latest",
+  generator: "gemini-flash-lite-latest",
   judge: "gemini-3.1-flash-lite",
 };
+
+/** Non-ÖSYM health probes. Order: requested Pro preview, then working Flash defaults. */
+export const smokeModels = [
+  "gemini-3.1-pro-preview",
+  "gemini-3.8-flash",
+  "gemini-flash-latest",
+  "gemini-3.5-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-flash-lite-latest",
+] as const;
 
 const modelEnv: Record<ModelRole, string> = {
   analyzer: "ANALYZER_MODEL",

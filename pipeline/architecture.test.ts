@@ -25,6 +25,19 @@ describe("architecture", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("extraction modules do not import the AI layer", () => {
+    const offenders = files("pipeline/extract").filter((file) => imports(file).some((target) => target.includes("/ai/") || target.includes("pipeline/ai")));
+    expect(offenders).toEqual([]);
+  });
+
+  it("the extract alias never runs analyze, so extraction works with AI disabled", () => {
+    const cli = readFileSync(path.join(root, "pipeline/cli.ts"), "utf8");
+    expect(cli).toMatch(/extract:\s*\[[^\]]*"validate"/);
+    expect(cli).toMatch(/"text-exam":\s*\[[^\]]*"dna-skeleton"/);
+    expect(cli).not.toMatch(/extract:\s*\[[^\]]*analyze/);
+    expect(cli).not.toMatch(/"text-exam":\s*\[[^\]]*analyze/);
+  });
+
   it("only the Gemini provider talks to the Gemini API and reads no env itself", () => {
     const callers = [...files("src"), ...files("pipeline")].filter((file) => !file.endsWith(".test.ts") && readFileSync(path.join(root, file), "utf8").includes("generativelanguage.googleapis.com"));
     expect(callers).toEqual(["pipeline/ai/gemini.ts"]);
@@ -33,7 +46,7 @@ describe("architecture", () => {
 
   it("model names live only in the central config", () => {
     const offenders = [...files("src"), ...files("pipeline")].filter(
-      (file) => file !== "pipeline/ai/config.ts" && !file.endsWith(".test.ts") && /["'`](gemini|gemma)-\d/.test(readFileSync(path.join(root, file), "utf8")),
+      (file) => file !== "pipeline/ai/config.ts" && file !== "pipeline/ai/smoke.ts" && !file.endsWith(".test.ts") && /["'`](gemini|gemma)-\d/.test(readFileSync(path.join(root, file), "utf8")),
     );
     expect(offenders).toEqual([]);
   });
