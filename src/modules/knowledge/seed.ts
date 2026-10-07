@@ -38,7 +38,7 @@ const patternSlug: Record<ConnectorKind, string> = {
   inf: "infinitive_connector",
 };
 
-const sectionSlug: Record<SectionId, string> = {
+export const sectionSlug: Record<SectionId, string> = {
   vocabulary: "vocabulary",
   grammar: "grammar",
   cloze: "cloze",
