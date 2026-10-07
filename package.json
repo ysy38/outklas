@@ -7,7 +7,9 @@
     "start": "next start",
     "test": "vitest run",
     "db:migrate": "tsx scripts/db-migrate.ts",
-    "knowledge:sync": "tsx scripts/knowledge-sync.ts"
+    "knowledge:sync": "tsx scripts/knowledge-sync.ts",
+    "analysis": "tsx pipeline/cli.ts",
+    "analysis:pilot": "tsx pipeline/cli.ts pilot"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.14",
@@ -21,11 +23,14 @@
     "zod": "^4.1.11"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^0.1.100",
     "@tailwindcss/postcss": "^4.1.14",
     "@types/node": "^24.6.0",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
+    "pdfjs-dist": "^5.6.205",
     "tailwindcss": "^4.1.14",
+    "tesseract.js": "^7.0.0",
     "tsx": "^4.23.15",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
