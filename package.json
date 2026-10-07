@@ -5,7 +5,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:migrate": "tsx scripts/db-migrate.ts",
+    "knowledge:sync": "tsx scripts/knowledge-sync.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.14",
@@ -24,6 +26,7 @@
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "tailwindcss": "^4.1.14",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   }
