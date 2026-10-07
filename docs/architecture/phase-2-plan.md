@@ -18,7 +18,7 @@ Faz 2, geçmiş ÖSYM sınavlarını **yalnızca analiz için** yerelde işler v
 | Sistem araçları | `tesseract`, `pdftoppm`, `pdfinfo`, `mutool`, `gs`, ImageMagick yok; `sudo` parola istiyor. Python 3.8 + pip --user var. | Kullanıcı alanında Node yığını: `pdfjs-dist` (render + metin katmanı), `@napi-rs/canvas` (pdfjs'in kendi sürümüyle aynı 0.1.x), `tesseract.js` (WASM, `eng+tur`). Sistem paketi gerekmez. |
 | Kaynak PDF'ler | Kasım 2024: 18 sayfa, metin katmanı yok (sayfa başı ~80 karakter, yalnızca tarayıcı izi). Mart 2024: 46 sayfa, yeniden dizilmiş tarama. Ekim 2023 ve 2025 Mart: metin katmanı var. | Pilot Kasım 2024. OCR doğruluğu için "metin katmanlı ikiz" yok; ölçüm yöntemi §9'da. |
 | Gemini anahtarı | `.env.example` içine gerçek bir anahtar yazılmıştı (commit edilmemişti). | Anahtar gitignore'lu `.env.local` dosyasına taşındı (izin 600), `.env.example` boş bırakıldı. Değer hiçbir yerde yazdırılmadı. |
-| Gemini modelleri | `ListModels` ile alındı. `gemini-2.5-*` bu anahtar için kapalı (404). `gemini-3.1-pro-preview` **ücretsiz katmanda kota 0** (429). Pilot günü (7 Ekim) tüm `*-flash` modelleri saatlerce 503 ("high demand") döndü; `gemini-3.5-flash-lite` ve `gemma-4-31b-it` çalıştı (sütun başı ~30–40 sn, sık 500/503 yeniden denemeleriyle). | Varsayılanlar (`pipeline/ai/config.ts`): Analyzer = `gemini-3.5-flash-lite`, Verifier = `gemma-4-31b-it` (bilerek farklı model ailesi: kör çözüm Analyzer'dan bağımsız olsun), Generator = `gemini-3.5-flash`, Judge = `gemini-3.1-flash-lite`. Hepsi env ile değişir; `AI_MAX_RETRIES` yeniden deneme sayısını ayarlar. |
+| Gemini modelleri | 8 Ekim duman testi (ÖSYM metni yok): `gemini-3.1-pro-preview` 429; çalışan modeller oturuma göre değişiyor (`gemini-flash-latest` / `gemini-3.1-flash-lite` / `gemini-flash-lite-latest`). Çıkarım Gemini’ye bağlı değil. | Varsayılanlar canlı probe’a göre güncellenir (`pipeline/ai/config.ts`). Analyzer ve Verifier ayrı modeller. Anahtar yalnızca `.env.local`. |
 | Ücretsiz katman | Anahtar ücretsiz katmanda. Google'ın şartlarına göre ücretsiz katmanda gönderilen içerik ürün geliştirme için kullanılabilir. | Pilot kitapçık zaten kamuya açık bir sınav; yine de **kullanıcı kararı gerekiyor** (§12). Maliyet ve kota için tüm AI yanıtları girdi hash'iyle önbelleklenir. |
 | Faz 1 graph'ı | 155 düğüm, 280 kenar, 113 eşleme. Misconception, distractor_type, connector, discourse_relation, question_type düğümleri var. `vocabulary` ve `topic` türünde düğüm yok. | Analiz yalnızca mevcut düğümlere bağlanır. Bilinmeyen kavram ve kelimeler **öneri** olur (`analysis.node_proposals`), kanonik düğüm oluşturulmaz. |
 | Katmanlama | UI → `src/server/*` → `src/modules/*` → `src/db/*`. Next uygulaması `src/` dışını import etmiyor. | Saf analiz mantığı `src/modules/analysis/`, Drizzle şeması `src/db/analysis-schema.ts`, IO ve AI içeren offline kod `pipeline/` altında. `src/` hiçbir zaman `pipeline/`'ı import etmez (test ile zorlanır). |
@@ -108,7 +108,7 @@ Her aşama `.data/analysis/<belge>/<aşama>/` altına yazar ve bir `manifest.jso
 | 2 | `ocr` | sayfa PNG | `ocr/page-NN-{left,right}.json` (kelime, güven, kutu) + `.txt` | Kırmızı kanal → filigran bastırma; orta çizgiden sütun bölme; `eng+tur`. **Değişmez, hash'li.** |
 | 3 | `ocr-verify` | sayfa PNG + ham OCR | `ocr-verify/page-NN-{left,right}.json` | Gemini Verifier görüntüden yeniden okur; ham OCR'a dokunmaz. Model, prompt versiyonu ve kullanım kaydedilir. |
 | 4 | `cleanup` | ham OCR + doğrulanmış metin | `cleanup/stream.json` (okuma sırasında satırlar, kaynak etiketi) | Tırnak, kesme, tire, satır sonu birleştirme, filigran kalıntısı, nokta dolgu satırları |
-| 5 | `segment` | temiz akış | `segment/blocks.json` | Soru numarası (1–80 artan dizi), paylaşılan pasajlar, cevap anahtarı sayfası |
+| 5 | `segment` | temiz akış | `segment/blocks.json` | Kullanılmış 1–N numaraları (sıra dışı kabul; eksik uydurulmaz), paylaşılan pasajlar, cevap anahtarı |
 | 6 | `reconstruct` | bloklar | `reconstruct/questions.json` | kök, pasaj, şıklar A–E, bölüm (blueprint), çeviri yönü |
 | 7 | `validate` | sorular + anahtar | `validate/report.json` | deterministik kontroller (§6); `ok` / `needs_review` / `failed` |
 | 8 | `analyze` | doğrulanmış sorular | `analyze/q-NN.json` | Analyzer + Verifier kör çözüm; Zod; KG referans kontrolü |
@@ -123,7 +123,8 @@ Her aşama `.data/analysis/<belge>/<aşama>/` altına yazar ve bir `manifest.jso
 
 **Yeniden kurma (OCR'a güvenme):**
 
-- 1–80 numaraları tam bir kez ve artan sırada; eksik / birleşmiş / bölünmüş soru yok.
+- Numaralar uydurulmaz. 80/80 şart değildir; `partial_exam` analize açıktır. Konu dilimi (`topic_slice`) genel YDS dağılımına girmez. Ayrıntı: [`docs/decisions/0003-question-level-acceptance.md`](../decisions/0003-question-level-acceptance.md).
+- 1–80 numaraları tam bir kez beklenir ama sıra dışı (iki sütun) numaralar tutulur; eksik / birleşmiş / bölünmüş soru işaretlenir, icat edilmez.
 - Her soruda A–E şıkları, bu sırada ve boş değil (anlam bütünlüğü sorularında `A) I … E) V`).
 - Boşluk gerektiren tiplerde `----` işareti var; cloze ve paragraf tamamlamada pasaj bağlı; okuma sorusu bir pasaja bağlı; anlam bütünlüğünde (I)–(V) cümleleri tam.
 - Tırnak ve parantez dengesi, kesme işareti (`'`), tire, satır sonu tirelemesi, rakam-harf karışık kelimeler, yapışmış kelimeler (çok uzun token), tek harfli çöp tokenlar.
