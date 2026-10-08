@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { analysisDraft, type AnalysisDraft } from "@/modules/analysis/contract";
+import { analysisDraft, optionLabels, type AnalysisDraft } from "@/modules/analysis/contract";
 import { toDnaQuestion, type DnaQuestion } from "@/modules/analysis/dna";
 import { ydsDnaV1 } from "@/modules/analysis/corpus";
 import type { ReconstructedQuestion } from "@/modules/analysis/surface";
 import type { NodeRef } from "@/modules/knowledge/graph";
-import { generatedQuestionCandidate, type GeneratedQuestionCandidate } from "./candidate";
+import { completedSentences, generatedQuestionCandidate, type GeneratedQuestionCandidate } from "./candidate";
 import { connectorsFor, familyBlueprints } from "./families";
-import { judgeDecision, judgeReport, type JudgeReport } from "./judge";
+import { judgeDecision, judgeReport, type JudgeReport, type OptionAcceptability } from "./judge";
 import { buildExamProfile, consistentMisconception, evidenceLevel, familyConcept } from "./profile";
 import { generatorJudgeIndependent, provenance } from "./provenance";
 import { applyReview, initialStatus, type CandidateRecord } from "./review";
@@ -240,6 +240,24 @@ describe("candidate validator", () => {
     expect(codes(good(), { siblings: [{ id: "x", stem: good().question.stem, options: good().question.options }] })).toContain("duplicate_of_sibling");
   });
 
+  it("does not read the next sentence's option letter as the named key", () => {
+    expect(codes(good({ explanation: "Bu yüzden although bağlacı doğru seçenektir. B seçeneği koşul bildirir." }))).not.toContain("explanation_names_other_answer");
+    expect(codes(good({ explanation: "Doğru seçenek ödünleme (concession) ilişkisi kurar. D seçeneği neden bildirir." }))).not.toContain("explanation_names_other_answer");
+    expect(codes(good({ explanation: "Doğru yanıt (A) çünkü although beklenmeyen bir sonucu verir." }))).not.toContain("explanation_names_other_answer");
+  });
+
+  it("warns about greetings and the wrong term in explanations", () => {
+    expect(codes(good({ explanation: `Merhaba! ${good().explanation}` }))).toContain("explanation_style");
+    expect(codes(good({ explanation: `${good().explanation} Bu bir taviz ilişkisidir.` }))).toContain("explanation_style");
+    expect(codes(good())).not.toContain("explanation_style");
+  });
+
+  it("writes each option into the blank for the acceptability check", () => {
+    const sentences = completedSentences(good());
+    expect(sentences.A).toBe(good().question.stem.replace("----", good().question.options.A));
+    expect(Object.values(sentences).every((sentence) => !sentence.includes("----"))).toBe(true);
+  });
+
   it("warns about clues without rejecting", () => {
     const long = withOption("A", "although their thin roots reach only a few centimetres below the dry and very hot sandy desert surface every day");
     const result = validateCandidate({ spec, candidate: long });
@@ -258,9 +276,25 @@ const report = (patch: Partial<JudgeReport> = {}): JudgeReport =>
     ...patch,
   });
 
+const onlyKey = (acceptable: Partial<Record<(typeof optionLabels)[number], number>> = {}): OptionAcceptability => ({
+  sentences: optionLabels.map((option) => {
+    const confidence = acceptable[option];
+    return { option, acceptable: confidence !== undefined ? confidence > 0 : option === "A", confidence: Math.abs(confidence ?? 0.9), reason: "" };
+  }),
+});
+
 describe("judge decision", () => {
   const validation = validateCandidate({ spec, candidate: good() });
-  const decide = (patch: Partial<JudgeReport> = {}, blindAnswer: "A" | "B" = "A") => judgeDecision({ spec, validation, judge: { blindAnswer, blindConfidence: 0.9, report: report(patch) } });
+  const decide = (patch: Partial<JudgeReport> = {}, blindAnswer: "A" | "B" = "A", acceptability = onlyKey()) =>
+    judgeDecision({ spec, validation, judge: { blindAnswer, blindConfidence: 0.9, acceptability, report: report(patch) } });
+
+  it("rejects a wrong option that reads as a sensible sentence on its own, and a key that does not", () => {
+    expect(decide({}, "A", onlyKey({ D: 0.8 }))).toMatchObject({ verdict: "REJECT", acceptableOptions: ["A", "D"] });
+    expect(decide({}, "A", onlyKey({ D: 0.8 })).failures).toContain("acceptable_distractor_D");
+    expect(decide({}, "A", onlyKey({ D: 0.3 }))).toMatchObject({ verdict: "REVIEW", concerns: expect.arrayContaining(["acceptable_distractor_D"]) });
+    expect(decide({}, "A", onlyKey({ A: -0.9 })).failures).toContain("key_unacceptable");
+    expect(decide({}, "A", { sentences: onlyKey().sentences.slice(0, 4).concat(onlyKey().sentences[0]) }).failures).toContain("acceptability_incomplete");
+  });
 
   it("approves only when the model and every rule agree", () => {
     expect(decide().verdict).toBe("APPROVE");
@@ -292,6 +326,7 @@ const prov = {
   generatorPromptVersion: "generator.v1",
   judgePromptVersion: "judge.v1",
   blindSolvePromptVersion: "verifier-solve.v1",
+  acceptabilityPromptVersion: "acceptability.v1",
   questionSpecVersion: factoryVersions.questionSpec,
   specId: spec.id,
   knowledgeVersion: "1.0",
@@ -302,7 +337,7 @@ const prov = {
   judgeVersion: factoryVersions.judge,
   originalityVersion: factoryVersions.originality,
   generatedAt: "2026-10-08T12:00:00.000Z",
-  requestHashes: { generator: "a".repeat(64), blindSolve: "b".repeat(64), judge: "c".repeat(64) },
+  requestHashes: { generator: "a".repeat(64), blindSolve: "b".repeat(64), acceptability: "d".repeat(64), judge: "c".repeat(64) },
   sourceContextIds: ["yds-2018", "yds-2023-10"],
 };
 
@@ -320,7 +355,7 @@ describe("provenance", () => {
 
 describe("human review", () => {
   const validation = validateCandidate({ spec, candidate: good() });
-  const judge = judgeDecision({ spec, validation, judge: { blindAnswer: "A", blindConfidence: 0.9, report: report({ verdict: "REVIEW" }) } });
+  const judge = judgeDecision({ spec, validation, judge: { blindAnswer: "A", blindConfidence: 0.9, acceptability: onlyKey(), report: report({ verdict: "REVIEW" }) } });
   const record: CandidateRecord = {
     id: spec.id,
     spec,

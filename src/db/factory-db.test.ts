@@ -13,9 +13,10 @@ const rows = async <T>(query: string, params: unknown[] = []) => (await client.q
 const run = (generator: string, judge: string) =>
   rows<{ id: string }>(
     `insert into factory.runs (exam, family, band, requested, provider, generator_model, judge_model, generator_prompt_version, judge_prompt_version,
-       blind_solve_prompt_version, question_spec_version, knowledge_version, dna_version, exam_profile_version, validator_version, judge_version, originality_version, started_at)
-     values ('yds', 'sentence_completion.concession', 'medium', 12, 'gemini', $1, $2, 'generator.v1', 'judge.v1', 'verifier-solve.v1', 'question-spec.v2', '1.0', '1',
-       'yds-profile.v1', 'validator.v1', 'judge-contract.v1', 'shingle5.v1', now()) returning id`,
+       blind_solve_prompt_version, acceptability_prompt_version, question_spec_version, knowledge_version, dna_version, exam_profile_version, validator_version, judge_version,
+       originality_version, started_at)
+     values ('yds', 'sentence_completion.concession', 'medium', 12, 'gemini', $1, $2, 'generator.v3', 'judge.v1', 'verifier-solve.v1', 'acceptability.v1', 'question-spec.v2',
+       '1.0', '1', 'yds-profile.v1', 'validator.v3', 'judge-contract.v2', 'shingle5.v1', now()) returning id`,
     [generator, judge],
   );
 

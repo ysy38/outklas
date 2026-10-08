@@ -3,8 +3,8 @@ export const factoryVersions = {
   examProfile: "yds-profile.v1",
   questionSpec: "question-spec.v2",
   candidate: "candidate.v1",
-  validator: "validator.v2",
-  judge: "judge-contract.v1",
+  validator: "validator.v3",
+  judge: "judge-contract.v2",
   originality: "shingle5.v1",
   review: "review.v1",
 } as const;

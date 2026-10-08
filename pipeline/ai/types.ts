@@ -1,7 +1,7 @@
 import type { AnalysisDraft, BlindSolution, TranscriptionDraft } from "@/modules/analysis/contract";
 import type { ReconstructedQuestion } from "@/modules/analysis/surface";
 import type { GeneratedQuestionCandidate } from "@/modules/factory/candidate";
-import type { JudgeReport } from "@/modules/factory/judge";
+import type { JudgeReport, OptionAcceptability } from "@/modules/factory/judge";
 import type { QuestionSpec } from "@/modules/factory/spec";
 import type { CandidateValidation } from "@/modules/factory/validator";
 
@@ -60,9 +60,9 @@ export interface Generator {
   generate(spec: QuestionSpec): Promise<AIResult<GeneratedQuestionCandidate>>;
 }
 
-export type JudgeEvaluation = { blind: AIResult<BlindSolution>; report: AIResult<JudgeReport> };
+export type JudgeEvaluation = { blind: AIResult<BlindSolution>; acceptability: AIResult<OptionAcceptability>; report: AIResult<JudgeReport> };
 
-/** Separate prompt and model from Generator: its job is to prove the candidate is bad. It solves blind first. */
+/** Separate prompt and model from Generator: its job is to prove the candidate is bad. Both blind steps run before it sees the key. */
 export interface Judge {
   evaluate(candidate: GeneratedQuestionCandidate, spec: QuestionSpec, validation: CandidateValidation): Promise<JudgeEvaluation>;
 }

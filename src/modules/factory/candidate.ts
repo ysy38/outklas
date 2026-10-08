@@ -33,3 +33,11 @@ export const generatedQuestionCandidate = z.object({
   }),
 });
 export type GeneratedQuestionCandidate = z.infer<typeof generatedQuestionCandidate>;
+
+/** The stem with each option written into the blank: what a learner actually reads when trying an option. */
+export function completedSentences(candidate: Pick<GeneratedQuestionCandidate, "question">): Record<(typeof optionLabels)[number], string> {
+  return Object.fromEntries(optionLabels.map((label) => [label, candidate.question.stem.replace("----", candidate.question.options[label].trim())])) as Record<
+    (typeof optionLabels)[number],
+    string
+  >;
+}

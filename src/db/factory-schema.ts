@@ -20,6 +20,7 @@ export const factoryRuns = factory.table(
     generatorPromptVersion: text("generator_prompt_version").notNull(),
     judgePromptVersion: text("judge_prompt_version").notNull(),
     blindSolvePromptVersion: text("blind_solve_prompt_version").notNull(),
+    acceptabilityPromptVersion: text("acceptability_prompt_version").notNull(),
     questionSpecVersion: text("question_spec_version").notNull(),
     knowledgeVersion: text("knowledge_version")
       .notNull()

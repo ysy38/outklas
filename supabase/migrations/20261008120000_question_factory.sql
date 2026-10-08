@@ -19,6 +19,7 @@ CREATE TABLE factory.runs (
   generator_prompt_version   text NOT NULL CHECK (char_length(generator_prompt_version) <= 40),
   judge_prompt_version       text NOT NULL CHECK (char_length(judge_prompt_version) <= 40),
   blind_solve_prompt_version text NOT NULL CHECK (char_length(blind_solve_prompt_version) <= 40),
+  acceptability_prompt_version text NOT NULL CHECK (char_length(acceptability_prompt_version) <= 40),
   question_spec_version      text NOT NULL CHECK (char_length(question_spec_version) <= 40),
   knowledge_version          text NOT NULL REFERENCES public.knowledge_versions(version) ON DELETE RESTRICT,
   dna_version                text NOT NULL CHECK (char_length(dna_version) <= 20),

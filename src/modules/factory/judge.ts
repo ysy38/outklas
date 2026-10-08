@@ -34,7 +34,25 @@ export const judgeReport = z.object({
 });
 export type JudgeReport = z.infer<typeof judgeReport>;
 
-export type JudgeInput = { blindAnswer: (typeof optionLabels)[number]; blindConfidence: number; report: JudgeReport };
+/** Each completed sentence judged on its own, without the key: a wrong option that reads as a sensible sentence is a second answer. */
+export const optionAcceptability = z.object({
+  sentences: z
+    .array(
+      z.object({
+        option: z.enum(optionLabels),
+        acceptable: z.boolean(),
+        confidence: unit,
+        reason: z.string().max(300),
+      }),
+    )
+    .length(optionLabels.length),
+});
+export type OptionAcceptability = z.infer<typeof optionAcceptability>;
+
+/** Below this confidence an "acceptable" wrong option is a concern for the reviewer rather than an automatic reject. */
+export const acceptableDistractorConfidence = 0.5;
+
+export type JudgeInput = { blindAnswer: (typeof optionLabels)[number]; blindConfidence: number; acceptability: OptionAcceptability; report: JudgeReport };
 
 export type JudgeDecision = {
   version: typeof factoryVersions.judge;
@@ -42,6 +60,7 @@ export type JudgeDecision = {
   modelVerdict: Verdict;
   blindAnswer: (typeof optionLabels)[number];
   blindAgrees: boolean;
+  acceptableOptions: (typeof optionLabels)[number][];
   failures: string[];
   concerns: string[];
   qualityScore: number;
@@ -73,6 +92,16 @@ export function judgeDecision(input: { spec: QuestionSpec; validation: Candidate
   const alternatives = judge.report.alternativeDefensibleOptions.filter((label) => label !== correct);
   if (alternatives.length) failures.push(`second_defensible_${alternatives.join("")}`);
 
+  const seen = new Set(judge.acceptability.sentences.map((entry) => entry.option));
+  if (seen.size !== optionLabels.length) failures.push("acceptability_incomplete");
+  for (const entry of judge.acceptability.sentences) {
+    if (entry.option === correct) {
+      if (!entry.acceptable) failures.push("key_unacceptable");
+    } else if (entry.acceptable) {
+      (entry.confidence >= acceptableDistractorConfidence ? failures : concerns).push(`acceptable_distractor_${entry.option}`);
+    }
+  }
+
   const low = judgeThresholds.reject;
   for (const key of ["correctness", "grammar", "semantic", "distractorQuality", "targetAlignment"] as const) if (scores[key] < low[key]) failures.push(`${key}_low`);
   for (const key of ["ambiguityRisk", "clueRisk", "originalityRisk"] as const) if (scores[key] > low[key]) failures.push(`${key}_high`);
@@ -99,6 +128,7 @@ export function judgeDecision(input: { spec: QuestionSpec; validation: Candidate
     modelVerdict: judge.report.verdict,
     blindAnswer: judge.blindAnswer,
     blindAgrees,
+    acceptableOptions: judge.acceptability.sentences.filter((entry) => entry.acceptable).map((entry) => entry.option).sort(),
     failures,
     concerns,
     qualityScore: Math.round(qualityScore * 1000) / 1000,

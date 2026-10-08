@@ -5,13 +5,14 @@ import { dataRoot } from "../lib/artifacts";
 import { analysisDraft, blindSolution, coerceAnalysisJson, transcription } from "@/modules/analysis/contract";
 import type { ReconstructedQuestion } from "@/modules/analysis/surface";
 import { generatedQuestionCandidate, type GeneratedQuestionCandidate } from "@/modules/factory/candidate";
-import { judgeReport } from "@/modules/factory/judge";
+import { judgeReport, optionAcceptability } from "@/modules/factory/judge";
 import { cachedGenerate } from "./cache";
 import { loadAIConfig, type AIConfig } from "./config";
 import { GeminiProvider } from "./gemini";
+import { acceptabilityPromptVersion, acceptabilityResponseSchema, acceptabilitySystem, acceptabilityUser } from "./prompts/acceptability.v1";
 import { analyzerPromptVersion, analyzerResponseSchema, analyzerSystem, analyzerUser } from "./prompts/analyzer.v2";
 import { responseSchema } from "./prompts/schema";
-import { generatorPromptVersion, generatorResponseSchema, generatorSystem, generatorUser } from "./prompts/generator.v2";
+import { generatorPromptVersion, generatorResponseSchema, generatorSystem, generatorUser } from "./prompts/generator.v3";
 import { judgePromptVersion, judgeResponseSchema, judgeSystem, judgeUser } from "./prompts/judge.v1";
 import { solvePromptVersion, solveSystem, solveUser, transcribePromptVersion, transcribeSystem, transcribeUser } from "./prompts/verifier.v1";
 import type { AIProvider, AIResult, AIRole, AIService, ModelRequest, Usage } from "./types";
@@ -160,6 +161,14 @@ export function createAIService(config: AIConfig = loadAIConfig(), provider: AIP
           temperature: 0,
           maxOutputTokens: 4096,
         });
+        const acceptability = await structuredCall(provider, acceptabilityPromptVersion, optionAcceptability, {
+          model: config.models.judge,
+          system: acceptabilitySystem,
+          parts: [{ text: acceptabilityUser(candidate) }],
+          jsonSchema: acceptabilityResponseSchema(),
+          temperature: 0,
+          maxOutputTokens: 4096,
+        });
         const report = await structuredCall(provider, judgePromptVersion, judgeReport, {
           model: config.models.judge,
           system: judgeSystem,
@@ -168,7 +177,7 @@ export function createAIService(config: AIConfig = loadAIConfig(), provider: AIP
           temperature: 0,
           maxOutputTokens: 4096,
         });
-        return { blind, report };
+        return { blind, acceptability, report };
       },
     },
     explainer: { explain: notImplemented("explainer") },

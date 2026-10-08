@@ -9,7 +9,8 @@ import { buildExamProfile } from "@/modules/factory/profile";
 import { buildQuestionSpec } from "@/modules/factory/spec-engine";
 import { validateCandidate } from "@/modules/factory/validator";
 import { loadAIConfig } from "./ai/config";
-import { generatorPromptVersion, generatorResponseSchema, generatorSystem, generatorUser } from "./ai/prompts/generator.v2";
+import { generatorPromptVersion, generatorResponseSchema, generatorSystem, generatorUser } from "./ai/prompts/generator.v3";
+import { acceptabilitySystem, acceptabilityUser } from "./ai/prompts/acceptability.v1";
 import { judgeUser } from "./ai/prompts/judge.v1";
 import { createAIService, JudgeNotIndependent } from "./ai/service";
 import type { AIProvider, ModelRequest, ModelResponse } from "./ai/types";
@@ -82,6 +83,9 @@ const judgeJson = {
   verdict: "APPROVE",
   reasons: ["clean"],
 };
+const acceptabilityJson = {
+  sentences: (["A", "B", "C", "D", "E"] as const).map((option) => ({ option, acceptable: option === "B", confidence: 0.9, reason: "relation check" })),
+};
 
 function scripted(): AIProvider & { calls: ModelRequest[] } {
   const calls: ModelRequest[] = [];
@@ -90,7 +94,13 @@ function scripted(): AIProvider & { calls: ModelRequest[] } {
     calls,
     async generate(request): Promise<ModelResponse> {
       calls.push(request);
-      const text = request.system?.startsWith("ROLE") ? JSON.stringify(candidateJson) : request.system?.startsWith("You are taking") ? JSON.stringify({ answer: "B", confidence: 0.9, rationale: "concessive clause" }) : JSON.stringify(judgeJson);
+      const text = request.system?.startsWith("ROLE")
+        ? JSON.stringify(candidateJson)
+        : request.system?.startsWith("You are taking")
+          ? JSON.stringify({ answer: "B", confidence: 0.9, rationale: "concessive clause" })
+          : request.system === acceptabilitySystem
+            ? JSON.stringify(acceptabilityJson)
+            : JSON.stringify(judgeJson);
       return { text, model: request.model, usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 } };
     },
   };
@@ -108,13 +118,13 @@ describe("generator prompt", () => {
     expect(user).toContain(`"${spec.id}"`);
     expect(user).toContain("B) CORRECT");
     expect(user).not.toContain("evidenceReferences");
-    expect(generatorPromptVersion).toBe("generator.v2");
+    expect(generatorPromptVersion).toBe("generator.v3");
   });
 
   it("never carries historical item text or few-shot examples", () => {
     const prompt = `${generatorSystem(spec)}\n${generatorUser(spec)}`;
     expect(prompt).not.toMatch(/PASSAGE:|\nITEM\n|EXAMPLES?:|Example \d|few-shot/);
-    expect(readFileSync(path.join(process.cwd(), "pipeline/ai/prompts/generator.v2.ts"), "utf8")).not.toMatch(/from "\.\/item"|\.data|readFileSync/);
+    expect(readFileSync(path.join(process.cwd(), "pipeline/ai/prompts/generator.v3.ts"), "utf8")).not.toMatch(/from "\.\/item"|\.data|readFileSync/);
   });
 
   it("refuses types and families it has no rules for", () => {
@@ -138,7 +148,7 @@ describe("judge", () => {
     expect(prompt).not.toContain("blind");
   });
 
-  it("solves blind and reviews with the judge model, and refuses to judge with the generator model", async () => {
+  it("solves blind, checks each sentence and reviews with the judge model, and refuses to judge with the generator model", async () => {
     const provider = scripted();
     const service = createAIService(loadAIConfig({ GENERATOR_MODEL: "gen", JUDGE_MODEL: "judge" }), provider);
     const generated = await service.generator.generate(spec);
@@ -148,10 +158,19 @@ describe("judge", () => {
     const evaluation = await service.judge.evaluate(generated.value, spec, validation);
     expect(evaluation.blind.value.answer).toBe("B");
     expect(evaluation.report.value.verdict).toBe("APPROVE");
-    expect(provider.calls.slice(1).map((call) => call.model)).toEqual(["judge", "judge"]);
-    expect(provider.calls[1].parts.map((part) => ("text" in part ? part.text : "")).join("")).not.toContain("KEY");
+    expect(evaluation.acceptability.value.sentences.filter((entry) => entry.acceptable).map((entry) => entry.option)).toEqual(["B"]);
+    expect(provider.calls.slice(1).map((call) => call.model)).toEqual(["judge", "judge", "judge"]);
+    for (const call of provider.calls.slice(1, 3)) expect(call.parts.map((part) => ("text" in part ? part.text : "")).join("")).not.toContain("KEY");
     const same = createAIService(loadAIConfig({ GENERATOR_MODEL: "m", JUDGE_MODEL: "m" }), scripted());
     await expect(same.judge.evaluate(generated.value, spec, validation)).rejects.toBeInstanceOf(JudgeNotIndependent);
+  });
+
+  it("checks each completed sentence without the key or a single-answer framing", () => {
+    const prompt = `${acceptabilitySystem}\n${acceptabilityUser(candidateJson)}`;
+    expect(prompt).toContain("B. Although their thin roots reach only a few centimetres below the dry surface, many desert plants survive");
+    expect(prompt).toContain("D. Unless scientists measure");
+    expect(prompt).not.toMatch(/KEY|correct option|answer key/i);
+    expect(prompt).not.toContain("----");
   });
 });
 

@@ -4,7 +4,7 @@ import type { QuestionSpec } from "@/modules/factory/spec";
 import { parseRef, type NodeRef } from "@/modules/knowledge/graph";
 import { responseSchema, withRefEnums } from "./schema";
 
-export const generatorPromptVersion = "generator.v2";
+export const generatorPromptVersion = "generator.v3";
 
 const name = (value: NodeRef | null) => (value ? parseRef(value).slug.replaceAll("_", " ") : "none");
 const words = (list: NodeRef[]) => list.map((value) => `"${connectorSurface(value)}"`).join(", ");
@@ -33,21 +33,22 @@ const typeRules: Record<string, string> = {
 
 const familyRules: Record<string, string> = {
   "sentence_completion.concession": `FAMILY RULES: concession in sentence completion
-- The correct option expresses CONCESSION: it states a fact that would normally lead one to expect the opposite of what the main clause says (expectation vs. actual outcome). It opens with one of the allowed concessive connectors in the spec.
-- The contrast distractor opens with a contrast connector and sets two different subjects or groups side by side (a parallel comparison). It must not read as a concession; it fails because the stem needs an unexpected outcome, not a side-by-side comparison.
-- The cause distractor gives a reason that would lead to the OPPOSITE of the main clause (it is on-topic, but "main clause because X" is illogical). Never give a reason that genuinely explains the main clause.
-- The condition distractor states a condition that makes no sense as a restriction on the main clause (for example a past, settled fact or an unrelated action).
-- The sequence distractor uses a time connector with an event that could not sensibly come before or after the main clause.
+- The correct option expresses CONCESSION: it states a fact that would clearly and directly lead a reader to expect the OPPOSITE of the main clause (an obstacle, a disadvantage, a reason against). The stronger the expected-vs-actual clash, the better. It opens with one of the allowed concessive connectors in the spec.
+- Design principle for every wrong option: it is ON TOPIC (same scene, same vocabulary field) so that a weak candidate is tempted, but the full sentence it produces is FALSE or INCOHERENT as a statement. A wrong option that yields a true, sensible sentence is a second correct answer and ruins the item.
+- The contrast distractor opens with a contrast connector. It is about the SAME subject as the main clause and states something that points in the SAME direction as the main clause (or is fully compatible with it), so that there is nothing to contrast. NEVER introduce a different group, place, period or species that genuinely differs: "X happened whereas Y (another group) did the opposite" is a perfectly good sentence and therefore forbidden.
+- The cause distractor opens with a cause connector and gives a reason that would make the main clause LESS likely (it supports the opposite outcome). Test it: if "<main clause> because <reason>" sounds like a sensible explanation, it is forbidden. Never give a reason that genuinely explains, enables or is neutral to the main clause.
+- The condition distractor opens with a condition connector and is grammatically or logically unable to restrict the main clause: for a main clause about a settled past or a general fact, use a condition about a future or hypothetical action that cannot have caused it. It must not describe a realistic precondition of the main clause.
+- The sequence distractor opens with a time connector and describes an event that cannot stand in that time relation to the main clause: for example an event that only makes sense AFTER the main clause placed with "before", or an event that would have prevented the main clause. It must never describe an earlier event that explains or enables the main clause (for example "after they improved X, Y succeeded" is a sensible sentence and forbidden).
 - Wrong options must not contain any word listed in vocabularyConstraints.forbiddenInDistractors, anywhere in the option.
-- Self-check before answering: read the full sentence with each wrong option in the blank. If any wrong option produces a true, sensible sentence, rewrite that option until it clearly fails. Then confirm that only the correct option makes sense.`,
+- Self-check before answering: write out the full sentence for each wrong option and ask "Would a careful editor accept this as a true, sensible statement?" If the answer is yes or maybe for ANY wrong option, rewrite that option until the answer is clearly no. Then confirm that the correct sentence is clearly sensible and that it is the only one.`,
 };
 
 const outputRules = `OUTPUT
 Return JSON only, matching the response schema:
 - question.stem and question.options A–E as specified above.
 - correctOption: exactly answerConstraints.correctOption from the spec.
-- explanation: in Turkish, addressing the learner as "sen", natural and friendly, at most the spec's maxWords. Name the correct connector in English exactly as written in the option, say which relation it builds and why the outcome is unexpected, and say in one short sentence why each wrong option fails.
-- distractorRationales: one entry for each wrong option letter; distractorType and misconception copied from the matching distractorPlan entry; whyPlausible and whyWrong in Turkish, at most 25 words each.
+- explanation: in natural, correct Turkish, addressing the learner as "sen", at most the spec's maxWords. No greeting, no "Merhaba", no exclamation marks. Name the correct connector in English exactly as written in the option. Call the relation "ödünleme (concession)", never "taviz"; contrast is "karşıtlık (contrast)". Say what the reader would normally expect and why the main clause is the unexpected outcome. Then one short sentence per wrong option saying which relation it builds and why the resulting sentence is false or illogical.
+- distractorRationales: one entry for each wrong option letter; distractorType and misconception copied from the matching distractorPlan entry; whyPlausible and whyWrong in natural Turkish, at most 25 words each.
 - targetConcept: the spec's primaryConcept. targetSkill: the spec's targetSkill.
 - metadata.connectorByOption: the connector each option opens with, in lowercase, exactly as written. metadata.selfRatedDifficulty: your honest estimate.
 You may not change the spec, move the answer, add taxonomy labels, or add fields.`;
@@ -55,7 +56,7 @@ You may not change the spec, move the answer, add taxonomy labels, or add fields
 export function generatorSystem(spec: QuestionSpec): string {
   const type = typeRules[spec.questionType];
   const family = familyRules[spec.questionFamily];
-  if (!type || !family) throw new Error(`generator.v2 has no rules for ${spec.questionType} / ${spec.questionFamily}`);
+  if (!type || !family) throw new Error(`${generatorPromptVersion} has no rules for ${spec.questionType} / ${spec.questionFamily}`);
   return [role, ydsRules, type, family, outputRules].join("\n\n");
 }
 

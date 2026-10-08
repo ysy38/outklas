@@ -11,6 +11,7 @@ export const provenance = z.object({
   generatorPromptVersion: z.string().min(1),
   judgePromptVersion: z.string().min(1),
   blindSolvePromptVersion: z.string().min(1),
+  acceptabilityPromptVersion: z.string().min(1),
   questionSpecVersion: z.literal(factoryVersions.questionSpec),
   specId: z.string().min(1),
   knowledgeVersion: z.string().min(1),
@@ -21,7 +22,7 @@ export const provenance = z.object({
   judgeVersion: z.literal(factoryVersions.judge),
   originalityVersion: z.literal(factoryVersions.originality),
   generatedAt: z.iso.datetime(),
-  requestHashes: z.object({ generator: hash, blindSolve: hash.nullable(), judge: hash.nullable() }),
+  requestHashes: z.object({ generator: hash, blindSolve: hash.nullable(), acceptability: hash.nullable(), judge: hash.nullable() }),
   sourceContextIds: z.array(z.string().regex(/^[a-z0-9-]+$/)),
 });
 export type Provenance = z.infer<typeof provenance>;

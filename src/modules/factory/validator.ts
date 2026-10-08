@@ -187,10 +187,12 @@ export function validateCandidate(input: { spec: QuestionSpec; candidate: Genera
 
   const explanation = candidate.explanation;
   if (!looksTurkish(explanation)) add("explanation_language", "warn");
-  const named = explanation.match(/doğru\s+(?:cevap|yanıt|seçenek|şık)[^A-E]{0,24}\b([A-E])\b/i)?.[1];
-  if (named && named.toUpperCase() !== correct) add("explanation_names_other_answer", "critical", { detail: named });
+  const named = explanation.match(/[Dd]oğru\s+(?:cevap|yanıt|seçenek|şık)[a-zçğıöşü]*\s+(?:olan\s+)?\(?([A-E])(?=[\s).,:;'’]|$)/)?.[1];
+  if (named && named !== correct) add("explanation_names_other_answer", "critical", { detail: named });
   if (answerConnector && !hasPhrase(explanation, connectorSurface(answerConnector))) add("explanation_missing_connector", "warn");
   if (words(explanation).length > spec.explanationRequirements.maxWords * 1.5) add("explanation_too_long", "warn", { detail: String(words(explanation).length) });
+  const offStyle = explanation.match(/\bmerhaba\b|\bselam\b|!|\btaviz\w*/i)?.[0];
+  if (offStyle) add("explanation_style", "warn", { detail: offStyle.toLowerCase() });
 
   const text = [stem, ...optionLabels.map((label) => options[label])].join(" \n ");
   let sourceOverlapRuns = 0;

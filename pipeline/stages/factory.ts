@@ -16,7 +16,8 @@ import type { QuestionSpec } from "@/modules/factory/spec";
 import { originalityIndex, validateCandidate, type OriginalityIndex, type Sibling } from "@/modules/factory/validator";
 import { dnaVersion, factoryVersions } from "@/modules/factory/versions";
 import { loadAIConfig } from "../ai/config";
-import { generatorPromptVersion } from "../ai/prompts/generator.v2";
+import { acceptabilityPromptVersion } from "../ai/prompts/acceptability.v1";
+import { generatorPromptVersion } from "../ai/prompts/generator.v3";
 import { judgePromptVersion } from "../ai/prompts/judge.v1";
 import { solvePromptVersion } from "../ai/prompts/verifier.v1";
 import { createAIService, JudgeNotIndependent } from "../ai/service";
@@ -67,6 +68,12 @@ function historicalIndex(): { index: OriginalityIndex; documents: number; items:
 
 type Failure = { specId: string; stage: "generator" | "judge"; error: string };
 
+function reviewedRun(runDir: string): boolean {
+  const dir = path.join(runDir, "candidates");
+  if (!existsSync(dir)) return false;
+  return readdirSync(dir).some((name) => (JSON.parse(readFileSync(path.join(dir, name), "utf8")) as CandidateRecord).reviews.length > 0);
+}
+
 function reviewSheet(records: CandidateRecord[], failures: Failure[]): string {
   const lines = ["# Question factory review sheet", "", "Local only. Original generated items; no historical text.", ""];
   for (const record of records) {
@@ -75,7 +82,10 @@ function reviewSheet(records: CandidateRecord[], failures: Failure[]): string {
     lines.push(`## ${record.id} — ${record.status}`, "");
     lines.push(`Spec: ${record.spec.questionFamily} · ${record.spec.difficulty.band}/${record.spec.difficulty.cefr} · domain ${record.spec.contextConstraints.domain} · blank ${record.spec.contextConstraints.blankPosition} · key ${record.spec.answerConstraints.correctOption}`);
     lines.push(`Validator: ${validation.status} (${validation.critical} critical, ${validation.warnings} warn) ${validation.issues.map((issue) => `${issue.code}${issue.option ? `@${issue.option}` : ""}`).join(", ")}`);
-    if (record.judge) lines.push(`Judge: ${record.judge.verdict} (model ${record.judge.modelVerdict}, blind ${record.judge.blindAnswer}, quality ${record.judge.qualityScore}) failures: ${record.judge.failures.join(", ") || "none"}; concerns: ${record.judge.concerns.join(", ") || "none"}`);
+    if (record.judge)
+      lines.push(
+        `Judge: ${record.judge.verdict} (model ${record.judge.modelVerdict}, blind ${record.judge.blindAnswer}, acceptable ${record.judge.acceptableOptions.join("") || "none"}, quality ${record.judge.qualityScore}) failures: ${record.judge.failures.join(", ") || "none"}; concerns: ${record.judge.concerns.join(", ") || "none"}`,
+      );
     lines.push("", `**${candidate.question.stem}**`, "");
     for (const label of optionLabels) lines.push(`- ${label}) ${candidate.question.options[label]}${label === candidate.correctOption ? "  ✓" : ""}`);
     lines.push("", `Açıklama: ${candidate.explanation}`, "");
@@ -100,6 +110,8 @@ export async function factorySlice(options: SliceOptions) {
 
   const { profile } = factoryProfile();
   const specs = Array.from({ length: options.count }, (_, index) => buildQuestionSpec({ profile, family, ordinal: index + 1, band: options.band }));
+  const runDir = path.join(factoryRoot(), "runs", `${family.id}.${specs[0].difficulty.band}.n${options.count}.${generatorPromptVersion}`);
+  if (reviewedRun(runDir)) throw new Error(`${runDir} already holds human review decisions; it is never overwritten.`);
   const { index, documents, items } = historicalIndex();
   log(`profile ${profile.version}: ${profile.questions} questions; originality index ${index.shingles.size} shingles from ${items} items in ${documents} documents`);
 
@@ -124,13 +136,18 @@ export async function factorySlice(options: SliceOptions) {
     const validation = validateCandidate({ spec, candidate, originality: index, siblings });
     siblings.push({ id: spec.id, stem: candidate.question.stem, options: candidate.question.options });
     let judge = null;
-    const hashes: Provenance["requestHashes"] = { generator: result.requestHash, blindSolve: null, judge: null };
+    const hashes: Provenance["requestHashes"] = { generator: result.requestHash, blindSolve: null, acceptability: null, judge: null };
     let judgeModel = config.models.judge;
     if (validation.status === "pass") {
       try {
         const evaluation = await service.judge.evaluate(candidate, spec, validation);
-        judge = judgeDecision({ spec, validation, judge: { blindAnswer: evaluation.blind.value.answer, blindConfidence: evaluation.blind.value.confidence, report: evaluation.report.value } });
+        judge = judgeDecision({
+          spec,
+          validation,
+          judge: { blindAnswer: evaluation.blind.value.answer, blindConfidence: evaluation.blind.value.confidence, acceptability: evaluation.acceptability.value, report: evaluation.report.value },
+        });
         hashes.blindSolve = evaluation.blind.requestHash;
+        hashes.acceptability = evaluation.acceptability.requestHash;
         hashes.judge = evaluation.report.requestHash;
         judgeModel = evaluation.report.model;
       } catch (error) {
@@ -144,6 +161,7 @@ export async function factorySlice(options: SliceOptions) {
       generatorPromptVersion,
       judgePromptVersion,
       blindSolvePromptVersion: solvePromptVersion,
+      acceptabilityPromptVersion,
       questionSpecVersion: spec.version,
       specId: spec.id,
       knowledgeVersion: spec.knowledgeVersion,
@@ -168,7 +186,6 @@ export async function factorySlice(options: SliceOptions) {
     });
   }
 
-  const runDir = path.join(factoryRoot(), "runs", `${family.id}.${specs[0].difficulty.band}.n${options.count}.${generatorPromptVersion}`);
   mkdirSync(path.join(runDir, "candidates"), { recursive: true });
   for (const record of records) writeFileSync(path.join(runDir, "candidates", `${record.id}.json`), json(record));
   const count = (status: string) => records.filter((record) => record.status === status).length;
@@ -187,7 +204,7 @@ export async function factorySlice(options: SliceOptions) {
       records.flatMap((record) => record.versions[0].validation.issues.map((issue) => `${issue.severity}:${issue.code}`)).reduce<Record<string, number>>((acc, code) => ({ ...acc, [code]: (acc[code] ?? 0) + 1 }), {}),
     ).sort((a, b) => b[1] - a[1]),
     models: { generator: config.models.generator, judge: config.models.judge },
-    versions: { ...factoryVersions, generatorPromptVersion, judgePromptVersion, dnaVersion, knowledgeVersion: specs[0].knowledgeVersion },
+    versions: { ...factoryVersions, generatorPromptVersion, judgePromptVersion, acceptabilityPromptVersion, dnaVersion, knowledgeVersion: specs[0].knowledgeVersion },
   };
   writeFileSync(path.join(runDir, "summary.json"), json(summary));
   writeFileSync(path.join(runDir, "review.md"), reviewSheet(records, failures));
