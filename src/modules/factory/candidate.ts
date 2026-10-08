@@ -14,6 +14,8 @@ export const generatedQuestionCandidate = z.object({
   }),
   correctOption: z.enum(optionLabels),
   explanation: z.string().min(1).max(1200),
+  /** How to recognise the same relation in another item; written by the explanation stage. */
+  transferNote: z.string().max(400).optional(),
   distractorRationales: z
     .array(
       z.object({

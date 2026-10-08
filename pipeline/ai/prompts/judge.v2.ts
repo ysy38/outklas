@@ -6,7 +6,10 @@ import type { CandidateValidation } from "@/modules/factory/validator";
 import { parseRef, type NodeRef } from "@/modules/knowledge/graph";
 import { responseSchema } from "./schema";
 
-export const judgePromptVersion = "judge.v1";
+export const judgePromptVersion = "judge.v2";
+
+/** What each option's own distractor judge decided; shown to the final judge, which must not take it on trust. */
+export type DistractorCheckSummary = { option: (typeof optionLabels)[number]; decision: string; attempts: number; failures: string[]; concerns: string[] };
 
 const name = (value: NodeRef | null) => (value ? parseRef(value).slug.replaceAll("_", " ") : "none");
 
@@ -24,16 +27,22 @@ Check, in this order:
 9. originalityRisk: it looks copied or closely adapted from a known exam or textbook (0 = clearly original).
 10. clueRisk: accidental clues (length, word echoes, grammar that rules options out for the wrong reason).
 
+Each wrong option was checked on its own by another reviewer before you. Do not take those checks on trust: look at the five options together. If two options lead to the same logical reading, or any option other than the key could be defended once all five are side by side, list it in alternativeDefensibleOptions and raise ambiguityRisk.
+
 All scores 0..1. verdict: APPROVE only when you would put it in front of learners unchanged; REVIEW when a human should look; REJECT when it is broken. reasons: at most six short points in English, no quotes longer than four words from the item.`;
 
-export function judgeUser(input: { spec: QuestionSpec; candidate: GeneratedQuestionCandidate; validation: CandidateValidation }): string {
+export function judgeUser(input: { spec: QuestionSpec; candidate: GeneratedQuestionCandidate; validation: CandidateValidation; distractorChecks?: DistractorCheckSummary[] }): string {
   const { spec, candidate, validation } = input;
+  const checks = (input.distractorChecks ?? []).map(
+    (check) => `${check.option}: ${check.decision} after ${check.attempts} attempt(s)${check.concerns.length ? `; concerns ${check.concerns.join(", ")}` : ""}`,
+  );
   const plan = spec.distractorPlan.map((slot) => `${slot.option}: ${name(slot.expresses)} via ${slot.distractorType}${slot.misconception ? ` (probes ${slot.misconception})` : ""}`).join("; ");
   const warnings = validation.issues.filter((issue) => issue.severity === "warn").map((issue) => `${issue.code}${issue.option ? `@${issue.option}` : ""}`);
   return [
     `TARGET: ${spec.questionType}; family ${spec.questionFamily}; concept ${spec.primaryConcept}; pattern ${spec.grammarPattern ?? "none"}; misconception ${spec.targetMisconception ?? "none"}; band ${spec.difficulty.band} (CEFR ${spec.difficulty.cefr}).`,
     `DISTRACTOR PLAN: ${plan}.`,
     `DETERMINISTIC CHECKS: passed; warnings: ${warnings.length ? warnings.join(", ") : "none"}.`,
+    ...(checks.length ? [`INDIVIDUAL DISTRACTOR CHECKS (one option at a time): ${checks.join("; ")}.`] : []),
     "",
     "ITEM",
     candidate.question.stem,

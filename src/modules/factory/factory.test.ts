@@ -320,14 +320,22 @@ describe("judge decision", () => {
 });
 
 const prov = {
+  pipelineVersion: factoryVersions.pipeline,
   provider: "gemini",
   generatorModel: "gen-model",
+  distractorModel: "gen-model",
+  distractorJudgeModel: "judge-model",
   judgeModel: "judge-model",
-  generatorPromptVersion: "generator.v1",
-  judgePromptVersion: "judge.v1",
+  explanationModel: "gen-model",
+  generatorPromptVersion: "skeleton.v1",
+  distractorPromptVersion: "distractor.v1",
+  distractorJudgePromptVersion: "distractor-judge.v1",
+  judgePromptVersion: "judge.v2",
   blindSolvePromptVersion: "verifier-solve.v1",
   acceptabilityPromptVersion: "acceptability.v1",
+  explanationPromptVersion: "explanation.v1",
   questionSpecVersion: factoryVersions.questionSpec,
+  distractorSpecVersion: factoryVersions.distractorSpec,
   specId: spec.id,
   knowledgeVersion: "1.0",
   dnaVersion: "1",
@@ -335,21 +343,47 @@ const prov = {
   candidateVersion: factoryVersions.candidate,
   validatorVersion: factoryVersions.validator,
   judgeVersion: factoryVersions.judge,
+  distractorJudgeVersion: factoryVersions.distractorJudge,
   originalityVersion: factoryVersions.originality,
   generatedAt: "2026-10-08T12:00:00.000Z",
-  requestHashes: { generator: "a".repeat(64), blindSolve: "b".repeat(64), acceptability: "d".repeat(64), judge: "c".repeat(64) },
+  attempts: [
+    { stage: "skeleton" as const, option: null, attempt: 1, model: "gen-model", promptVersion: "skeleton.v1", requestHash: "a".repeat(64), cached: false, latencyMs: 900, output: "Although the trial was short, the drug worked.", validator: { status: "pass" as const, codes: [] }, judge: null, rejectionReason: null },
+    {
+      stage: "distractor" as const,
+      option: "B" as const,
+      attempt: 1,
+      model: "gen-model",
+      promptVersion: "distractor.v1",
+      requestHash: "e".repeat(64),
+      cached: false,
+      latencyMs: 700,
+      output: "Because the trial was short",
+      validator: { status: "pass" as const, codes: [] },
+      judge: { model: "judge-model", promptVersion: "distractor-judge.v1", requestHash: "f".repeat(64), decision: "REGENERATE" as const, failures: ["competent_candidate_could_select"], concerns: [], reasons: ["reads as a valid cause"] },
+      rejectionReason: "competent_candidate_could_select",
+    },
+    { stage: "distractor" as const, option: "B" as const, attempt: 2, model: "gen-model", promptVersion: "distractor.v1", requestHash: null, cached: false, latencyMs: 300, output: null, validator: { status: "reject" as const, codes: [] }, judge: null, rejectionReason: "model_error: timeout" },
+  ],
+  requestHashes: { blindSolve: "b".repeat(64), acceptability: "d".repeat(64), judge: "c".repeat(64) },
   sourceContextIds: ["yds-2018", "yds-2023-10"],
 };
 
 describe("provenance", () => {
-  it("requires every version and model field", () => {
+  it("requires every version and model field and keeps every stage attempt", () => {
     expect(provenance.parse(prov)).toEqual(prov);
     const { judgeModel: _judgeModel, ...missing } = prov;
     void _judgeModel;
     expect(provenance.safeParse(missing).success).toBe(false);
+    expect(provenance.safeParse({ ...prov, attempts: [] }).success).toBe(false);
     expect(provenance.safeParse({ ...prov, sourceContextIds: ["Some item text"] }).success).toBe(false);
+    expect(provenance.safeParse({ ...prov, pipelineVersion: "generator.v3" }).success).toBe(false);
+  });
+
+  it("never lets a writer check its own output", () => {
     expect(generatorJudgeIndependent(prov)).toBe(true);
     expect(generatorJudgeIndependent({ generatorModel: "m", judgeModel: "m" })).toBe(false);
+    expect(generatorJudgeIndependent({ generatorModel: "g", distractorModel: "m", judgeModel: "m" })).toBe(false);
+    expect(generatorJudgeIndependent({ distractorModel: "m", distractorJudgeModel: "m", judgeModel: "j" })).toBe(false);
   });
 });
 

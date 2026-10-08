@@ -75,7 +75,7 @@ async function main() {
   }
   if (name === "factory") {
     const band = option("band", "") || undefined;
-    const result = await factorySlice({ family: option("family", ""), count: Number.parseInt(option("count", "0"), 10), band: band as "easy" | "medium" | "hard" | undefined, log: (message) => console.log(`  ${message}`) });
+    const result = await factorySlice({ family: option("family", ""), count: Number.parseInt(option("count", "0"), 10), band: band as "easy" | "medium" | "hard" | undefined, tag: option("tag", "") || undefined, log: (message) => console.log(`  ${message}`) });
     console.log(JSON.stringify(result, null, 2));
     return;
   }

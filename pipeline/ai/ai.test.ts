@@ -84,6 +84,13 @@ describe("GeminiProvider", () => {
     await expect(denied.generate({ model: "m", parts: [{ text: "x" }] })).rejects.toMatchObject({ status: 403, retryable: false });
   });
 
+  it("gives up at once when the quota asks for an hours-long wait", async () => {
+    const delays: number[] = [];
+    const exhausted = new GeminiProvider({ apiKey: "k", transport: async () => fail(429, "44073s"), sleep: async (ms) => void delays.push(ms) });
+    await expect(exhausted.generate({ model: "m", parts: [{ text: "x" }] })).rejects.toMatchObject({ status: 429, retryable: false, message: expect.stringMatching(/quota exhausted/) });
+    expect(delays).toEqual([]);
+  });
+
   it("treats a timeout as retryable", async () => {
     let calls = 0;
     const provider = new GeminiProvider({

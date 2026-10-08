@@ -6,6 +6,7 @@ import { discourseForConnector, knowledgeNodes } from "@/modules/knowledge/seed"
 import type { GeneratedQuestionCandidate } from "./candidate";
 import { connectorSurface } from "./spec-engine";
 import type { QuestionSpec } from "./spec";
+import { defaultFactoryThresholds, type FactoryThresholds } from "./thresholds";
 import { factoryVersions } from "./versions";
 
 export type IssueSeverity = "critical" | "warn";
@@ -26,6 +27,14 @@ export type CandidateValidation = {
   };
 };
 
+/** Result of a deterministic check on one stage output (skeleton, one distractor). Critical issues mean regenerate. */
+export type StageValidation = { status: "pass" | "reject"; critical: number; warnings: number; issues: ValidationIssue[] };
+
+export function stageValidation(issues: ValidationIssue[]): StageValidation {
+  const critical = issues.filter((issue) => issue.severity === "critical").length;
+  return { status: critical ? "reject" : "pass", critical, warnings: issues.length - critical, issues };
+}
+
 /** 5-word shingles of historical items. Built offline from local artifacts; the texts themselves never leave the machine. */
 export type OriginalityIndex = { size: number; shingles: ReadonlySet<string> };
 
@@ -45,9 +54,9 @@ const connectorSurfaces = knowledgeNodes
 
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const lower = (text: string) => text.toLocaleLowerCase("en");
-const normalized = (text: string) => lower(text).replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+export const normalized = (text: string) => lower(text).replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 const stopwords = new Set(["the", "and", "that", "this", "with", "from", "have", "has", "had", "were", "was", "their", "they", "them", "there", "which", "would", "could", "about", "into", "than", "then", "been", "being", "more", "most", "such", "some", "many", "much", "also", "only", "very", "when", "what", "while", "where", "these", "those", "other"]);
-const contentWords = (text: string) => new Set(words(text).map(lower).filter((word) => word.length >= 4 && !stopwords.has(word)));
+export const contentWords = (text: string) => new Set(words(text).map(lower).filter((word) => word.length >= 4 && !stopwords.has(word)));
 
 /** The graph connector an option opens with (longest surface first), or null. */
 export function leadingConnector(option: string): NodeRef | null {
@@ -55,9 +64,9 @@ export function leadingConnector(option: string): NodeRef | null {
   return connectorSurfaces.find((entry) => new RegExp(`^${escape(entry.surface)}\\b`).test(text))?.ref ?? null;
 }
 
-const hasPhrase = (text: string, phrase: string) => new RegExp(`(^|[^\\p{L}])${escape(lower(phrase))}([^\\p{L}]|$)`, "u").test(lower(text));
+export const hasPhrase = (text: string, phrase: string) => new RegExp(`(^|[^\\p{L}])${escape(lower(phrase))}([^\\p{L}]|$)`, "u").test(lower(text));
 
-function blankPosition(stem: string): CandidateValidation["metrics"]["blankPosition"] {
+export function blankPosition(stem: string): CandidateValidation["metrics"]["blankPosition"] {
   const trimmed = stem.trim();
   if (!trimmed.includes("----")) return "none";
   if (trimmed.startsWith("----")) return "start";
@@ -65,7 +74,37 @@ function blankPosition(stem: string): CandidateValidation["metrics"]["blankPosit
   return "middle";
 }
 
-const integrityProblems = (text: string): string[] =>
+/** An option without its leading connector: the clause the candidate actually reads. */
+export function optionBody(option: string): string {
+  const connector = leadingConnector(option);
+  const text = option.trim();
+  return connector ? text.slice(connectorSurface(connector).length).trim() : text;
+}
+
+const trigrams = (text: string) => {
+  const tokens = normalized(text).split(" ").filter(Boolean);
+  return new Set(tokens.slice(2).map((_, i) => tokens.slice(i, i + 3).join(" ")));
+};
+
+export type ClauseReuse = { tokenOverlap: number; trigramOverlap: number; level: "none" | "warn" | "copy" };
+
+/**
+ * How much of `reference` (normally the correct option) a wrong option repeats once both connectors are removed.
+ * Shared topic words are normal; a copy of the clause behind a different connector is not.
+ */
+export function clauseReuse(reference: string, option: string, thresholds: FactoryThresholds = defaultFactoryThresholds): ClauseReuse {
+  const left = contentWords(optionBody(option));
+  const right = contentWords(optionBody(reference));
+  const tokenOverlap = left.size && right.size ? [...left].filter((word) => right.has(word)).length / Math.min(left.size, right.size) : 0;
+  const a = trigrams(optionBody(option));
+  const b = trigrams(optionBody(reference));
+  const trigramOverlap = a.size && b.size ? [...a].filter((gram) => b.has(gram)).length / Math.min(a.size, b.size) : 0;
+  const level =
+    tokenOverlap >= thresholds.answerReuseTokenOverlap || trigramOverlap >= thresholds.answerReuseTrigramOverlap ? "copy" : tokenOverlap >= thresholds.answerReuseTokenWarn ? "warn" : "none";
+  return { tokenOverlap: Math.round(tokenOverlap * 100) / 100, trigramOverlap: Math.round(trigramOverlap * 100) / 100, level };
+}
+
+export const integrityProblems = (text: string): string[] =>
   [
     /[\u0000-\u001f]/.test(text) ? "control_character" : null,
     /(^|\s)[A-E]\)/.test(text) ? "option_label" : null,
@@ -76,7 +115,13 @@ const integrityProblems = (text: string): string[] =>
   ].filter((value): value is string => value !== null);
 
 /** Deterministic checks; any critical issue rejects the candidate before the judge sees it. */
-export function validateCandidate(input: { spec: QuestionSpec; candidate: GeneratedQuestionCandidate; originality?: OriginalityIndex; siblings?: Sibling[] }): CandidateValidation {
+export function validateCandidate(input: {
+  spec: QuestionSpec;
+  candidate: GeneratedQuestionCandidate;
+  originality?: OriginalityIndex;
+  siblings?: Sibling[];
+  thresholds?: FactoryThresholds;
+}): CandidateValidation {
   const { spec, candidate } = input;
   const { stem, options } = candidate.question;
   const issues: ValidationIssue[] = [];
@@ -156,16 +201,14 @@ export function validateCandidate(input: { spec: QuestionSpec; candidate: Genera
       if (hasPhrase(options[slot.option], marker)) add("forbidden_marker_in_distractor", "critical", { option: slot.option, detail: marker });
     }
   }
-  const body = (label: OptionLabel) => {
-    const connector = connectors[label];
-    const text = options[label].trim();
-    return connector ? text.slice(connectorSurface(connector).length) : text;
-  };
-  const answerBody = contentWords(body(correct));
   for (const label of distractorLabels) {
-    const own = contentWords(body(label));
-    const shared = [...own].filter((word) => answerBody.has(word)).length;
-    if (own.size && answerBody.size && shared / Math.min(own.size, answerBody.size) >= 0.8) add("connector_swap", "critical", { option: label });
+    const reuse = clauseReuse(options[correct], options[label], input.thresholds);
+    if (reuse.level === "copy") add("connector_swap", "critical", { option: label, detail: `${reuse.tokenOverlap}/${reuse.trigramOverlap}` });
+  }
+  for (const [i, a] of distractorLabels.entries()) {
+    for (const b of distractorLabels.slice(i + 1)) {
+      if (clauseReuse(options[a], options[b], input.thresholds).level === "copy") add("distractor_clause_reuse", "critical", { option: b, detail: a });
+    }
   }
   const used = Object.values(connectors).filter((value): value is NodeRef => !!value);
   if (new Set(used).size !== used.length) add("connector_repeated", "warn");

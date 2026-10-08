@@ -2,6 +2,7 @@ import { z } from "zod";
 import { optionLabels } from "@/modules/analysis/contract";
 import type { CandidateValidation } from "./validator";
 import type { QuestionSpec } from "./spec";
+import { defaultFactoryThresholds, type FactoryThresholds } from "./thresholds";
 import { factoryVersions } from "./versions";
 
 export const verdicts = ["APPROVE", "REVIEW", "REJECT"] as const;
@@ -49,10 +50,14 @@ export const optionAcceptability = z.object({
 });
 export type OptionAcceptability = z.infer<typeof optionAcceptability>;
 
-/** Below this confidence an "acceptable" wrong option is a concern for the reviewer rather than an automatic reject. */
-export const acceptableDistractorConfidence = 0.5;
-
-export type JudgeInput = { blindAnswer: (typeof optionLabels)[number]; blindConfidence: number; acceptability: OptionAcceptability; report: JudgeReport };
+export type JudgeInput = {
+  blindAnswer: (typeof optionLabels)[number];
+  blindConfidence: number;
+  acceptability: OptionAcceptability;
+  report: JudgeReport;
+  /** Options whose own distractor judge was unsure; the item cannot be approved without a human. */
+  distractorReviews?: (typeof optionLabels)[number][];
+};
 
 export type JudgeDecision = {
   version: typeof factoryVersions.judge;
@@ -78,8 +83,9 @@ const rank: Record<Verdict, number> = { APPROVE: 0, REVIEW: 1, REJECT: 2 };
 const worst = (...list: Verdict[]) => list.reduce((a, b) => (rank[b] > rank[a] ? b : a));
 
 /** Combines the judge's own verdict with fixed rules. The rules can only make the verdict stricter, never looser. */
-export function judgeDecision(input: { spec: QuestionSpec; validation: CandidateValidation; judge: JudgeInput }): JudgeDecision {
+export function judgeDecision(input: { spec: QuestionSpec; validation: CandidateValidation; judge: JudgeInput; thresholds?: FactoryThresholds }): JudgeDecision {
   const { spec, validation, judge } = input;
+  const acceptableDistractorConfidence = (input.thresholds ?? defaultFactoryThresholds).distractorAcceptability;
   const { scores } = judge.report;
   const failures: string[] = [];
   const concerns: string[] = [];
@@ -111,6 +117,7 @@ export function judgeDecision(input: { spec: QuestionSpec; validation: Candidate
   for (const key of ["ambiguityRisk", "clueRisk", "originalityRisk"] as const) if (scores[key] > high[key]) concerns.push(`${key}_gray`);
   if (judge.report.estimatedDifficulty !== spec.difficulty.band) concerns.push(`difficulty_${judge.report.estimatedDifficulty}`);
   if (validation.warnings > 0) concerns.push("validator_warnings");
+  for (const option of judge.distractorReviews ?? []) concerns.push(`distractor_review_${option}`);
 
   const ruled: Verdict = failures.length ? "REJECT" : concerns.length ? "REVIEW" : "APPROVE";
   const qualityScore =

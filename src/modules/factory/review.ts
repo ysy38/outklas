@@ -1,4 +1,5 @@
 import type { GeneratedQuestionCandidate } from "./candidate";
+import { advance, type GenerationTrace } from "./generation";
 import type { JudgeDecision } from "./judge";
 import type { Provenance } from "./provenance";
 import type { QuestionSpec } from "./spec";
@@ -38,6 +39,8 @@ export type CandidateRecord = {
   provenance: Provenance;
   reviews: ReviewEntry[];
   status: CandidateStatus;
+  /** How the atomic pipeline built the item; absent on records from the single-call generator. */
+  generation?: GenerationTrace;
 };
 
 export function initialStatus(validation: CandidateValidation, judge: JudgeDecision | null): CandidateStatus {
@@ -72,5 +75,6 @@ export function applyReview(
   const entry: ReviewEntry = { reviewVersion: factoryVersions.review, decision: review.decision, reviewer: review.reviewer, appliesToVersion: versions[versions.length - 1].version, notes: review.notes ?? "", at: review.at };
   const status: CandidateStatus =
     review.decision === "REJECT" ? "rejected" : review.decision === "APPROVE" ? "approved" : review.edit!.validation.status === "pass" ? "pending_review" : "needs_revalidation";
-  return { ...record, versions, reviews: [...record.reviews, entry], status };
+  const generation = record.generation?.state === "HUMAN_REVIEW" && advance(record.generation, review.decision === "APPROVE" ? "APPROVED" : review.decision === "REJECT" ? "REJECTED" : "HUMAN_REVIEW", review.at, `human:${review.reviewer}`);
+  return { ...record, versions, reviews: [...record.reviews, entry], status, ...(generation ? { generation } : {}) };
 }

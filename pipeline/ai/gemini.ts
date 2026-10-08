@@ -9,6 +9,8 @@ export type GeminiOptions = {
   baseUrl?: string;
   timeoutMs?: number;
   maxRetries?: number;
+  /** A longer retry hint means the daily quota is gone; waiting it out would stall a run for hours. */
+  maxWaitMs?: number;
   sleep?: (ms: number) => Promise<void>;
   onRetry?: (event: { model: string; status: number; attempt: number; delayMs: number; message: string }) => void;
 };
@@ -66,6 +68,7 @@ export class GeminiProvider implements AIProvider {
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
+  private readonly maxWaitMs: number;
   private readonly sleep: (ms: number) => Promise<void>;
 
   constructor(private readonly options: GeminiOptions) {
@@ -75,6 +78,7 @@ export class GeminiProvider implements AIProvider {
     this.baseUrl = options.baseUrl ?? "https://generativelanguage.googleapis.com/v1beta";
     this.timeoutMs = options.timeoutMs ?? 180_000;
     this.maxRetries = options.maxRetries ?? 6;
+    this.maxWaitMs = options.maxWaitMs ?? 300_000;
     this.sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   }
 
@@ -111,6 +115,7 @@ export class GeminiProvider implements AIProvider {
       }
       const delayMs = retryDelayMs(parsed, attempt);
       this.options.onRetry?.({ model: request.model, status, attempt, delayMs, message: message.slice(0, 120) });
+      if (delayMs > this.maxWaitMs) throw new AIRequestError(`Gemini ${request.model} ${status}: asks to wait ${Math.round(delayMs / 60_000)} min (quota exhausted): ${message}`, status, false);
       await this.sleep(delayMs);
     }
   }

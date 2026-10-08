@@ -5,15 +5,22 @@ import { dataRoot } from "../lib/artifacts";
 import { analysisDraft, blindSolution, coerceAnalysisJson, transcription } from "@/modules/analysis/contract";
 import type { ReconstructedQuestion } from "@/modules/analysis/surface";
 import { generatedQuestionCandidate, type GeneratedQuestionCandidate } from "@/modules/factory/candidate";
+import { distractorJudgeReport, generatedDistractor } from "@/modules/factory/distractor";
+import { itemExplanation } from "@/modules/factory/explanation";
 import { judgeReport, optionAcceptability } from "@/modules/factory/judge";
+import { questionSkeleton } from "@/modules/factory/skeleton";
 import { cachedGenerate } from "./cache";
 import { loadAIConfig, type AIConfig } from "./config";
 import { GeminiProvider } from "./gemini";
 import { acceptabilityPromptVersion, acceptabilityResponseSchema, acceptabilitySystem, acceptabilityUser } from "./prompts/acceptability.v1";
 import { analyzerPromptVersion, analyzerResponseSchema, analyzerSystem, analyzerUser } from "./prompts/analyzer.v2";
+import { distractorJudgePromptVersion, distractorJudgeResponseSchema, distractorJudgeSystem, distractorJudgeUser } from "./prompts/distractor-judge.v1";
+import { distractorPromptVersion, distractorResponseSchema, distractorSystem, distractorUser } from "./prompts/distractor.v1";
+import { explanationPromptVersion, explanationResponseSchema, explanationSystem, explanationUser } from "./prompts/explanation.v1";
 import { responseSchema } from "./prompts/schema";
 import { generatorPromptVersion, generatorResponseSchema, generatorSystem, generatorUser } from "./prompts/generator.v3";
-import { judgePromptVersion, judgeResponseSchema, judgeSystem, judgeUser } from "./prompts/judge.v1";
+import { judgePromptVersion, judgeResponseSchema, judgeSystem, judgeUser } from "./prompts/judge.v2";
+import { skeletonPromptVersion, skeletonResponseSchema, skeletonSystem, skeletonUser } from "./prompts/skeleton.v1";
 import { solvePromptVersion, solveSystem, solveUser, transcribePromptVersion, transcribeSystem, transcribeUser } from "./prompts/verifier.v1";
 import type { AIProvider, AIResult, AIRole, AIService, ModelRequest, Usage } from "./types";
 
@@ -85,9 +92,14 @@ function logRetry(event: object) {
 }
 
 export class JudgeNotIndependent extends Error {
-  constructor(model: string) {
-    super(`GENERATOR_MODEL and JUDGE_MODEL are both ${model}; the judge must be a different model.`);
+  constructor(model: string, writer = "GENERATOR_MODEL", judge = "JUDGE_MODEL") {
+    super(`${writer} and ${judge} are both ${model}; the judge must be a different model.`);
   }
+}
+
+function assertFinalJudgeIndependent(config: AIConfig) {
+  if (config.models.generator === config.models.judge) throw new JudgeNotIndependent(config.models.judge);
+  if (config.models.distractor === config.models.judge) throw new JudgeNotIndependent(config.models.judge, "DISTRACTOR_MODEL", "FINAL_JUDGE_MODEL");
 }
 
 /** The judge's blind solve reads the candidate the way a learner would: stem and options, no key. */
@@ -152,8 +164,8 @@ export function createAIService(config: AIConfig = loadAIConfig(), provider: AIP
         }),
     },
     judge: {
-      evaluate: async (candidate, spec, validation) => {
-        if (config.models.generator === config.models.judge) throw new JudgeNotIndependent(config.models.judge);
+      evaluate: async (candidate, spec, validation, distractorChecks) => {
+        assertFinalJudgeIndependent(config);
         const blind = await structuredCall(provider, solvePromptVersion, blindSolution, {
           model: config.models.judge,
           system: solveSystem,
@@ -172,13 +184,53 @@ export function createAIService(config: AIConfig = loadAIConfig(), provider: AIP
         const report = await structuredCall(provider, judgePromptVersion, judgeReport, {
           model: config.models.judge,
           system: judgeSystem,
-          parts: [{ text: judgeUser({ spec, candidate, validation }) }],
+          parts: [{ text: judgeUser({ spec, candidate, validation, distractorChecks }) }],
           jsonSchema: judgeResponseSchema(),
           temperature: 0,
           maxOutputTokens: 4096,
         });
         return { blind, acceptability, report };
       },
+    },
+    factory: {
+      skeleton: (spec, feedback) =>
+        structuredCall(provider, skeletonPromptVersion, questionSkeleton, {
+          model: config.models.generator,
+          system: skeletonSystem(spec),
+          parts: [{ text: skeletonUser(spec, feedback) }],
+          jsonSchema: skeletonResponseSchema(),
+          temperature: 0.8,
+          maxOutputTokens: 2048,
+        }),
+      distractor: (input) =>
+        structuredCall(provider, distractorPromptVersion, generatedDistractor, {
+          model: config.models.distractor,
+          system: distractorSystem,
+          parts: [{ text: distractorUser(input) }],
+          jsonSchema: distractorResponseSchema(),
+          temperature: 0.8,
+          maxOutputTokens: 1024,
+        }),
+      judgeDistractor: async (input) => {
+        if (config.models.distractor === config.models.distractorJudge) throw new JudgeNotIndependent(config.models.distractor, "DISTRACTOR_MODEL", "DISTRACTOR_JUDGE_MODEL");
+        return structuredCall(provider, distractorJudgePromptVersion, distractorJudgeReport, {
+          model: config.models.distractorJudge,
+          system: distractorJudgeSystem,
+          parts: [{ text: distractorJudgeUser(input) }],
+          jsonSchema: distractorJudgeResponseSchema(),
+          temperature: 0,
+          maxOutputTokens: 2048,
+        });
+      },
+      explain: (input) =>
+        structuredCall(provider, explanationPromptVersion, itemExplanation, {
+          model: config.models.explanation,
+          system: explanationSystem,
+          parts: [{ text: explanationUser(input) }],
+          jsonSchema: explanationResponseSchema(),
+          temperature: 0.4,
+          maxOutputTokens: 4096,
+        }),
     },
     explainer: { explain: notImplemented("explainer") },
     tutor: { respond: notImplemented("tutor") },

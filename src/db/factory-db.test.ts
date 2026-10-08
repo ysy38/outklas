@@ -10,14 +10,16 @@ import { migratePglite } from "./migrations";
 let client: PGlite;
 const rows = async <T>(query: string, params: unknown[] = []) => (await client.query<T>(query, params)).rows;
 
-const run = (generator: string, judge: string) =>
+const run = (generator: string, judge: string, distractor = generator, distractorJudge = judge) =>
   rows<{ id: string }>(
-    `insert into factory.runs (exam, family, band, requested, provider, generator_model, judge_model, generator_prompt_version, judge_prompt_version,
-       blind_solve_prompt_version, acceptability_prompt_version, question_spec_version, knowledge_version, dna_version, exam_profile_version, validator_version, judge_version,
-       originality_version, started_at)
-     values ('yds', 'sentence_completion.concession', 'medium', 12, 'gemini', $1, $2, 'generator.v3', 'judge.v1', 'verifier-solve.v1', 'acceptability.v1', 'question-spec.v2',
-       '1.0', '1', 'yds-profile.v1', 'validator.v3', 'judge-contract.v2', 'shingle5.v1', now()) returning id`,
-    [generator, judge],
+    `insert into factory.runs (exam, family, band, requested, pipeline_version, provider, generator_model, distractor_model, distractor_judge_model, judge_model, explanation_model,
+       generator_prompt_version, distractor_prompt_version, distractor_judge_prompt_version, judge_prompt_version, blind_solve_prompt_version, acceptability_prompt_version,
+       explanation_prompt_version, question_spec_version, distractor_spec_version, knowledge_version, dna_version, exam_profile_version, validator_version, judge_version,
+       distractor_judge_version, originality_version, started_at)
+     values ('yds', 'sentence_completion.concession', 'medium', 12, 'atomic.v1', 'gemini', $1, $3, $4, $2, $1, 'skeleton.v1', 'distractor.v1', 'distractor-judge.v1', 'judge.v2',
+       'verifier-solve.v1', 'acceptability.v1', 'explanation.v1', 'question-spec.v2', 'distractor-spec.v1', '1.0', '1', 'yds-profile.v1', 'validator.v4', 'judge-contract.v3',
+       'distractor-judge.v1', 'shingle5.v1', now()) returning id`,
+    [generator, judge, distractor, distractorJudge],
   );
 
 beforeAll(async () => {
@@ -43,7 +45,9 @@ describe("factory schema", () => {
   });
 
   it("refuses a run whose judge is the generator model", async () => {
-    await expect(run("same", "same")).rejects.toThrow(/independent_judge/);
+    await expect(run("same", "same", "gen", "dj")).rejects.toThrow(/independent_judge/);
+    await expect(run("gen", "same", "same", "dj")).rejects.toThrow(/independent_judge/);
+    await expect(run("gen", "judge", "same", "same")).rejects.toThrow(/independent_distractor_judge/);
   });
 
   it("keeps versions and reviews append-only and version 1 for the generator", async () => {
