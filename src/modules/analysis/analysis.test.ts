@@ -4,8 +4,13 @@ import { analysisDraft, coerceAnalysisJson, type AnalysisDraft } from "./contrac
 import { deriveFamilies, forOverallDistribution, mineDna, toDnaQuestion } from "./dna";
 import { licenseProblems, sourceDocuments, usableForGrounding } from "./sources";
 import { expectedQuestionType, looksTurkish, normalizeForHash, surfaceFeatures, type ReconstructedQuestion } from "./surface";
-import { classifySource, usableForDistribution } from "./acceptance";
-import { analysisScaleThresholds } from "./thresholds";
+import { classifySource, evidenceScope, usableForDistribution } from "./acceptance";
+import { coverageDecision } from "./coverage";
+import { ydsDnaV1 } from "./corpus";
+import { extractionFreezeMetrics } from "./freeze";
+import { proposalSummary, reviewProposals } from "./proposals";
+import { getQuestionSpec } from "./spec-engine";
+import { analysisScaleThresholds, extractionFreezeThresholds } from "./thresholds";
 import { quotedRun, validateAnalysis } from "./validate";
 
 const question: ReconstructedQuestion = {
@@ -202,6 +207,9 @@ describe("source classes", () => {
     expect(classifySource({ topic: true, questionsFound: 22, expected: 22, trustworthy: true })).toBe("topic_slice");
     expect(usableForDistribution("partial_exam")).toBe(true);
     expect(usableForDistribution("topic_slice")).toBe(false);
+    expect(evidenceScope("topic_slice")).toBe("pattern_only");
+    expect(evidenceScope("complete_exam")).toBe("exam_distribution");
+    expect(evidenceScope("partial_exam")).toBe("exam_distribution");
   });
 });
 
@@ -212,5 +220,82 @@ describe("sources", () => {
       expect(usableForGrounding(document.license)).toBe(false);
     }
     expect(licenseProblems({ ...sourceDocuments[0].license, commercialUse: true })).toHaveLength(1);
+  });
+});
+
+describe("coverage and freeze", () => {
+  it("archives a thin native extract when every ACCEPT type is already saturated", () => {
+    const report = coverageDecision({
+      candidate: [
+        { questionType: "question_type:grammar", extractionStatus: "ok" },
+        { questionType: "question_type:sentence_completion", extractionStatus: "ok" },
+        { questionType: "question_type:grammar", extractionStatus: "needs_review" },
+      ],
+      corpus: [
+        { key: "question_type:grammar", count: 37 },
+        { key: "question_type:sentence_completion", count: 34 },
+      ],
+    });
+    expect(report.decision).toBe("archive");
+    expect(report.novelTypes).toEqual([]);
+  });
+
+  it("OCRs only when an ACCEPT type is still unsaturated", () => {
+    const report = coverageDecision({
+      candidate: [{ questionType: "question_type:dialogue_completion", extractionStatus: "ok" }],
+      corpus: [{ key: "question_type:dialogue_completion", count: 6 }],
+    });
+    expect(report.decision).toBe("ocr");
+    expect(report.novelTypes).toEqual(["question_type:dialogue_completion"]);
+  });
+
+  it("freezes extraction when segmentation, options and reconstruction clear the bar", () => {
+    expect(extractionFreezeThresholds).toEqual({ segmentation: 0.95, optionCompleteness: 0.95, reconstruction: 0.9 });
+    const ok = { status: "ok" as const, flags: [] as string[] };
+    const review = { status: "needs_review" as const, flags: ["junk_token"] };
+    const failed = { status: "failed" as const, flags: ["empty_option_E"] };
+    expect(extractionFreezeMetrics({ expected: 80, missing: [], questions: [...Array.from({ length: 76 }, () => ok), ...Array.from({ length: 4 }, () => review)] }).freeze).toBe(true);
+    expect(extractionFreezeMetrics({ expected: 80, missing: Array.from({ length: 5 }, (_, i) => i + 1), questions: Array.from({ length: 75 }, () => ok) }).freeze).toBe(false);
+    expect(extractionFreezeMetrics({ expected: 80, missing: [], questions: [...Array.from({ length: 70 }, () => ok), ...Array.from({ length: 10 }, () => failed)] }).freeze).toBe(false);
+  });
+});
+
+describe("proposal review", () => {
+  it("merges existing slugs, rejects hapax vocabulary, and never auto-inserts canonical nodes", () => {
+    const reviews = reviewProposals([
+      { type: "misconception", slug: "concession_vs_contrast", questions: 12 },
+      { type: "vocabulary", slug: "the", questions: 4 },
+      { type: "vocabulary", slug: "aphasia", questions: 1 },
+      { type: "topic", slug: "made_up_topic", questions: 5 },
+      { type: "grammar", slug: "rare_clause", questions: 1 },
+    ]);
+    expect(reviews.find((row) => row.slug === "concession_vs_contrast")).toMatchObject({ decision: "merge", mergeInto: "misconception:concession_vs_contrast" });
+    expect(reviews.find((row) => row.slug === "the")?.decision).toBe("reject");
+    expect(reviews.find((row) => row.slug === "aphasia")?.decision).toBe("reject");
+    expect(reviews.find((row) => row.slug === "made_up_topic")?.decision).toBe("recommend_accept");
+    expect(reviews.find((row) => row.slug === "rare_clause")?.decision).toBe("pending");
+    expect(proposalSummary(reviews)).toMatchObject({ canonicalInserts: 0, merge: 1, reject: 2, recommend_accept: 1, pending: 1 });
+  });
+});
+
+describe("QuestionSpec engine", () => {
+  it("fills a spec from DNA gaps without calling a model", () => {
+    const row = (number: number, type: "question_type:sentence_completion" | "question_type:cloze", concept: "discourse_relation:concession" | "discourse_relation:contrast", overall: number) =>
+      toDnaQuestion({
+        document: "yds-2018",
+        question: { ...question, number },
+        analysis: { ...draft(), question_type: type, knowledge: { ...draft().knowledge, primary_concepts: [concept] }, difficulty: { ...draft().difficulty, overall } },
+        answer: "A",
+        textSha256: "0".repeat(64),
+        proposals: [],
+      });
+    const rows = [row(1, "question_type:sentence_completion", "discourse_relation:concession", 0.3), row(2, "question_type:cloze", "discourse_relation:concession", 0.8), row(3, "question_type:cloze", "discourse_relation:contrast", 0.5)];
+    const dna = ydsDnaV1({ questions: rows }).dna;
+    const spec = getQuestionSpec({ dna, productionTypeCounts: [{ key: "question_type:cloze", count: 10 }] });
+    expect(spec.questionType).toBe("question_type:sentence_completion");
+    expect(spec.primaryConcepts).toEqual(["discourse_relation:concession"]);
+    expect(spec.targetMisconception).toBe("misconception:concession_vs_contrast");
+    expect(spec.constraints.originalContent).toBe(true);
+    expect(spec.dnaBasis.documentIds).toEqual(["yds-2018"]);
   });
 });

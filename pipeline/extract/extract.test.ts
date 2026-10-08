@@ -8,7 +8,7 @@ import { markDialogueBlanks, reconstruct, recoverNumberedSentences, splitInlineO
 import { detectColumns, joinGlyphs, layoutPage, type TextGlyph } from "./text-layer";
 import { detectExams, parseExamHeader, parseTopicHeader } from "./inventory";
 import { knownYds2013_2021Booklets } from "./known-booklets";
-import { leadingQuestionNumber, questionNumber, segment } from "./segment";
+import { leadingQuestionNumber, questionNumber, segment, soruNoNumbers } from "./segment";
 import type { PageTextLayout, TextLayerExtract } from "./text-layer";
 import type { OcrColumn, StreamLine } from "./types";
 
@@ -121,6 +121,18 @@ describe("segment", () => {
     const result = segment([line("1. One."), line("A) a"), line("3. Three.")], 3);
     expect(result.blocks.map((block) => block.number)).toEqual([1, 3]);
     expect(result.missing).toEqual([2]);
+  });
+
+  it("opens blocks from Soru No labels, including two labels on one line, without inventing gaps", () => {
+    expect(soruNoNumbers("Soru No: 22 Soru No: 23")).toEqual([22, 23]);
+    expect(soruNoNumbers("soruNo:10")).toEqual([10]);
+    const result = segment(
+      [line("Soru No: 5"), line("stem five"), line("A) a"), line("1g SoruNo:19 soru No: 20"), line("stem nineteen"), line("Soru No: 21")],
+      21,
+    );
+    expect(result.blocks.map((block) => block.number)).toEqual([5, 19, 20, 21]);
+    expect(result.missing).toEqual([1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]);
+    expect(result.blocks.find((block) => block.number === 5)?.lines.map((entry) => entry.text)).toEqual(["stem five", "A) a"]);
   });
 
   it("keeps out-of-order unused numbers from two-column pages and ignores already-used false positives", () => {

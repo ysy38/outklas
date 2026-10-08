@@ -11,4 +11,14 @@ export const analysisScaleThresholds = {
   connectorRelationMismatch: 0,
 } as const;
 
+/** Last extraction benchmark (Mart 2024 OCR). Meet all three to freeze the extractor. */
+export const extractionFreezeThresholds = {
+  segmentation: 0.95,
+  optionCompleteness: 0.95,
+  reconstruction: 0.9,
+} as const;
+
+/** A question type is saturated in the DNA corpus above this many ACCEPT rows. */
+export const typeSaturationCount = 8;
+
 export type ScaleThresholds = typeof analysisScaleThresholds;

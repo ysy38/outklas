@@ -27,6 +27,13 @@ export function questionNumber(text: string): number | null {
 const instructionRange = /^\d{1,2}\s*[.)]?\s*[-–—]\s*\d{1,2}\s*[.)]/;
 const keyPair = /^\d{1,2}\s*[.)]\s*[A-E]\b/;
 
+/** Third-party retypesets print "Soru No: 17" instead of a bare "17."; a line may carry two column labels. */
+export function soruNoNumbers(text: string): number[] {
+  return [...text.matchAll(/soru\s*no\s*[:.]?\s*(\d{1,2})/gi)]
+    .map((match) => Number(match[1]))
+    .filter((number) => Number.isInteger(number) && number > 0);
+}
+
 /** Option lines such as "B) although" must never be read as question 8 (OCR digit map B→8). */
 export function leadingQuestionNumber(text: string): number | null {
   const trimmed = text.trim();
@@ -52,6 +59,17 @@ export function segment(stream: StreamLine[], questionCount: number): Segmentati
   const used = new Set<number>();
   let expected = 1;
   for (const line of stream) {
+    const markers = soruNoNumbers(line.text).filter((number) => number <= questionCount && !used.has(number));
+    if (markers.length) {
+      for (const number of markers) {
+        if (number !== expected) warnings.push(`question ${number} opened before ${expected}`);
+        blocks.push({ number, lines: [], pages: [line.page] });
+        used.add(number);
+        expected = number + 1;
+        while (used.has(expected) && expected <= questionCount) expected += 1;
+      }
+      continue;
+    }
     const leading = splitLeadingNumber(line);
     let number = leading?.number ?? questionNumber(line.text);
     const body = leading?.rest ?? null;

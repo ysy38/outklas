@@ -1,3 +1,4 @@
+import { extractionFreezeMetrics } from "@/modules/analysis/freeze";
 import { blueprintForDocument } from "../extract/topic-blueprint";
 import { readJson, readManifest, runStage } from "../lib/artifacts";
 import { checkQuestion, type QuestionCheck } from "../extract/checks";
@@ -20,8 +21,10 @@ function exam(context: StageContext) {
 
 function readings(context: StageContext): Reading[] {
   const slug = context.document.slug;
+  if (readManifest(slug, "ocr-verify")) return ["verified", "ocr"];
+  if (readManifest(slug, "ocr")) return ["ocr"];
   if (readManifest(slug, "cleanup")?.files["stream-text.json"] || readManifest(slug, "text-extract")) return ["text"];
-  return readManifest(slug, "ocr-verify") ? ["verified", "ocr"] : ["ocr"];
+  return ["ocr"];
 }
 
 /** OCR cleanup: both readings become normalised line streams; the raw OCR and Gemini artifacts stay untouched. */
@@ -159,6 +162,7 @@ export async function validateStage(context: StageContext) {
     };
     const flagCounts: Record<string, number> = {};
     for (const question of questions) for (const flag of question.flags) flagCounts[flag.replace(/:.*/, "")] = (flagCounts[flag.replace(/:.*/, "")] ?? 0) + 1;
-    return { files: { "report.json": json(report) }, stats: { ...report.summary, keyDisagreements: disagreements, flagCounts } };
+    const freeze = extractionFreezeMetrics({ expected: layout.questionCount, missing: segmentation.missing, questions });
+    return { files: { "report.json": json(report) }, stats: { ...report.summary, keyDisagreements: disagreements, flagCounts, freeze } };
   });
 }

@@ -1,10 +1,7 @@
 import type { NodeRef } from "@/modules/knowledge/graph";
 import type { DifficultyDimension } from "./contract";
 
-/**
- * Phase 3 draft. A generator request is always built from this, never from "give me a YDS question".
- * Nothing in Phase 2 constructs or consumes it.
- */
+/** A generator request is always built from this, never from "give me a YDS question". */
 export type QuestionSpec = {
   questionType: NodeRef;
   primaryConcepts: NodeRef[];

@@ -15,9 +15,17 @@ export type HumanReviewStatus = (typeof humanReviewStatuses)[number];
 export const topicSliceKeys = ["vocab", "tense", "conj", "prep", "sent", "trans", "dlg"] as const;
 export type TopicSliceKey = (typeof topicSliceKeys)[number];
 
+export const evidenceScopes = ["exam_distribution", "pattern_only"] as const;
+export type EvidenceScope = (typeof evidenceScopes)[number];
+
 /** Topic compilations may support pattern evidence; they must never feed YDS overall-distribution stats. */
 export function usableForDistribution(sourceClass: SourceClass): boolean {
   return sourceClass === "complete_exam" || sourceClass === "partial_exam";
+}
+
+/** e-YDS topic slices are pattern evidence. They must not be quoted as YDS exam share. */
+export function evidenceScope(sourceClass: SourceClass): EvidenceScope {
+  return sourceClass === "topic_slice" ? "pattern_only" : "exam_distribution";
 }
 
 export function classifySource(input: { topic?: boolean; questionsFound: number; expected: number; trustworthy: boolean }): SourceClass {
