@@ -161,10 +161,10 @@ describe("analyzer response schema", () => {
 });
 
 describe("AIService roles", () => {
-  it("exposes separate roles and only implements the analyzer and verifier", async () => {
+  it("exposes separate roles; explainer and tutor are not implemented yet", async () => {
     const service = createAIService(loadAIConfig({}), fakeProvider(["{}"]));
-    await expect(service.generator.generate({} as never)).rejects.toBeInstanceOf(NotImplementedRole);
-    await expect(service.judge.evaluate({}, {} as never)).rejects.toBeInstanceOf(NotImplementedRole);
+    expect(typeof service.generator.generate).toBe("function");
+    expect(typeof service.judge.evaluate).toBe("function");
     await expect(service.explainer.explain("q", "A")).rejects.toBeInstanceOf(NotImplementedRole);
     await expect(service.tutor.respond("s", "hi")).rejects.toBeInstanceOf(NotImplementedRole);
     expect(typeof service.analyzer.analyze).toBe("function");

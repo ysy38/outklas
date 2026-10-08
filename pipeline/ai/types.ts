@@ -1,6 +1,9 @@
 import type { AnalysisDraft, BlindSolution, TranscriptionDraft } from "@/modules/analysis/contract";
-import type { QuestionSpec } from "@/modules/analysis/spec";
 import type { ReconstructedQuestion } from "@/modules/analysis/surface";
+import type { GeneratedQuestionCandidate } from "@/modules/factory/candidate";
+import type { JudgeReport } from "@/modules/factory/judge";
+import type { QuestionSpec } from "@/modules/factory/spec";
+import type { CandidateValidation } from "@/modules/factory/validator";
 
 export const aiRoles = ["analyzer", "verifier", "generator", "judge", "explainer", "tutor"] as const;
 export type AIRole = (typeof aiRoles)[number];
@@ -52,14 +55,16 @@ export interface Verifier {
   solve(question: ReconstructedQuestion): Promise<AIResult<BlindSolution>>;
 }
 
-/** Phase 3. Builds a candidate from a QuestionSpec only. */
+/** Builds a draft candidate from a QuestionSpec only; it never sees historical item text. */
 export interface Generator {
-  generate(spec: QuestionSpec): Promise<AIResult<never>>;
+  generate(spec: QuestionSpec): Promise<AIResult<GeneratedQuestionCandidate>>;
 }
 
-/** Phase 3. Separate prompt and model from Generator: its job is to prove the candidate is bad. */
+export type JudgeEvaluation = { blind: AIResult<BlindSolution>; report: AIResult<JudgeReport> };
+
+/** Separate prompt and model from Generator: its job is to prove the candidate is bad. It solves blind first. */
 export interface Judge {
-  evaluate(candidate: unknown, spec: QuestionSpec): Promise<AIResult<never>>;
+  evaluate(candidate: GeneratedQuestionCandidate, spec: QuestionSpec, validation: CandidateValidation): Promise<JudgeEvaluation>;
 }
 export type Evaluator = Judge;
 

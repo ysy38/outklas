@@ -51,6 +51,14 @@ describe("architecture", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("question factory logic stays out of UI and routes, and never touches a database", () => {
+    const ui = [...files("src/app"), ...files("src/components")].filter((file) => imports(file).some((target) => target.startsWith("@/modules/factory")));
+    expect(ui).toEqual([]);
+    const domain = files("src/modules/factory").filter((file) => imports(file).some((target) => /^@\/(db|server|app|components)\b/.test(target) || target.includes("pipeline")));
+    expect(domain).toEqual([]);
+    expect(imports("pipeline/stages/factory.ts").some((target) => target.includes("lib/db") || target.startsWith("@/db"))).toBe(false);
+  });
+
   it("no NEXT_PUBLIC variable carries AI settings", () => {
     const env = readFileSync(path.join(root, ".env.example"), "utf8");
     expect(env).not.toMatch(/NEXT_PUBLIC_[A-Z_]*(GEMINI|AI|MODEL)/);

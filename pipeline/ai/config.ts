@@ -49,7 +49,7 @@ export function loadAIConfig(env: Record<string, string | undefined> = process.e
     (Object.keys(modelDefaults) as ModelRole[]).map((role) => [role, env[modelEnv[role]]?.trim() || modelDefaults[role]]),
   ) as Record<ModelRole, string>;
   const warnings: string[] = [];
-  if (models.generator === models.judge) warnings.push("GENERATOR_MODEL and JUDGE_MODEL are the same model; Phase 3 will refuse this.");
+  if (models.generator === models.judge) warnings.push("GENERATOR_MODEL and JUDGE_MODEL are the same model; the judge refuses to run.");
   const maxRetries = Number.parseInt(env.AI_MAX_RETRIES ?? "", 10);
   return { provider, apiKey: env.GEMINI_API_KEY?.trim() || null, models, maxRetries: Number.isFinite(maxRetries) && maxRetries >= 0 ? maxRetries : 6, warnings };
 }

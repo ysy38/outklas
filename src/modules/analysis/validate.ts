@@ -36,7 +36,7 @@ export const isKnownRef = (value: NodeRef) => knownNodes.has(value);
 
 const tokens = (text: string) => words(text).map((word) => word.toLocaleLowerCase("en"));
 
-function shingles(text: string, size: number): Set<string> {
+export function shingles(text: string, size: number): Set<string> {
   const list = tokens(text);
   const result = new Set<string>();
   for (let i = 0; i + size <= list.length; i += 1) result.add(list.slice(i, i + size).join(" "));

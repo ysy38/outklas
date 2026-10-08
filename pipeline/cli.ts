@@ -8,6 +8,7 @@ import { corpus } from "./stages/corpus";
 import { dna } from "./stages/dna";
 import { dnaSkeleton } from "./stages/dna-skeleton";
 import { examSlice } from "./stages/exam-slice";
+import { factoryProfile, factoryReview, factorySlice } from "./stages/factory";
 import { cleanup, reconstructStage, segmentStage, validateStage } from "./stages/extraction";
 import { importStage } from "./stages/import";
 import { metrics } from "./stages/metrics";
@@ -67,12 +68,28 @@ async function main() {
     console.log(JSON.stringify(result, null, 2));
     return;
   }
+  if (name === "profile") {
+    const { profile, file } = factoryProfile();
+    console.log(JSON.stringify({ file, version: profile.version, questions: profile.questions, families: profile.families.length, unsupported: profile.unsupported.length }, null, 2));
+    return;
+  }
+  if (name === "factory") {
+    const band = option("band", "") || undefined;
+    const result = await factorySlice({ family: option("family", ""), count: Number.parseInt(option("count", "0"), 10), band: band as "easy" | "medium" | "hard" | undefined, log: (message) => console.log(`  ${message}`) });
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+  if (name === "factory-review") {
+    const edit = option("edit", "");
+    console.log(JSON.stringify(factoryReview({ runDir: option("run", ""), candidateId: option("candidate", ""), decision: option("decision", ""), reviewer: option("reviewer", ""), notes: option("notes", ""), editFile: edit || undefined }), null, 2));
+    return;
+  }
   const document = documentBySlug(option("doc", "yds-2024-11"));
   const context: StageContext = { document, force: process.argv.includes("--force"), log: (message) => console.log(`  ${message}`) };
   const order = aliases[name] ?? [name];
   for (const stageName of order) {
     const stage = stages[stageName];
-    if (!stage) throw new Error(`Unknown stage "${stageName}". Stages: ${[...Object.keys(stages), ...Object.keys(aliases), "smoke", "corpus"].join(", ")}`);
+    if (!stage) throw new Error(`Unknown stage "${stageName}". Stages: ${[...Object.keys(stages), ...Object.keys(aliases), "smoke", "corpus", "profile", "factory", "factory-review"].join(", ")}`);
     console.log(`▸ ${stageName} (${document.slug})`);
     const result = await stage(context);
     if (result) console.log(`  ${result.cached ? "cached" : "done"} · input ${result.manifest.inputHash.slice(0, 12)} · output ${result.manifest.outputHash.slice(0, 12)}`, JSON.stringify(result.manifest.stats));

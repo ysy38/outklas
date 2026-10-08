@@ -3,11 +3,16 @@ import path from "node:path";
 import type { z } from "zod";
 import { dataRoot } from "../lib/artifacts";
 import { analysisDraft, blindSolution, coerceAnalysisJson, transcription } from "@/modules/analysis/contract";
+import type { ReconstructedQuestion } from "@/modules/analysis/surface";
+import { generatedQuestionCandidate, type GeneratedQuestionCandidate } from "@/modules/factory/candidate";
+import { judgeReport } from "@/modules/factory/judge";
 import { cachedGenerate } from "./cache";
 import { loadAIConfig, type AIConfig } from "./config";
 import { GeminiProvider } from "./gemini";
 import { analyzerPromptVersion, analyzerResponseSchema, analyzerSystem, analyzerUser } from "./prompts/analyzer.v2";
 import { responseSchema } from "./prompts/schema";
+import { generatorPromptVersion, generatorResponseSchema, generatorSystem, generatorUser } from "./prompts/generator.v2";
+import { judgePromptVersion, judgeResponseSchema, judgeSystem, judgeUser } from "./prompts/judge.v1";
 import { solvePromptVersion, solveSystem, solveUser, transcribePromptVersion, transcribeSystem, transcribeUser } from "./prompts/verifier.v1";
 import type { AIProvider, AIResult, AIRole, AIService, ModelRequest, Usage } from "./types";
 
@@ -78,6 +83,24 @@ function logRetry(event: object) {
   appendFileSync(path.join(dir, "ai-retries.jsonl"), `${JSON.stringify({ at: new Date().toISOString(), ...event })}\n`);
 }
 
+export class JudgeNotIndependent extends Error {
+  constructor(model: string) {
+    super(`GENERATOR_MODEL and JUDGE_MODEL are both ${model}; the judge must be a different model.`);
+  }
+}
+
+/** The judge's blind solve reads the candidate the way a learner would: stem and options, no key. */
+const asItem = (candidate: GeneratedQuestionCandidate): ReconstructedQuestion => ({
+  number: 1,
+  section: "sentence",
+  layout: "blank",
+  stimulusKey: null,
+  stimulus: null,
+  stem: candidate.question.stem,
+  options: candidate.question.options,
+  translationDirection: null,
+});
+
 export function createProvider(config: AIConfig): AIProvider {
   switch (config.provider) {
     case "gemini":
@@ -116,8 +139,38 @@ export function createAIService(config: AIConfig = loadAIConfig(), provider: AIP
           maxOutputTokens: 4096,
         }),
     },
-    generator: { generate: notImplemented("generator") },
-    judge: { evaluate: notImplemented("judge") },
+    generator: {
+      generate: (spec) =>
+        structuredCall(provider, generatorPromptVersion, generatedQuestionCandidate, {
+          model: config.models.generator,
+          system: generatorSystem(spec),
+          parts: [{ text: generatorUser(spec) }],
+          jsonSchema: generatorResponseSchema(),
+          temperature: 0.8,
+          maxOutputTokens: 8192,
+        }),
+    },
+    judge: {
+      evaluate: async (candidate, spec, validation) => {
+        if (config.models.generator === config.models.judge) throw new JudgeNotIndependent(config.models.judge);
+        const blind = await structuredCall(provider, solvePromptVersion, blindSolution, {
+          model: config.models.judge,
+          system: solveSystem,
+          parts: [{ text: solveUser(asItem(candidate)) }],
+          temperature: 0,
+          maxOutputTokens: 4096,
+        });
+        const report = await structuredCall(provider, judgePromptVersion, judgeReport, {
+          model: config.models.judge,
+          system: judgeSystem,
+          parts: [{ text: judgeUser({ spec, candidate, validation }) }],
+          jsonSchema: judgeResponseSchema(),
+          temperature: 0,
+          maxOutputTokens: 4096,
+        });
+        return { blind, report };
+      },
+    },
     explainer: { explain: notImplemented("explainer") },
     tutor: { respond: notImplemented("tutor") },
   };
