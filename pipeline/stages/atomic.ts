@@ -12,7 +12,7 @@ import { attemptLimits } from "@/modules/factory/thresholds";
 import { validateCandidate, leadingConnector, type CandidateValidation, type OriginalityIndex, type Sibling, type ValidationIssue } from "@/modules/factory/validator";
 import { dnaVersion, factoryVersions } from "@/modules/factory/versions";
 import type { NodeRef } from "@/modules/knowledge/graph";
-import type { AIConfig } from "../ai/config";
+import { parseModel, type AIConfig } from "../ai/config";
 import { acceptabilityPromptVersion } from "../ai/prompts/acceptability.v1";
 import { distractorJudgePromptVersion } from "../ai/prompts/distractor-judge.v1";
 import { distractorPromptVersion } from "../ai/prompts/distractor.v1";
@@ -30,6 +30,9 @@ export type ItemOutcome = { trace: GenerationTrace; record: CandidateRecord | nu
 
 const codes = (issues: ValidationIssue[], severity: "critical" | "warn" = "critical") =>
   issues.filter((issue) => issue.severity === severity).map((issue) => `${issue.code}${issue.option ? `@${issue.option}` : ""}${issue.detail ? `(${issue.detail})` : ""}`);
+
+/** The model that actually answered (aliases resolved), with its provider prefix unless it is Gemini. */
+const servedModel = (result: AIResult<unknown>) => (result.provider === "gemini" ? result.model : `${result.provider}:${result.model}`);
 
 async function timed<T>(call: () => Promise<AIResult<T>>): Promise<{ result: AIResult<T> | null; error: string | null; latencyMs: number }> {
   const started = Date.now();
@@ -102,7 +105,8 @@ export async function generateItem(spec: QuestionSpec, ctx: RunContext): Promise
       }
       const text = call.result.value.text.trim();
       const output = text.slice(0, 800);
-      const validation = validateDistractor({ dspec, skeleton, text, accepted, originality: ctx.originality, thresholds });
+      const rejected = attempts.filter((attempt) => attempt.stage === "distractor" && attempt.option === dspec.option && attempt.output).map((attempt) => attempt.output!);
+      const validation = validateDistractor({ dspec, skeleton, text, accepted, rejected, originality: ctx.originality, thresholds });
       const critical = codes(validation.issues);
       const validator = { status: validation.status, codes: [...critical, ...codes(validation.issues, "warn")] };
       if (validation.status === "reject") {
@@ -127,7 +131,7 @@ export async function generateItem(spec: QuestionSpec, ctx: RunContext): Promise
         output,
         validator,
         judge: {
-          model: judged.result.model,
+          model: servedModel(judged.result),
           promptVersion: distractorJudgePromptVersion,
           requestHash: judged.result.requestHash,
           decision: decision.decision,
@@ -201,7 +205,7 @@ export async function generateItem(spec: QuestionSpec, ctx: RunContext): Promise
       hashes.blindSolve = evaluation.blind.requestHash;
       hashes.acceptability = evaluation.acceptability.requestHash;
       hashes.judge = evaluation.report.requestHash;
-      judgeModel = evaluation.report.model;
+      judgeModel = servedModel(evaluation.report);
       trace = advance(trace, "JUDGED", now());
       trace = judge.verdict === "REJECT" ? { ...advance(trace, "REJECTED", now(), judge.failures.join(", ")), failure: "final_judge" } : advance(trace, "HUMAN_REVIEW", now());
     } catch (caught) {
@@ -211,7 +215,7 @@ export async function generateItem(spec: QuestionSpec, ctx: RunContext): Promise
 
   const provenance = provenanceSchema.parse({
     pipelineVersion: factoryVersions.pipeline,
-    provider: config.provider,
+    provider: [...new Set([config.models.generator, config.models.distractor, config.models.distractorJudge, config.models.judge, config.models.explanation].map((setting) => parseModel(setting, config.provider).provider))].join("+"),
     generatorModel: config.models.generator,
     distractorModel: config.models.distractor,
     distractorJudgeModel: config.models.distractorJudge,

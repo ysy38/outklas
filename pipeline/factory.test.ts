@@ -325,6 +325,11 @@ describe("distractor validation", () => {
     expect(check(option, text).issues.map((issue) => issue.code)).toContain(code);
   });
 
+  it("rejects a text the writer already had rejected for this option", () => {
+    const again = validateDistractor({ dspec: dspec("A"), skeleton, text: `${fine.A} `, accepted: [], rejected: [fine.A] });
+    expect(again.issues.map((issue) => issue.code)).toContain("repeats_rejected_attempt");
+  });
+
   it("rejects a repeated connector or a copy of an accepted distractor", () => {
     expect(check("C", "If doctors record every side effect in a separate file kept at the hospital", [{ option: "A", text: "If the drug works" }]).issues.map((issue) => issue.code)).toContain("connector_repeated");
     expect(check("C", "Unless the national health authority approved the drug only after a long clinical trial", [{ option: "A", text: fine.A }]).issues.map((issue) => issue.code)).toContain("distractor_clause_reuse");
@@ -377,7 +382,7 @@ describe("generation states", () => {
 
 const hashOf = (n: number) => n.toString(16).padStart(64, "0");
 let counter = 0;
-const result = <T>(value: T, model: string): AIResult<T> => ({ value, provider: "fake", model, promptVersion: "test", requestHash: hashOf(++counter), usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 }, cached: false });
+const result = <T>(value: T, model: string): AIResult<T> => ({ value, provider: "gemini", model, promptVersion: "test", requestHash: hashOf(++counter), usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 }, cached: false });
 const explanationJson: ItemExplanation = {
   explanation: "Doğru cevap B. 'although' beklentinin tersine bir durumu bildirir: yan etkilere rağmen hastalar ilacı almaya devam eder. Diğer seçenekler sebep, koşul, zaman ya da karşıtlık bildirir.",
   distractorRationales: (["A", "C", "D", "E"] as const).map((option) => ({ option, whyPlausible: "Akıcı ve konuyla ilgili görünür.", whyWrong: "Bildirdiği ilişki cümlenin iki yarısını bağlamaz." })),
@@ -474,8 +479,16 @@ describe("atomic generation", () => {
     expect(outcome.record!.generation?.distractors.find((entry) => entry.option === "A")?.attempts).toBe(3);
   });
 
+  it("does not send a repeated rejected text to the judge again", async () => {
+    const { service, log } = fakeService({ distractors: { A: [fine.A, fine.A, "Because doctors usually prescribe it to patients who have already tried other drugs"] }, reviews: { A: [review({ competentCandidateCouldSelect: true }), review()] } });
+    const outcome = await generateItem(spec, ctxFor(service));
+    expect(outcome.trace.state).toBe("HUMAN_REVIEW");
+    expect(log.filter((entry) => entry === "review:A")).toHaveLength(2);
+    expect(outcome.record!.provenance.attempts.filter((attempt) => attempt.option === "A").map((attempt) => attempt.rejectionReason?.replace(/@A$/, "") ?? null)).toEqual(["competent_candidate_could_select", "repeats_rejected_attempt", null]);
+  });
+
   it("stops after three rejected attempts without going back to the skeleton", async () => {
-    const { service, log } = fakeService({ reviews: { C: [review({ competentCandidateCouldSelect: true })] } });
+    const { service, log } = fakeService({ reviews: { C: [review({ competentCandidateCouldSelect: true })] }, distractors: { C: [fine.C, "If doctors record every side effect in a separate file kept at the hospital", "Unless nurses record every side effect in a separate file kept at the clinic"] } });
     const outcome = await generateItem(spec, ctxFor(service));
     expect(outcome.trace.state).toBe("DISTRACTORS_FAILED");
     expect(outcome.trace.failure).toMatch(/distractor_C_.*_rejected_after_3/);
@@ -528,8 +541,10 @@ describe("atomic generation", () => {
   });
 
   it("summarises a slice per stage and per distractor role", async () => {
-    const first = await generateItem(spec, ctxFor(fakeService({ reviews: { A: [review({ competentCandidateCouldSelect: true }), review()] } }).service));
-    const second = await generateItem(spec, ctxFor(fakeService({ reviews: { C: [review({ competentCandidateCouldSelect: true })] } }).service));
+    const secondA = "Because doctors usually prescribe it to patients who have already tried other drugs";
+    const first = await generateItem(spec, ctxFor(fakeService({ distractors: { A: [fine.A, secondA] }, reviews: { A: [review({ competentCandidateCouldSelect: true }), review()] } }).service));
+    const otherC = ["If doctors record every side effect in a separate file kept at the hospital", "Unless nurses record every side effect in a separate file kept at the clinic"];
+    const second = await generateItem(spec, ctxFor(fakeService({ distractors: { C: [fine.C, ...otherC] }, reviews: { C: [review({ competentCandidateCouldSelect: true })] } }).service));
     const metrics = sliceMetrics([first, second], 30);
     expect(metrics.skeleton).toMatchObject({ generated: 2, acceptedItems: 2 });
     expect(metrics.distractors).toMatchObject({ acceptedFirstTry: 4, regenerated: 2, acceptedAfterRegeneration: 1, rejectedAfterLimit: 1 });

@@ -10,8 +10,10 @@ import { itemExplanation } from "@/modules/factory/explanation";
 import { judgeReport, optionAcceptability } from "@/modules/factory/judge";
 import { questionSkeleton } from "@/modules/factory/skeleton";
 import { cachedGenerate } from "./cache";
-import { loadAIConfig, type AIConfig } from "./config";
+import { AnthropicProvider } from "./anthropic";
+import { loadAIConfig, parseModel, sameModel, type AIConfig, type ProviderName } from "./config";
 import { GeminiProvider } from "./gemini";
+import { OpenAICompatibleProvider } from "./openai-compatible";
 import { acceptabilityPromptVersion, acceptabilityResponseSchema, acceptabilitySystem, acceptabilityUser } from "./prompts/acceptability.v1";
 import { analyzerPromptVersion, analyzerResponseSchema, analyzerSystem, analyzerUser } from "./prompts/analyzer.v2";
 import { distractorJudgePromptVersion, distractorJudgeResponseSchema, distractorJudgeSystem, distractorJudgeUser } from "./prompts/distractor-judge.v1";
@@ -34,7 +36,7 @@ export class AIOutputError extends Error {
 }
 
 /** Finish reasons where asking again cannot help: the provider declined to produce the content. */
-const declined = new Set(["RECITATION", "SAFETY", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII"]);
+const declined = new Set(["RECITATION", "SAFETY", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII", "REFUSAL", "CONTENT_FILTER"]);
 
 export class NotImplementedRole extends Error {
   constructor(role: AIRole) {
@@ -97,9 +99,15 @@ export class JudgeNotIndependent extends Error {
   }
 }
 
-function assertFinalJudgeIndependent(config: AIConfig) {
-  if (config.models.generator === config.models.judge) throw new JudgeNotIndependent(config.models.judge);
-  if (config.models.distractor === config.models.judge) throw new JudgeNotIndependent(config.models.judge, "DISTRACTOR_MODEL", "FINAL_JUDGE_MODEL");
+/** Throws when a writer would check its own output. Shared by the service and the slice runner. */
+export function assertIndependent(config: AIConfig, scope: "final" | "distractor" | "all" = "all") {
+  const same = (a: string, b: string) => sameModel(a, b, config.provider);
+  const { generator, distractor, distractorJudge, judge } = config.models;
+  if (scope !== "distractor") {
+    if (same(generator, judge)) throw new JudgeNotIndependent(judge);
+    if (same(distractor, judge)) throw new JudgeNotIndependent(judge, "DISTRACTOR_MODEL", "FINAL_JUDGE_MODEL");
+  }
+  if (scope !== "final" && same(distractor, distractorJudge)) throw new JudgeNotIndependent(distractor, "DISTRACTOR_MODEL", "DISTRACTOR_JUDGE_MODEL");
 }
 
 /** The judge's blind solve reads the candidate the way a learner would: stem and options, no key. */
@@ -114,19 +122,41 @@ const asItem = (candidate: GeneratedQuestionCandidate): ReconstructedQuestion =>
   translationDirection: null,
 });
 
-export function createProvider(config: AIConfig): AIProvider {
-  switch (config.provider) {
+export function createProvider(config: AIConfig, name: ProviderName = config.provider): AIProvider {
+  const common = { maxRetries: config.maxRetries, onRetry: logRetry };
+  switch (name) {
     case "gemini":
-      return new GeminiProvider({ apiKey: config.apiKey ?? "", maxRetries: config.maxRetries, onRetry: logRetry });
+      return new GeminiProvider({ apiKey: config.keys.gemini ?? "", ...common });
+    case "nvidia":
+      return new OpenAICompatibleProvider("nvidia", { apiKey: config.keys.nvidia ?? "", baseUrl: config.nvidiaBaseUrl, ...common });
+    case "anthropic":
+      return new AnthropicProvider({ apiKey: config.keys.anthropic ?? "", ...common });
   }
 }
 
-export function createAIService(config: AIConfig = loadAIConfig(), provider: AIProvider = createProvider(config)): AIService {
+export type ProviderSet = AIProvider | Partial<Record<ProviderName, AIProvider>>;
+
+/** Providers are built on first use, so a missing key only matters for a role that needs it. */
+export function providerRouter(config: AIConfig, given?: ProviderSet, wrap: (provider: AIProvider) => AIProvider = (provider) => provider) {
+  const built = new Map<ProviderName, AIProvider>();
+  return (setting: string): { provider: AIProvider; model: string } => {
+    const { provider: name, model } = parseModel(setting, config.provider);
+    if (given && "generate" in given) return { provider: given as AIProvider, model };
+    if (!built.has(name)) built.set(name, wrap((given as Partial<Record<ProviderName, AIProvider>> | undefined)?.[name] ?? createProvider(config, name)));
+    return { provider: built.get(name)!, model };
+  };
+}
+
+export function createAIService(config: AIConfig = loadAIConfig(), providers?: ProviderSet | ReturnType<typeof providerRouter>): AIService {
+  const route = typeof providers === "function" ? providers : providerRouter(config, providers);
+  const call = <T>(setting: string, promptVersion: string, schema: z.ZodType<T>, request: Omit<ModelRequest, "model">) => {
+    const target = route(setting);
+    return structuredCall(target.provider, promptVersion, schema, { ...request, model: target.model });
+  };
   return {
     analyzer: {
       analyze: (input) =>
-        structuredCall(provider, analyzerPromptVersion, analysisDraft, {
-          model: config.models.analyzer,
+        call(config.models.analyzer, analyzerPromptVersion, analysisDraft, {
           system: analyzerSystem(),
           parts: [{ text: analyzerUser(input) }],
           jsonSchema: analyzerResponseSchema(),
@@ -136,16 +166,14 @@ export function createAIService(config: AIConfig = loadAIConfig(), provider: AIP
     },
     verifier: {
       transcribe: (input) =>
-        structuredCall(provider, transcribePromptVersion, transcription, {
-          model: config.models.verifier,
+        call(config.models.verifier, transcribePromptVersion, transcription, {
           system: transcribeSystem,
           parts: [{ image: { mimeType: "image/png", data: input.image } }, { text: transcribeUser(input.label) }],
           temperature: 0,
           maxOutputTokens: 32_768,
         }),
       solve: (question) =>
-        structuredCall(provider, solvePromptVersion, blindSolution, {
-          model: config.models.verifier,
+        call(config.models.verifier, solvePromptVersion, blindSolution, {
           system: solveSystem,
           parts: [{ text: solveUser(question) }],
           temperature: 0,
@@ -154,8 +182,7 @@ export function createAIService(config: AIConfig = loadAIConfig(), provider: AIP
     },
     generator: {
       generate: (spec) =>
-        structuredCall(provider, generatorPromptVersion, generatedQuestionCandidate, {
-          model: config.models.generator,
+        call(config.models.generator, generatorPromptVersion, generatedQuestionCandidate, {
           system: generatorSystem(spec),
           parts: [{ text: generatorUser(spec) }],
           jsonSchema: generatorResponseSchema(),
@@ -165,24 +192,21 @@ export function createAIService(config: AIConfig = loadAIConfig(), provider: AIP
     },
     judge: {
       evaluate: async (candidate, spec, validation, distractorChecks) => {
-        assertFinalJudgeIndependent(config);
-        const blind = await structuredCall(provider, solvePromptVersion, blindSolution, {
-          model: config.models.judge,
+        assertIndependent(config, "final");
+        const blind = await call(config.models.judge, solvePromptVersion, blindSolution, {
           system: solveSystem,
           parts: [{ text: solveUser(asItem(candidate)) }],
           temperature: 0,
           maxOutputTokens: 4096,
         });
-        const acceptability = await structuredCall(provider, acceptabilityPromptVersion, optionAcceptability, {
-          model: config.models.judge,
+        const acceptability = await call(config.models.judge, acceptabilityPromptVersion, optionAcceptability, {
           system: acceptabilitySystem,
           parts: [{ text: acceptabilityUser(candidate) }],
           jsonSchema: acceptabilityResponseSchema(),
           temperature: 0,
           maxOutputTokens: 4096,
         });
-        const report = await structuredCall(provider, judgePromptVersion, judgeReport, {
-          model: config.models.judge,
+        const report = await call(config.models.judge, judgePromptVersion, judgeReport, {
           system: judgeSystem,
           parts: [{ text: judgeUser({ spec, candidate, validation, distractorChecks }) }],
           jsonSchema: judgeResponseSchema(),
@@ -194,8 +218,7 @@ export function createAIService(config: AIConfig = loadAIConfig(), provider: AIP
     },
     factory: {
       skeleton: (spec, feedback) =>
-        structuredCall(provider, skeletonPromptVersion, questionSkeleton, {
-          model: config.models.generator,
+        call(config.models.generator, skeletonPromptVersion, questionSkeleton, {
           system: skeletonSystem(spec),
           parts: [{ text: skeletonUser(spec, feedback) }],
           jsonSchema: skeletonResponseSchema(),
@@ -203,8 +226,7 @@ export function createAIService(config: AIConfig = loadAIConfig(), provider: AIP
           maxOutputTokens: 2048,
         }),
       distractor: (input) =>
-        structuredCall(provider, distractorPromptVersion, generatedDistractor, {
-          model: config.models.distractor,
+        call(config.models.distractor, distractorPromptVersion, generatedDistractor, {
           system: distractorSystem,
           parts: [{ text: distractorUser(input) }],
           jsonSchema: distractorResponseSchema(),
@@ -212,9 +234,8 @@ export function createAIService(config: AIConfig = loadAIConfig(), provider: AIP
           maxOutputTokens: 1024,
         }),
       judgeDistractor: async (input) => {
-        if (config.models.distractor === config.models.distractorJudge) throw new JudgeNotIndependent(config.models.distractor, "DISTRACTOR_MODEL", "DISTRACTOR_JUDGE_MODEL");
-        return structuredCall(provider, distractorJudgePromptVersion, distractorJudgeReport, {
-          model: config.models.distractorJudge,
+        assertIndependent(config, "distractor");
+        return call(config.models.distractorJudge, distractorJudgePromptVersion, distractorJudgeReport, {
           system: distractorJudgeSystem,
           parts: [{ text: distractorJudgeUser(input) }],
           jsonSchema: distractorJudgeResponseSchema(),
@@ -223,8 +244,7 @@ export function createAIService(config: AIConfig = loadAIConfig(), provider: AIP
         });
       },
       explain: (input) =>
-        structuredCall(provider, explanationPromptVersion, itemExplanation, {
-          model: config.models.explanation,
+        call(config.models.explanation, explanationPromptVersion, itemExplanation, {
           system: explanationSystem,
           parts: [{ text: explanationUser(input) }],
           jsonSchema: explanationResponseSchema(),

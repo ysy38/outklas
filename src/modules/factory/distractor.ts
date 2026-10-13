@@ -29,6 +29,8 @@ export function validateDistractor(input: {
   skeleton: QuestionSkeleton;
   text: string;
   accepted: PlacedOption[];
+  /** Texts already rejected for this option; a writer that repeats one has ignored the feedback. */
+  rejected?: string[];
   originality?: OriginalityIndex;
   thresholds?: FactoryThresholds;
 }): StageValidation & { reuse: ReturnType<typeof clauseReuse> } {
@@ -59,6 +61,7 @@ export function validateDistractor(input: {
   if (dspec.grammarConstraint.finiteClause && connector && words(text).length < 4) add("not_a_clause", "critical");
 
   if (normalized(text) === normalized(skeleton.correctAnswer)) add("option_duplicate", "critical", "answer");
+  if ((input.rejected ?? []).some((previous) => normalized(previous) === normalized(text))) add("repeats_rejected_attempt", "critical");
   const reuse = clauseReuse(skeleton.correctAnswer, text, thresholds);
   if (reuse.level === "copy") add("answer_clause_reuse", "critical", `${reuse.tokenOverlap}/${reuse.trigramOverlap}`);
   else if (reuse.level === "warn") add("answer_overlap", "warn", `${reuse.tokenOverlap}/${reuse.trigramOverlap}`);

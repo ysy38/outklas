@@ -21,7 +21,7 @@ import { distractorPromptVersion } from "../ai/prompts/distractor.v1";
 import { explanationPromptVersion } from "../ai/prompts/explanation.v1";
 import { judgePromptVersion } from "../ai/prompts/judge.v2";
 import { skeletonPromptVersion } from "../ai/prompts/skeleton.v1";
-import { createAIService, createProvider, JudgeNotIndependent } from "../ai/service";
+import { assertIndependent, createAIService, providerRouter } from "../ai/service";
 import type { AIProvider, AIService } from "../ai/types";
 import { dataRoot, readJson, readManifest } from "../lib/artifacts";
 import { mapLimit } from "../lib/limit";
@@ -76,17 +76,22 @@ export function assertRunWritable(runDir: string) {
   if (reviewed) throw new Error(`${runDir} already holds human review decisions; it is never overwritten.`);
 }
 
-/** Counts real provider requests, including repair attempts and judge calls. */
-function counting(provider: AIProvider): AIProvider & { calls: number } {
-  const wrapped = {
+type ProviderUsage = Record<string, { calls: number; inputTokens: number; outputTokens: number }>;
+
+/** Counts real provider requests (repairs and judge calls included) and their tokens, per provider and model. */
+function counting(provider: AIProvider, usage: ProviderUsage): AIProvider {
+  return {
     name: provider.name,
-    calls: 0,
-    generate: (request: Parameters<AIProvider["generate"]>[0]) => {
-      wrapped.calls += 1;
-      return provider.generate(request);
+    generate: async (request) => {
+      const key = `${provider.name}:${request.model}`;
+      const entry = (usage[key] ??= { calls: 0, inputTokens: 0, outputTokens: 0 });
+      entry.calls += 1;
+      const response = await provider.generate(request);
+      entry.inputTokens += response.usage.inputTokens;
+      entry.outputTokens += response.usage.outputTokens;
+      return response;
     },
   };
-  return wrapped;
 }
 
 const rate = (part: number, whole: number) => (whole ? Math.round((part / whole) * 1000) / 1000 : null);
@@ -192,11 +197,10 @@ export async function factorySlice(options: SliceOptions) {
   if (!Number.isInteger(options.count) || options.count < 1 || options.count > sliceLimit) throw new Error(`count must be 1–${sliceLimit}; bulk generation is not enabled.`);
   if (options.tag !== undefined && !/^[a-z0-9-]+$/.test(options.tag)) throw new Error("tag must be lowercase letters, digits and hyphens");
   const config = options.config ?? loadAIConfig();
-  if (config.models.generator === config.models.judge) throw new JudgeNotIndependent(config.models.judge);
-  if (config.models.distractor === config.models.judge) throw new JudgeNotIndependent(config.models.judge, "DISTRACTOR_MODEL", "FINAL_JUDGE_MODEL");
-  if (config.models.distractor === config.models.distractorJudge) throw new JudgeNotIndependent(config.models.distractor, "DISTRACTOR_MODEL", "DISTRACTOR_JUDGE_MODEL");
-  const provider = options.service ? null : counting(createProvider(config));
-  const service = options.service ?? createAIService(config, provider!);
+  assertIndependent(config);
+  const usage: ProviderUsage = {};
+  const service = options.service ?? createAIService(config, providerRouter(config, undefined, (provider) => counting(provider, usage)));
+  const providerCalls = options.service ? null : () => Object.values(usage).reduce((sum, entry) => sum + entry.calls, 0);
   const log = options.log ?? (() => undefined);
 
   const { profile } = factoryProfile();
@@ -223,7 +227,8 @@ export async function factorySlice(options: SliceOptions) {
     family: family.id,
     band: specs[0].difficulty.band,
     requested: options.count,
-    metrics: sliceMetrics(outcomes, provider?.calls ?? null),
+    metrics: sliceMetrics(outcomes, providerCalls?.() ?? null),
+    providerUsage: usage,
     errors: outcomes.filter((outcome) => outcome.error).map((outcome) => ({ specId: outcome.trace.specId, error: outcome.error })),
     models: config.models,
     thresholds: config.thresholds,

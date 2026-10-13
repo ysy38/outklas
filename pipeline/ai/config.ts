@@ -46,12 +46,31 @@ const thresholdEnv: Record<keyof FactoryThresholds, string> = {
   answerReuseTokenWarn: "ANSWER_REUSE_TOKEN_WARN",
 };
 
-export const providers = ["gemini"] as const;
+export const providers = ["gemini", "nvidia", "anthropic"] as const;
 export type ProviderName = (typeof providers)[number];
 
+/**
+ * A model setting is `provider:model` (`nvidia:nvidia/nemotron-3-super-120b-a12b`, `anthropic:claude-haiku-5-5`)
+ * or a bare name for the default provider, so existing Gemini settings, provenance and caches keep their meaning.
+ */
+export function parseModel(setting: string, fallback: ProviderName = "gemini"): { provider: ProviderName; model: string } {
+  const prefix = setting.slice(0, setting.indexOf(":"));
+  return (providers as readonly string[]).includes(prefix) ? { provider: prefix as ProviderName, model: setting.slice(prefix.length + 1) } : { provider: fallback, model: setting };
+}
+
+/** Same provider and same model, however the setting was written. */
+export const sameModel = (a: string, b: string, fallback: ProviderName = "gemini") => {
+  const [x, y] = [parseModel(a, fallback), parseModel(b, fallback)];
+  return x.provider === y.provider && x.model === y.model;
+};
+
 export type AIConfig = {
+  /** Provider for bare model names. */
   provider: ProviderName;
+  /** The Gemini key; kept under this name for the analysis stages. */
   apiKey: string | null;
+  keys: Record<ProviderName, string | null>;
+  nvidiaBaseUrl: string;
   models: Record<ModelRole, string>;
   thresholds: FactoryThresholds;
   maxRetries: number;
@@ -77,13 +96,25 @@ export function loadAIConfig(env: Record<string, string | undefined> = process.e
     (Object.keys(modelDefaults) as ModelRole[]).map((role) => [role, modelEnv[role].map((name) => env[name]?.trim()).find(Boolean) || modelDefaults[role]]),
   ) as Record<ModelRole, string>;
   const warnings: string[] = [];
-  if (models.generator === models.judge) warnings.push("GENERATOR_MODEL and JUDGE_MODEL are the same model; the judge refuses to run.");
-  if (models.distractor === models.judge) warnings.push("DISTRACTOR_MODEL and FINAL_JUDGE_MODEL are the same model; the judge refuses to run.");
-  if (models.distractor === models.distractorJudge) warnings.push("DISTRACTOR_MODEL and DISTRACTOR_JUDGE_MODEL are the same model; the distractor judge refuses to run.");
+  const same = (a: string, b: string) => sameModel(a, b, provider);
+  if (same(models.generator, models.judge)) warnings.push("GENERATOR_MODEL and JUDGE_MODEL are the same model; the judge refuses to run.");
+  if (same(models.distractor, models.judge)) warnings.push("DISTRACTOR_MODEL and FINAL_JUDGE_MODEL are the same model; the judge refuses to run.");
+  if (same(models.distractor, models.distractorJudge)) warnings.push("DISTRACTOR_MODEL and DISTRACTOR_JUDGE_MODEL are the same model; the distractor judge refuses to run.");
   const maxRetries = Number.parseInt(env.AI_MAX_RETRIES ?? "", 10);
+  const keys: Record<ProviderName, string | null> = {
+    gemini: env.GEMINI_API_KEY?.trim() || null,
+    nvidia: env.NVIDIA_API_KEY?.trim() || null,
+    anthropic: env.CLAUDE_API_KEY?.trim() || env.ANTHROPIC_API_KEY?.trim() || null,
+  };
+  for (const role of Object.keys(models) as ModelRole[]) {
+    const { provider: owner } = parseModel(models[role], provider);
+    if (!keys[owner]) warnings.push(`${role} uses ${owner}, but its API key is not set.`);
+  }
   return {
     provider,
-    apiKey: env.GEMINI_API_KEY?.trim() || null,
+    apiKey: keys.gemini,
+    keys,
+    nvidiaBaseUrl: env.NVIDIA_API_URL?.trim() || "https://integrate.api.nvidia.com/v1",
     models,
     thresholds: loadThresholds(env),
     maxRetries: Number.isFinite(maxRetries) && maxRetries >= 0 ? maxRetries : 6,

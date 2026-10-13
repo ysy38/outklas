@@ -4,11 +4,13 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { requestHash } from "./cache";
-import { loadAIConfig, modelDefaults } from "./config";
+import { AnthropicProvider } from "./anthropic";
+import { loadAIConfig, modelDefaults, parseModel, sameModel } from "./config";
 import { AIRequestError, GeminiProvider, geminiBody, type Transport } from "./gemini";
+import { OpenAICompatibleProvider } from "./openai-compatible";
 import { analyzerResponseSchema } from "./prompts/analyzer.v2";
 import { withRefEnums } from "./prompts/schema";
-import { AIOutputError, createAIService, NotImplementedRole, structuredCall } from "./service";
+import { AIOutputError, assertIndependent, createAIService, JudgeNotIndependent, NotImplementedRole, structuredCall } from "./service";
 import type { AIProvider, ModelRequest, ModelResponse } from "./types";
 
 let dir = "";
@@ -46,6 +48,106 @@ describe("config", () => {
     expect(config.warnings).toHaveLength(1);
     expect(loadAIConfig({}).apiKey).toBeNull();
     expect(() => loadAIConfig({ AI_PROVIDER: "openai" })).toThrow();
+  });
+
+  it("reads a provider prefix per role and compares models by provider and name", () => {
+    expect(parseModel("gemini-3.1-flash-lite")).toEqual({ provider: "gemini", model: "gemini-3.1-flash-lite" });
+    expect(parseModel("nvidia:nvidia/nemotron-3-super-120b-a12b")).toEqual({ provider: "nvidia", model: "nvidia/nemotron-3-super-120b-a12b" });
+    expect(parseModel("anthropic:claude-haiku-5-5")).toEqual({ provider: "anthropic", model: "claude-haiku-5-5" });
+    expect(sameModel("gemini:gemini-x", "gemini-x")).toBe(true);
+    expect(sameModel("nvidia:m", "anthropic:m")).toBe(false);
+    const config = loadAIConfig({ GEMINI_API_KEY: "g", NVIDIA_API_KEY: "n", DISTRACTOR_JUDGE_MODEL: "nvidia:j", FINAL_JUDGE_MODEL: "anthropic:claude-haiku-5-5" });
+    expect(config.keys).toEqual({ gemini: "g", nvidia: "n", anthropic: null });
+    expect(config.warnings).toEqual(["judge uses anthropic, but its API key is not set."]);
+    expect(loadAIConfig({ ANTHROPIC_API_KEY: "a" }).keys.anthropic).toBe("a");
+    expect(loadAIConfig({}).nvidiaBaseUrl).toBe("https://integrate.api.nvidia.com/v1");
+  });
+});
+
+const reply = (status: number, body: unknown, headers: Record<string, string> = {}) => ({ status, text: async () => JSON.stringify(body), headers: { get: (name: string) => headers[name] ?? null } });
+
+describe("OpenAI-compatible provider (NVIDIA)", () => {
+  it("sends a bearer key, a system message and a JSON schema, keeps a reasoning budget and drops thinking", async () => {
+    const seen: { url: string; headers: Record<string, string>; body: string }[] = [];
+    const provider = new OpenAICompatibleProvider("nvidia", {
+      apiKey: "nv-key",
+      baseUrl: "https://integrate.api.nvidia.com/v1/",
+      transport: async (url, init) => {
+        seen.push({ url, headers: init.headers, body: init.body });
+        return reply(200, { choices: [{ message: { content: '<think>hmm</think>\n{"x":1}' }, finish_reason: "stop" }], usage: { prompt_tokens: 9, completion_tokens: 4, total_tokens: 13 }, model: "nvidia/m" });
+      },
+    });
+    const response = await provider.generate({ model: "nvidia/m", system: "sys", parts: [{ text: "hi" }], jsonSchema: { type: "object" }, maxOutputTokens: 1024 });
+    expect(response).toEqual({ text: '{"x":1}', model: "nvidia/m", finishReason: "STOP", usage: { inputTokens: 9, outputTokens: 4, totalTokens: 13 } });
+    expect(seen[0].url).toBe("https://integrate.api.nvidia.com/v1/chat/completions");
+    expect(seen[0].headers.authorization).toBe("Bearer nv-key");
+    const body = JSON.parse(seen[0].body);
+    expect(body.messages).toEqual([
+      { role: "system", content: "sys" },
+      { role: "user", content: "hi" },
+    ]);
+    expect(body.max_tokens).toBe(16_384);
+    expect(body.response_format).toEqual({ type: "json_schema", json_schema: { name: "output", schema: { type: "object" } } });
+    await expect(provider.generate({ model: "m", parts: [{ image: { mimeType: "image/png", data: new Uint8Array([1]) } }] })).rejects.toThrow(/images/);
+  });
+
+  it("retries a busy worker with Retry-After and stops on an hours-long wait", async () => {
+    const delays: number[] = [];
+    const responses = [reply(503, { detail: "Worker local total request limit reached" }, { "retry-after": "2" }), reply(200, { choices: [{ message: { content: "{}" } }] })];
+    const provider = new OpenAICompatibleProvider("nvidia", { apiKey: "k", baseUrl: "https://x/v1", transport: async () => responses.shift()!, sleep: async (ms) => void delays.push(ms) });
+    expect((await provider.generate({ model: "m", parts: [{ text: "x" }] })).text).toBe("{}");
+    expect(delays).toEqual([2500]);
+    const exhausted = new OpenAICompatibleProvider("nvidia", { apiKey: "k", baseUrl: "https://x/v1", transport: async () => reply(429, { detail: "quota" }, { "retry-after": "40000" }), sleep: async () => {} });
+    await expect(exhausted.generate({ model: "m", parts: [{ text: "x" }] })).rejects.toMatchObject({ status: 429, retryable: false });
+    const missing = new OpenAICompatibleProvider("nvidia", { apiKey: "k", baseUrl: "https://x/v1", transport: async () => reply(404, { detail: "Function not found for account" }), sleep: async () => {} });
+    await expect(missing.generate({ model: "m", parts: [{ text: "x" }] })).rejects.toThrow(/404: Function not found/);
+    expect(() => new OpenAICompatibleProvider("nvidia", { apiKey: "", baseUrl: "https://x/v1" })).toThrow(/key/);
+  });
+});
+
+describe("AnthropicProvider", () => {
+  it("forces a tool call for JSON and returns the tool input as the text", async () => {
+    const seen: { url: string; headers: Record<string, string>; body: string }[] = [];
+    const provider = new AnthropicProvider({
+      apiKey: "cl-key",
+      transport: async (url, init) => {
+        seen.push({ url, headers: init.headers, body: init.body });
+        return reply(200, { content: [{ type: "tool_use", name: "respond", input: { x: 1 } }], stop_reason: "tool_use", usage: { input_tokens: 20, output_tokens: 5 }, model: "claude-haiku-5-5" });
+      },
+    });
+    const response = await provider.generate({ model: "claude-haiku-5-5", system: "sys", parts: [{ text: "hi" }], jsonSchema: { type: "object" }, temperature: 0.4 });
+    expect(response).toEqual({ text: '{"x":1}', model: "claude-haiku-5-5", finishReason: "TOOL_USE", usage: { inputTokens: 20, outputTokens: 5, totalTokens: 25 } });
+    expect(seen[0].url).toBe("https://api.anthropic.com/v1/messages");
+    expect(seen[0].headers).toMatchObject({ "x-api-key": "cl-key", "anthropic-version": "2023-06-01" });
+    const body = JSON.parse(seen[0].body);
+    expect(body).toMatchObject({ model: "claude-haiku-5-5", system: "sys", temperature: 0.4, max_tokens: 4096, tool_choice: { type: "tool", name: "respond" } });
+    expect(body.tools[0].input_schema).toEqual({ type: "object" });
+    expect(body.messages[0].content).toEqual([{ type: "text", text: "hi" }]);
+  });
+
+  it("retries overload, but not an empty credit balance", async () => {
+    const delays: number[] = [];
+    const responses = [reply(529, { error: { type: "overloaded_error", message: "Overloaded" } }), reply(200, { content: [{ type: "text", text: "OK" }] })];
+    const provider = new AnthropicProvider({ apiKey: "k", transport: async () => responses.shift()!, sleep: async (ms) => void delays.push(ms) });
+    expect((await provider.generate({ model: "m", parts: [{ text: "x" }] })).text).toBe("OK");
+    expect(delays).toEqual([2000]);
+    const broke = new AnthropicProvider({ apiKey: "k", transport: async () => reply(400, { error: { type: "invalid_request_error", message: "Your credit balance is too low" } }), sleep: async () => {} });
+    await expect(broke.generate({ model: "m", parts: [{ text: "x" }] })).rejects.toMatchObject({ status: 400, retryable: false, message: expect.stringMatching(/credit balance/) });
+  });
+});
+
+describe("provider routing", () => {
+  it("sends each role to its own provider with the bare model name", async () => {
+    const gemini = fakeProvider(['{"answer":"B","confidence":0.9,"rationale":"x"}']);
+    const nvidia = fakeProvider(['{"answer":"B","confidence":0.9,"rationale":"x"}']);
+    const config = loadAIConfig({ GEMINI_API_KEY: "g", VERIFIER_MODEL: "nvidia:nvidia/judge", ANALYZER_MODEL: "gemini-a" });
+    const service = createAIService(config, { gemini, nvidia });
+    await service.verifier.solve({ number: 1, section: "sentence", layout: "blank", stimulusKey: null, stimulus: null, stem: "x ----.", options: { A: "a", B: "b", C: "c", D: "d", E: "e" }, translationDirection: null });
+    expect(nvidia.calls.map((call) => call.model)).toEqual(["nvidia/judge"]);
+    expect(gemini.calls).toHaveLength(0);
+    expect(() => assertIndependent(loadAIConfig({ DISTRACTOR_MODEL: "nvidia:m", DISTRACTOR_JUDGE_MODEL: "nvidia:m" }))).toThrow(JudgeNotIndependent);
+    expect(() => assertIndependent(loadAIConfig({ GENERATOR_MODEL: "gemini:x", FINAL_JUDGE_MODEL: "x" }))).toThrow(JudgeNotIndependent);
+    expect(() => assertIndependent(loadAIConfig({ DISTRACTOR_JUDGE_MODEL: "nvidia:gemini-flash-lite-latest" }))).not.toThrow();
   });
 });
 
