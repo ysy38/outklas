@@ -5,7 +5,7 @@ import { connectorSurface } from "@/modules/factory/spec-engine";
 import { parseRef, type NodeRef } from "@/modules/knowledge/graph";
 import { responseSchema } from "./schema";
 
-export const distractorPromptVersion = "distractor.v3";
+export const distractorPromptVersion = "distractor.v4";
 
 const name = (value: NodeRef | null) => (value ? parseRef(value).slug.replaceAll("_", " ") : "none");
 const quoted = (list: string[]) => list.map((word) => `"${word}"`).join(", ");
@@ -35,9 +35,9 @@ const failureInstructions: Record<FailureMode, string> = {
     'Give a reason that would make the main clause LESS likely (it argues for the opposite outcome). Test: if "<main clause> because <reason>" sounds like a sensible explanation, it is forbidden.',
   consequence_does_not_follow: "State a consequence that does not follow from the main clause, or that contradicts it.",
   condition_cannot_restrict:
-    "State a condition that cannot restrict the main clause: for a settled past fact or a general truth, a future or hypothetical action that could not have caused it. Never a realistic precondition of the main clause.",
+    "State a realistic, on-topic condition, in a tense that fits the main clause (a past condition for a past main clause), that would make the outcome LESS likely, so the sentence claims the outcome depended on something that works against it. Never a future event, an unrelated matter, or a realistic precondition that makes the sentence sensible.",
   impossible_time_order:
-    'Use a time connector with an event that cannot stand in that time relation to the main clause: an event that only makes sense after it placed with "before", or an event that would have prevented it. Never an earlier event that explains or enables the main clause.',
+    'Use the time connector with a realistic, on-topic event, in a tense that fits the main clause, whose time relation makes the sentence illogical: typically a setback placed right before the outcome (with "as soon as", "after", "once" and the like) as if the setback had triggered it. Never an event that is plainly impossible (the thing did not exist yet), a restatement of the main clause, or an earlier event that explains or enables the main clause.',
   purpose_does_not_fit: "State a purpose that the action in the main clause could not serve.",
   addition_contradicts: "Add a point that contradicts the main clause instead of supporting it.",
   example_does_not_illustrate: "Give an example that does not illustrate the main clause.",

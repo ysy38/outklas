@@ -16,7 +16,7 @@ const run = (generator: string, judge: string, distractor = generator, distracto
        generator_prompt_version, distractor_prompt_version, distractor_judge_prompt_version, judge_prompt_version, blind_solve_prompt_version, acceptability_prompt_version,
        explanation_prompt_version, question_spec_version, distractor_spec_version, knowledge_version, dna_version, exam_profile_version, validator_version, judge_version,
        distractor_judge_version, originality_version, started_at)
-     values ('yds', 'sentence_completion.concession', 'medium', 12, 'atomic.v1', 'gemini', $1, $3, $4, $2, $1, 'skeleton.v1', 'distractor.v3', 'distractor-judge.v3', 'judge.v2',
+     values ('yds', 'sentence_completion.concession', 'medium', 12, 'atomic.v1', 'gemini', $1, $3, $4, $2, $1, 'skeleton.v1', 'distractor.v4', 'distractor-judge.v3', 'judge.v2',
        'verifier-solve.v1', 'acceptability.v1', 'explanation.v2', 'question-spec.v2', 'distractor-spec.v3', '1.0', '1', 'yds-profile.v1', 'validator.v4', 'judge-contract.v3',
        'distractor-judge.v3', 'shingle5.v1', now()) returning id`,
     [generator, judge, distractor, distractorJudge],

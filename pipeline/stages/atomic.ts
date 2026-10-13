@@ -15,7 +15,7 @@ import type { NodeRef } from "@/modules/knowledge/graph";
 import { parseModel, type AIConfig } from "../ai/config";
 import { acceptabilityPromptVersion } from "../ai/prompts/acceptability.v1";
 import { distractorJudgePromptVersion } from "../ai/prompts/distractor-judge.v3";
-import { distractorPromptVersion } from "../ai/prompts/distractor.v3";
+import { distractorPromptVersion } from "../ai/prompts/distractor.v4";
 import { explanationPromptVersion } from "../ai/prompts/explanation.v2";
 import type { DistractorCheckSummary } from "../ai/prompts/judge.v2";
 import { judgePromptVersion } from "../ai/prompts/judge.v2";
