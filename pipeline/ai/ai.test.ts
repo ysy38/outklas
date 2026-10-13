@@ -112,16 +112,22 @@ describe("AnthropicProvider", () => {
       apiKey: "cl-key",
       transport: async (url, init) => {
         seen.push({ url, headers: init.headers, body: init.body });
-        return reply(200, { content: [{ type: "tool_use", name: "respond", input: { x: 1 } }], stop_reason: "tool_use", usage: { input_tokens: 20, output_tokens: 5 }, model: "claude-haiku-5-5" });
+        return reply(200, { content: [{ type: "text", text: '{"x":1}' }], stop_reason: "end_turn", usage: { input_tokens: 20, output_tokens: 5 }, model: "claude-haiku-5-5" });
       },
     });
-    const response = await provider.generate({ model: "claude-haiku-5-5", system: "sys", parts: [{ text: "hi" }], jsonSchema: { type: "object" }, temperature: 0.4 });
-    expect(response).toEqual({ text: '{"x":1}', model: "claude-haiku-5-5", finishReason: "TOOL_USE", usage: { inputTokens: 20, outputTokens: 5, totalTokens: 25 } });
+    const schema = { type: "object", properties: { x: { type: "number", minimum: 0, maximum: 1 }, list: { type: "array", items: { type: "object", properties: { y: { type: "string" } } } } } };
+    const response = await provider.generate({ model: "claude-haiku-5-5", system: "sys", parts: [{ text: "hi" }], jsonSchema: schema, temperature: 0.4 });
+    expect(response).toEqual({ text: '{"x":1}', model: "claude-haiku-5-5", finishReason: "END_TURN", usage: { inputTokens: 20, outputTokens: 5, totalTokens: 25 } });
     expect(seen[0].url).toBe("https://api.anthropic.com/v1/messages");
     expect(seen[0].headers).toMatchObject({ "x-api-key": "cl-key", "anthropic-version": "2023-06-01" });
     const body = JSON.parse(seen[0].body);
-    expect(body).toMatchObject({ model: "claude-haiku-5-5", system: "sys", temperature: 0.4, max_tokens: 4096, tool_choice: { type: "tool", name: "respond" } });
-    expect(body.tools[0].input_schema).toEqual({ type: "object" });
+    expect(body).toMatchObject({ model: "claude-haiku-5-5", system: "sys", max_tokens: 4096 });
+    expect(body).not.toHaveProperty("temperature");
+    expect(body).not.toHaveProperty("tool_choice");
+    expect(body.output_config.format).toEqual({
+      type: "json_schema",
+      schema: { type: "object", additionalProperties: false, properties: { x: { type: "number" }, list: { type: "array", items: { type: "object", additionalProperties: false, properties: { y: { type: "string" } } } } } },
+    });
     expect(body.messages[0].content).toEqual([{ type: "text", text: "hi" }]);
   });
 

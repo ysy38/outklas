@@ -25,7 +25,8 @@ export type DistractorProperty = (typeof distractorProperties)[number];
 
 /** How a wrong option is meant to fail. Codes only: the prompt layer turns them into instructions. */
 export const failureModes = [
-  "no_real_opposition",
+  "contrast_does_not_fit",
+  "similarity_does_not_hold",
   "reason_supports_opposite",
   "consequence_does_not_follow",
   "condition_cannot_restrict",
@@ -42,8 +43,8 @@ export type FailureMode = (typeof failureModes)[number];
 
 /** Relation a wrong option expresses → how it must fail. Applies to every family, not to one example item. */
 const relationFailure: Partial<Record<string, FailureMode>> = {
-  contrast: "no_real_opposition",
-  comparison: "no_real_opposition",
+  contrast: "contrast_does_not_fit",
+  comparison: "similarity_does_not_hold",
   cause: "reason_supports_opposite",
   result: "consequence_does_not_follow",
   condition: "condition_cannot_restrict",

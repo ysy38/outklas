@@ -11,6 +11,8 @@ export type FactoryThresholds = {
   answerReuseTrigramOverlap: number;
   /** Content-word overlap above which reuse is worth a warning even when it is not a copy. */
   answerReuseTokenWarn: number;
+  /** Content words a wrong option may share with the answer body before matching words gives the key away. */
+  answerSharedContentWords: number;
 };
 
 export const defaultFactoryThresholds: FactoryThresholds = {
@@ -18,6 +20,7 @@ export const defaultFactoryThresholds: FactoryThresholds = {
   answerReuseTokenOverlap: 0.8,
   answerReuseTrigramOverlap: 0.5,
   answerReuseTokenWarn: 0.6,
+  answerSharedContentWords: 4,
 };
 
 /** Attempt ceilings per stage: a failing stage retries only itself. */

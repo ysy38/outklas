@@ -242,13 +242,14 @@ describe("candidate validator", () => {
 
   it("does not read the next sentence's option letter as the named key", () => {
     expect(codes(good({ explanation: "Bu yüzden although bağlacı doğru seçenektir. B seçeneği koşul bildirir." }))).not.toContain("explanation_names_other_answer");
-    expect(codes(good({ explanation: "Doğru seçenek ödünleme (concession) ilişkisi kurar. D seçeneği neden bildirir." }))).not.toContain("explanation_names_other_answer");
+    expect(codes(good({ explanation: "Doğru seçenek beklenmedik sonuç (-e rağmen) ilişkisi kurar. D seçeneği neden bildirir." }))).not.toContain("explanation_names_other_answer");
     expect(codes(good({ explanation: "Doğru yanıt (A) çünkü although beklenmeyen bir sonucu verir." }))).not.toContain("explanation_names_other_answer");
   });
 
   it("warns about greetings and the wrong term in explanations", () => {
     expect(codes(good({ explanation: `Merhaba! ${good().explanation}` }))).toContain("explanation_style");
     expect(codes(good({ explanation: `${good().explanation} Bu bir taviz ilişkisidir.` }))).toContain("explanation_style");
+    expect(codes(good({ explanation: `${good().explanation} Bu bir ödünleme ilişkisidir.` }))).toContain("explanation_style");
     expect(codes(good())).not.toContain("explanation_style");
   });
 
@@ -328,12 +329,12 @@ const prov = {
   judgeModel: "judge-model",
   explanationModel: "gen-model",
   generatorPromptVersion: "skeleton.v1",
-  distractorPromptVersion: "distractor.v1",
-  distractorJudgePromptVersion: "distractor-judge.v1",
+  distractorPromptVersion: "distractor.v2",
+  distractorJudgePromptVersion: "distractor-judge.v2",
   judgePromptVersion: "judge.v2",
   blindSolvePromptVersion: "verifier-solve.v1",
   acceptabilityPromptVersion: "acceptability.v1",
-  explanationPromptVersion: "explanation.v1",
+  explanationPromptVersion: "explanation.v2",
   questionSpecVersion: factoryVersions.questionSpec,
   distractorSpecVersion: factoryVersions.distractorSpec,
   specId: spec.id,
@@ -353,16 +354,16 @@ const prov = {
       option: "B" as const,
       attempt: 1,
       model: "gen-model",
-      promptVersion: "distractor.v1",
+      promptVersion: "distractor.v2",
       requestHash: "e".repeat(64),
       cached: false,
       latencyMs: 700,
       output: "Because the trial was short",
       validator: { status: "pass" as const, codes: [] },
-      judge: { model: "judge-model", promptVersion: "distractor-judge.v1", requestHash: "f".repeat(64), decision: "REGENERATE" as const, failures: ["competent_candidate_could_select"], concerns: [], reasons: ["reads as a valid cause"] },
+      judge: { model: "judge-model", promptVersion: "distractor-judge.v2", requestHash: "f".repeat(64), decision: "REGENERATE" as const, failures: ["competent_candidate_could_select"], concerns: [], reasons: ["reads as a valid cause"] },
       rejectionReason: "competent_candidate_could_select",
     },
-    { stage: "distractor" as const, option: "B" as const, attempt: 2, model: "gen-model", promptVersion: "distractor.v1", requestHash: null, cached: false, latencyMs: 300, output: null, validator: { status: "reject" as const, codes: [] }, judge: null, rejectionReason: "model_error: timeout" },
+    { stage: "distractor" as const, option: "B" as const, attempt: 2, model: "gen-model", promptVersion: "distractor.v2", requestHash: null, cached: false, latencyMs: 300, output: null, validator: { status: "reject" as const, codes: [] }, judge: null, rejectionReason: "model_error: timeout" },
   ],
   requestHashes: { blindSolve: "b".repeat(64), acceptability: "d".repeat(64), judge: "c".repeat(64) },
   sourceContextIds: ["yds-2018", "yds-2023-10"],

@@ -6,7 +6,7 @@ import { discourseForConnector } from "@/modules/knowledge/seed";
 import type { DistractorSpec } from "./distractor-spec";
 import { completeStem, type QuestionSkeleton } from "./skeleton";
 import { defaultFactoryThresholds, type FactoryThresholds } from "./thresholds";
-import { clauseReuse, hasPhrase, integrityProblems, leadingConnector, normalized, stageValidation, type IssueSeverity, type OriginalityIndex, type StageValidation, type ValidationIssue } from "./validator";
+import { clauseReuse, hasPhrase, integrityProblems, leadingConnector, normalized, sharedWording, stageValidation, type IssueSeverity, type OriginalityIndex, type StageValidation, type ValidationIssue } from "./validator";
 import { factoryVersions } from "./versions";
 
 /** Stage 4 output: one wrong option. The rationale is internal and never shown to learners. */
@@ -29,7 +29,7 @@ export function validateDistractor(input: {
   skeleton: QuestionSkeleton;
   text: string;
   accepted: PlacedOption[];
-  /** Texts already rejected for this option; a writer that repeats one has ignored the feedback. */
+  /** Texts the judge already rejected for this option; a writer that repeats one has ignored the feedback. */
   rejected?: string[];
   originality?: OriginalityIndex;
   thresholds?: FactoryThresholds;
@@ -65,6 +65,8 @@ export function validateDistractor(input: {
   const reuse = clauseReuse(skeleton.correctAnswer, text, thresholds);
   if (reuse.level === "copy") add("answer_clause_reuse", "critical", `${reuse.tokenOverlap}/${reuse.trigramOverlap}`);
   else if (reuse.level === "warn") add("answer_overlap", "warn", `${reuse.tokenOverlap}/${reuse.trigramOverlap}`);
+  const shared = sharedWording(skeleton.correctAnswer, text);
+  if (shared.length >= thresholds.answerSharedContentWords) add("answer_shared_wording", "critical", shared.join(" "));
   for (const other of accepted) {
     if (normalized(other.text) === normalized(text)) add("option_duplicate", "critical", other.option);
     else if (clauseReuse(other.text, text, thresholds).level === "copy") add("distractor_clause_reuse", "critical", other.option);
@@ -86,11 +88,8 @@ export const distractorJudgeReport = z.object({
   grammaticalValidity: unit,
   /** The clause itself is natural, meaningful English (a gibberish option is too easy). */
   semanticCoherence: unit,
-  /** The option really expresses the relation its role asks for. */
-  targetRelationValidity: unit,
   /** Chance that the option is in fact a correct completion. */
   unintendedCorrectness: unit,
-  distractorRoleAlignment: unit,
   answerClauseReuse: unit,
   ambiguity: unit,
   /** "Could a competent YDS candidate reasonably select this option as correct?" */
@@ -106,8 +105,9 @@ export type DistractorDecisionKind = (typeof distractorDecisions)[number];
 export type DistractorDecision = { version: typeof factoryVersions.distractorJudge; decision: DistractorDecisionKind; failures: string[]; concerns: string[] };
 
 /**
- * Grammatical and coherent is not enough: the option must also fail as a completed sentence and play its role.
+ * Grammatical and coherent is not enough: the option must also fail as a completed sentence.
  * A confident "a candidate could pick this" regenerates the option; an unsure one goes to a human.
+ * Connector role and relation are settled by validateDistractor, so the judge has no say on them.
  */
 export function distractorDecision(input: { dspec: DistractorSpec; report: DistractorJudgeReport; thresholds?: FactoryThresholds }): DistractorDecision {
   const { dspec, report } = input;
@@ -123,8 +123,6 @@ export function distractorDecision(input: { dspec: DistractorSpec; report: Distr
   if (report.answerClauseReuse >= t) failures.push("answer_clause_reuse");
   if (dspec.grammarConstraint.mustBeGrammatical && report.grammaticalValidity < t) failures.push("ungrammatical");
   if (dspec.requiredProperties.includes("coherent_clause") && report.semanticCoherence < t) failures.push("incoherent_clause");
-  if (dspec.relationConstraint.targetRelation && report.targetRelationValidity < t) failures.push("target_relation_not_expressed");
-  if (report.distractorRoleAlignment < t) failures.push("role_misaligned");
   if (report.ambiguity >= t) concerns.push("ambiguous");
   if (!sure) concerns.push("low_confidence");
 

@@ -104,6 +104,12 @@ export function clauseReuse(reference: string, option: string, thresholds: Facto
   return { tokenOverlap: Math.round(tokenOverlap * 100) / 100, trigramOverlap: Math.round(trigramOverlap * 100) / 100, level };
 }
 
+/** Content words a wrong option shares with the answer body: enough of them lets a candidate match the key by wording. */
+export function sharedWording(answer: string, option: string): string[] {
+  const reference = contentWords(optionBody(answer));
+  return [...contentWords(optionBody(option))].filter((word) => reference.has(word));
+}
+
 export const integrityProblems = (text: string): string[] =>
   [
     /[\u0000-\u001f]/.test(text) ? "control_character" : null,
@@ -204,6 +210,8 @@ export function validateCandidate(input: {
   for (const label of distractorLabels) {
     const reuse = clauseReuse(options[correct], options[label], input.thresholds);
     if (reuse.level === "copy") add("connector_swap", "critical", { option: label, detail: `${reuse.tokenOverlap}/${reuse.trigramOverlap}` });
+    const shared = sharedWording(options[correct], options[label]);
+    if (shared.length >= (input.thresholds ?? defaultFactoryThresholds).answerSharedContentWords) add("answer_shared_wording", "critical", { option: label, detail: shared.join(" ") });
   }
   for (const [i, a] of distractorLabels.entries()) {
     for (const b of distractorLabels.slice(i + 1)) {
@@ -234,7 +242,7 @@ export function validateCandidate(input: {
   if (named && named !== correct) add("explanation_names_other_answer", "critical", { detail: named });
   if (answerConnector && !hasPhrase(explanation, connectorSurface(answerConnector))) add("explanation_missing_connector", "warn");
   if (words(explanation).length > spec.explanationRequirements.maxWords * 1.5) add("explanation_too_long", "warn", { detail: String(words(explanation).length) });
-  const offStyle = explanation.match(/\bmerhaba\b|\bselam\b|!|\btaviz\w*/i)?.[0];
+  const offStyle = explanation.match(/\bmerhaba\b|\bselam\b|!|\btaviz\w*|ödünleme\w*/i)?.[0];
   if (offStyle) add("explanation_style", "warn", { detail: offStyle.toLowerCase() });
 
   const text = [stem, ...optionLabels.map((label) => options[label])].join(" \n ");

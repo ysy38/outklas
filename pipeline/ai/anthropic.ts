@@ -2,7 +2,7 @@ import { postJson, type HttpOptions } from "./http";
 import type { AIProvider, ModelRequest, ModelResponse } from "./types";
 
 type MessagesBody = {
-  content?: ({ type: "text"; text: string } | { type: "tool_use"; name: string; input: unknown })[];
+  content?: { type: string; text?: string }[];
   stop_reason?: string;
   usage?: { input_tokens?: number; output_tokens?: number };
   model?: string;
@@ -11,9 +11,25 @@ type MessagesBody = {
 
 /** 529 is Anthropic's "overloaded". */
 const retryable = new Set([408, 429, 500, 502, 503, 504, 529]);
-const tool = "respond";
 
-/** Claude through the Messages API. Structured output is a forced tool call whose input is the JSON. */
+/** Keywords structured outputs reject; Zod enforces them after the call. */
+const unsupported = new Set(["minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf", "format"]);
+
+/** Structured outputs need every object closed (`additionalProperties: false`). */
+export function anthropicSchema(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(anthropicSchema);
+  if (!value || typeof value !== "object") return value;
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([key]) => !unsupported.has(key))
+    .map(([key, inner]) => [key, key === "properties" ? Object.fromEntries(Object.entries(inner as Record<string, unknown>).map(([name, field]) => [name, anthropicSchema(field)])) : anthropicSchema(inner)]);
+  const schema = Object.fromEntries(entries) as Record<string, unknown>;
+  return schema.type === "object" || schema.properties ? { ...schema, additionalProperties: false } : schema;
+}
+
+/**
+ * Claude through the Messages API. JSON comes from `output_config.format` (Sonnet 5.5 refuses forced tool calls),
+ * and no temperature is sent because Claude 5.x models reject it.
+ */
 export class AnthropicProvider implements AIProvider {
   readonly name = "anthropic";
 
@@ -29,7 +45,6 @@ export class AnthropicProvider implements AIProvider {
       body: {
         model: request.model,
         max_tokens: request.maxOutputTokens ?? 4096,
-        temperature: request.temperature ?? 0,
         ...(request.system ? { system: request.system } : {}),
         messages: [
           {
@@ -39,7 +54,7 @@ export class AnthropicProvider implements AIProvider {
             ),
           },
         ],
-        ...(request.jsonSchema ? { tools: [{ name: tool, description: "Return the result.", input_schema: request.jsonSchema }], tool_choice: { type: "tool", name: tool } } : {}),
+        ...(request.jsonSchema ? { output_config: { format: { type: "json_schema", schema: anthropicSchema(request.jsonSchema) } } } : {}),
       },
       model: request.model,
       label: "anthropic",
@@ -47,9 +62,7 @@ export class AnthropicProvider implements AIProvider {
       errorMessage: (parsed, raw) => (parsed as MessagesBody | null)?.error?.message ?? raw.slice(0, 200),
       options: this.options,
     })) as MessagesBody;
-    const blocks = body.content ?? [];
-    const call = blocks.find((block) => block.type === "tool_use");
-    const text = call && "input" in call ? JSON.stringify(call.input) : blocks.map((block) => ("text" in block ? block.text : "")).join("");
+    const text = (body.content ?? []).map((block) => (block.type === "text" ? (block.text ?? "") : "")).join("");
     const input = body.usage?.input_tokens ?? 0;
     const output = body.usage?.output_tokens ?? 0;
     return { text, model: body.model ?? request.model, finishReason: body.stop_reason?.toUpperCase(), usage: { inputTokens: input, outputTokens: output, totalTokens: input + output } };

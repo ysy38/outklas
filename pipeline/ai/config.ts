@@ -44,6 +44,7 @@ const thresholdEnv: Record<keyof FactoryThresholds, string> = {
   answerReuseTokenOverlap: "ANSWER_REUSE_TOKEN_OVERLAP",
   answerReuseTrigramOverlap: "ANSWER_REUSE_TRIGRAM_OVERLAP",
   answerReuseTokenWarn: "ANSWER_REUSE_TOKEN_WARN",
+  answerSharedContentWords: "ANSWER_SHARED_CONTENT_WORDS",
 };
 
 export const providers = ["gemini", "nvidia", "anthropic"] as const;

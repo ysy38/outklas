@@ -5,7 +5,7 @@ import type { QuestionSpec } from "@/modules/factory/spec";
 import { parseRef, type NodeRef } from "@/modules/knowledge/graph";
 import { responseSchema } from "./schema";
 
-export const explanationPromptVersion = "explanation.v1";
+export const explanationPromptVersion = "explanation.v2";
 
 const name = (value: NodeRef | null) => (value ? parseRef(value).slug.replaceAll("_", " ") : "none");
 
@@ -14,7 +14,7 @@ export const explanationHeader = "EXPLANATION WRITER";
 export const explanationSystem = `${explanationHeader}
 You explain one finished YDS sentence-completion item to a Turkish learner. The item and its key are final: do not change, question or rewrite them.
 
-Write in natural, correct Turkish, addressing the learner as "sen". No greeting, no "Merhaba", no exclamation marks. Name connectors in English exactly as written in the options. Call concession "ödünleme (concession)" (never "taviz") and contrast "karşıtlık (contrast)".
+Write in natural, correct Turkish, addressing the learner as "sen". No greeting, no "Merhaba", no exclamation marks. Name connectors in English exactly as written in the options. Use the product's terms: concession is "beklenmedik sonuç (-e rağmen)" and contrast is "zıtlık"; never "taviz" or "ödünleme".
 
 Return JSON only:
 - explanation: why the key is right: what the reader would normally expect and why the main clause is the unexpected outcome; then one short sentence per wrong option saying which relation it builds and why the completed sentence is false or illogical. At most the given word limit.

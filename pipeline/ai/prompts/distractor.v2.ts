@@ -5,7 +5,7 @@ import { connectorSurface } from "@/modules/factory/spec-engine";
 import { parseRef, type NodeRef } from "@/modules/knowledge/graph";
 import { responseSchema } from "./schema";
 
-export const distractorPromptVersion = "distractor.v1";
+export const distractorPromptVersion = "distractor.v2";
 
 const name = (value: NodeRef | null) => (value ? parseRef(value).slug.replaceAll("_", " ") : "none");
 const quoted = (list: string[]) => list.map((word) => `"${word}"`).join(", ");
@@ -26,8 +26,10 @@ Return JSON only: {"text": "<the option>", "rationale": "<one short English sent
 
 /** Relation-level instructions per failure mode. */
 const failureInstructions: Record<FailureMode, string> = {
-  no_real_opposition:
-    "Use the contrast connector, but keep the same subject as the main clause and say something that points the SAME way as the main clause or is fully compatible with it, so there is nothing to contrast. Never bring in another group, place, period or species that genuinely differs: that makes a good contrast sentence.",
+  contrast_does_not_fit:
+    "Use the contrast connector for a real contrast, but contrast the main clause with something that makes the completed sentence false or self-contradictory: for example, deny or reverse what the main clause states about the same subject. Never contrast with another group, place, period or species that genuinely differs: that makes a good, correct contrast sentence.",
+  similarity_does_not_hold:
+    "Use the similarity connector with a point that is not similar to the main clause or that contradicts it, so the comparison makes the completed sentence illogical.",
   reason_supports_opposite:
     'Give a reason that would make the main clause LESS likely (it argues for the opposite outcome). Test: if "<main clause> because <reason>" sounds like a sensible explanation, it is forbidden.',
   consequence_does_not_follow: "State a consequence that does not follow from the main clause, or that contradicts it.",

@@ -14,9 +14,9 @@ import { dnaVersion, factoryVersions } from "@/modules/factory/versions";
 import type { NodeRef } from "@/modules/knowledge/graph";
 import { parseModel, type AIConfig } from "../ai/config";
 import { acceptabilityPromptVersion } from "../ai/prompts/acceptability.v1";
-import { distractorJudgePromptVersion } from "../ai/prompts/distractor-judge.v1";
-import { distractorPromptVersion } from "../ai/prompts/distractor.v1";
-import { explanationPromptVersion } from "../ai/prompts/explanation.v1";
+import { distractorJudgePromptVersion } from "../ai/prompts/distractor-judge.v2";
+import { distractorPromptVersion } from "../ai/prompts/distractor.v2";
+import { explanationPromptVersion } from "../ai/prompts/explanation.v2";
 import type { DistractorCheckSummary } from "../ai/prompts/judge.v2";
 import { judgePromptVersion } from "../ai/prompts/judge.v2";
 import { skeletonPromptVersion } from "../ai/prompts/skeleton.v1";
@@ -105,7 +105,7 @@ export async function generateItem(spec: QuestionSpec, ctx: RunContext): Promise
       }
       const text = call.result.value.text.trim();
       const output = text.slice(0, 800);
-      const rejected = attempts.filter((attempt) => attempt.stage === "distractor" && attempt.option === dspec.option && attempt.output).map((attempt) => attempt.output!);
+      const rejected = attempts.filter((attempt) => attempt.stage === "distractor" && attempt.option === dspec.option && attempt.judge?.decision === "REGENERATE" && attempt.output).map((attempt) => attempt.output!);
       const validation = validateDistractor({ dspec, skeleton, text, accepted, rejected, originality: ctx.originality, thresholds });
       const critical = codes(validation.issues);
       const validator = { status: validation.status, codes: [...critical, ...codes(validation.issues, "warn")] };

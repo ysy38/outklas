@@ -16,9 +16,9 @@ import { originalityIndex, validateCandidate, type OriginalityIndex } from "@/mo
 import { dnaVersion, factoryVersions } from "@/modules/factory/versions";
 import { loadAIConfig, type AIConfig } from "../ai/config";
 import { acceptabilityPromptVersion } from "../ai/prompts/acceptability.v1";
-import { distractorJudgePromptVersion } from "../ai/prompts/distractor-judge.v1";
-import { distractorPromptVersion } from "../ai/prompts/distractor.v1";
-import { explanationPromptVersion } from "../ai/prompts/explanation.v1";
+import { distractorJudgePromptVersion } from "../ai/prompts/distractor-judge.v2";
+import { distractorPromptVersion } from "../ai/prompts/distractor.v2";
+import { explanationPromptVersion } from "../ai/prompts/explanation.v2";
 import { judgePromptVersion } from "../ai/prompts/judge.v2";
 import { skeletonPromptVersion } from "../ai/prompts/skeleton.v1";
 import { assertIndependent, createAIService, providerRouter } from "../ai/service";

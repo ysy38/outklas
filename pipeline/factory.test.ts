@@ -12,10 +12,11 @@ import { loadAIConfig } from "./ai/config";
 import { generatorPromptVersion, generatorResponseSchema, generatorSystem, generatorUser } from "./ai/prompts/generator.v3";
 import { acceptabilitySystem, acceptabilityUser } from "./ai/prompts/acceptability.v1";
 import { judgeUser } from "./ai/prompts/judge.v2";
+import { distractorJudgeUser } from "./ai/prompts/distractor-judge.v2";
 import { createAIService, JudgeNotIndependent } from "./ai/service";
 import type { AIProvider, ModelRequest, ModelResponse } from "./ai/types";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { distractorDecision, validateDistractor, type DistractorJudgeReport, type GeneratedDistractor } from "@/modules/factory/distractor";
+import { distractorDecision, distractorJudgeReport, validateDistractor, type DistractorJudgeReport, type GeneratedDistractor } from "@/modules/factory/distractor";
 import { buildDistractorSpecs, type DistractorSpec } from "@/modules/factory/distractor-spec";
 import type { ItemExplanation } from "@/modules/factory/explanation";
 import { advance, generationTransitions, IllegalTransition, newTrace } from "@/modules/factory/generation";
@@ -227,9 +228,7 @@ const review = (patch: Partial<DistractorJudgeReport> = {}): DistractorJudgeRepo
   standaloneSentenceAcceptable: false,
   grammaticalValidity: 0.95,
   semanticCoherence: 0.9,
-  targetRelationValidity: 0.9,
   unintendedCorrectness: 0.05,
-  distractorRoleAlignment: 0.9,
   answerClauseReuse: 0.05,
   ambiguity: 0.05,
   competentCandidateCouldSelect: false,
@@ -243,7 +242,7 @@ describe("distractor specs", () => {
     expect(buildDistractorSpecs(spec)).toEqual(dspecs);
     expect(dspecs.map((entry) => entry.option)).toEqual(spec.distractorPlan.map((slot) => slot.option));
     expect(new Set(dspecs.map((entry) => entry.role)).size).toBe(4);
-    expect(dspecs.map((entry) => entry.semanticConstraint.failureMode)).toEqual(["reason_supports_opposite", "condition_cannot_restrict", "impossible_time_order", "no_real_opposition"]);
+    expect(dspecs.map((entry) => entry.semanticConstraint.failureMode)).toEqual(["reason_supports_opposite", "condition_cannot_restrict", "impossible_time_order", "contrast_does_not_fit"]);
     for (const entry of dspecs) {
       expect(entry.relationConstraint.mustNotExpress).toEqual(["discourse_relation:concession"]);
       expect(entry.forbiddenProperties).toContain("reuses_answer_clause");
@@ -330,6 +329,12 @@ describe("distractor validation", () => {
     expect(again.issues.map((issue) => issue.code)).toContain("repeats_rejected_attempt");
   });
 
+  it("rejects a wrong option that shares the key's wording so a candidate could match it", () => {
+    const echo = check("A", "Because the treatment causes headaches and tiredness in older patients with weak hearts");
+    expect(echo.issues.find((issue) => issue.code === "answer_shared_wording")).toMatchObject({ severity: "critical", detail: "treatment causes headaches tiredness" });
+    expect(validateDistractor({ dspec: dspec("A"), skeleton, text: "Because the treatment causes headaches and tiredness in older patients with weak hearts", accepted: [], thresholds: { ...defaultFactoryThresholds, answerSharedContentWords: 5 } }).issues.map((issue) => issue.code)).not.toContain("answer_shared_wording");
+  });
+
   it("rejects a repeated connector or a copy of an accepted distractor", () => {
     expect(check("C", "If doctors record every side effect in a separate file kept at the hospital", [{ option: "A", text: "If the drug works" }]).issues.map((issue) => issue.code)).toContain("connector_repeated");
     expect(check("C", "Unless the national health authority approved the drug only after a long clinical trial", [{ option: "A", text: fine.A }]).issues.map((issue) => issue.code)).toContain("distractor_clause_reuse");
@@ -349,7 +354,12 @@ describe("distractor judge decision", () => {
     expect(decide({ unintendedCorrectness: 0.7 }).failures).toContain("unintended_correctness");
     expect(decide({ answerClauseReuse: 0.8 }).failures).toContain("answer_clause_reuse");
     expect(decide({ grammaticalValidity: 0.2 }).failures).toContain("ungrammatical");
-    expect(decide({ targetRelationValidity: 0.2 }).failures).toContain("target_relation_not_expressed");
+  });
+
+  it("leaves the connector role and relation to the deterministic checks", () => {
+    expect(Object.keys(distractorJudgeReport.shape)).not.toEqual(expect.arrayContaining(["targetRelationValidity"]));
+    expect(Object.keys(distractorJudgeReport.shape)).not.toEqual(expect.arrayContaining(["distractorRoleAlignment"]));
+    expect(distractorJudgeUser({ dspec: dspec("A"), skeleton, text: fine.A })).not.toMatch(/ROLE|fail by|expressing/);
   });
 
   it("sends an unsure reviewer to a human instead of deciding", () => {
@@ -449,7 +459,7 @@ describe("atomic generation", () => {
     expect(record.status).toBe("pending_review");
     expect(record.versions[0].candidate.question.options).toEqual({ A: fine.A, B: skeleton.correctAnswer, C: fine.C, D: fine.D, E: fine.E });
     expect(record.versions[0].candidate.distractorRationales.map((entry) => entry.distractorType)).toEqual(spec.distractorPlan.map((slot) => slot.distractorType));
-    expect(record.provenance).toMatchObject({ pipelineVersion: "atomic.v1", generatorModel: "gen", distractorJudgeModel: "dj", judgeModel: "judge", distractorSpecVersion: "distractor-spec.v1" });
+    expect(record.provenance).toMatchObject({ pipelineVersion: "atomic.v1", generatorModel: "gen", distractorJudgeModel: "dj", judgeModel: "judge", distractorSpecVersion: "distractor-spec.v2" });
     expect(record.provenance.attempts.map((attempt) => `${attempt.stage}:${attempt.option ?? "-"}:${attempt.attempt}`)).toEqual(["skeleton:-:1", "distractor:A:1", "distractor:C:1", "distractor:D:1", "distractor:E:1", "explanation:-:1"]);
     expect(record.provenance.attempts[1].judge).toMatchObject({ model: "dj", decision: "ACCEPT" });
     expect(applyReview(record, { decision: "APPROVE", reviewer: "mora", at: "2026-10-08T13:00:00.000Z" }).generation?.state).toBe("APPROVED");
