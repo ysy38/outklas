@@ -6,7 +6,7 @@ import { discourseForConnector } from "@/modules/knowledge/seed";
 import type { DistractorSpec } from "./distractor-spec";
 import { completeStem, type QuestionSkeleton } from "./skeleton";
 import { defaultFactoryThresholds, type FactoryThresholds } from "./thresholds";
-import { clauseReuse, hasPhrase, integrityProblems, leadingConnector, normalized, sharedWording, stageValidation, type IssueSeverity, type OriginalityIndex, type StageValidation, type ValidationIssue } from "./validator";
+import { clauseReuse, hasPhrase, integrityProblems, leadingConnector, normalized, sharedWording, stageValidation, stemEcho, type IssueSeverity, type OriginalityIndex, type StageValidation, type ValidationIssue } from "./validator";
 import { factoryVersions } from "./versions";
 
 /** Stage 4 output: one wrong option. The rationale is internal and never shown to learners. */
@@ -67,6 +67,8 @@ export function validateDistractor(input: {
   else if (reuse.level === "warn") add("answer_overlap", "warn", `${reuse.tokenOverlap}/${reuse.trigramOverlap}`);
   const shared = sharedWording(skeleton.correctAnswer, text);
   if (shared.length >= thresholds.answerSharedContentWords) add("answer_shared_wording", "critical", shared.join(" "));
+  const echo = stemEcho(skeleton.stem, text);
+  if (echo.length >= thresholds.stemSharedContentWords) add("stem_echo", "critical", echo.join(" "));
   for (const other of accepted) {
     if (normalized(other.text) === normalized(text)) add("option_duplicate", "critical", other.option);
     else if (clauseReuse(other.text, text, thresholds).level === "copy") add("distractor_clause_reuse", "critical", other.option);
@@ -92,6 +94,8 @@ export const distractorJudgeReport = z.object({
   unintendedCorrectness: unit,
   answerClauseReuse: unit,
   ambiguity: unit,
+  /** Chance that even a weak candidate dismisses it at a glance (absurd, off-topic, a plain negation): too easy to be worth an option. */
+  obviouslyWrong: unit,
   /** "Could a competent YDS candidate reasonably select this option as correct?" */
   competentCandidateCouldSelect: z.boolean(),
   confidence: unit,
@@ -123,6 +127,7 @@ export function distractorDecision(input: { dspec: DistractorSpec; report: Distr
   if (report.answerClauseReuse >= t) failures.push("answer_clause_reuse");
   if (dspec.grammarConstraint.mustBeGrammatical && report.grammaticalValidity < t) failures.push("ungrammatical");
   if (dspec.requiredProperties.includes("coherent_clause") && report.semanticCoherence < t) failures.push("incoherent_clause");
+  if (report.obviouslyWrong >= t) failures.push("too_obvious");
   if (report.ambiguity >= t) concerns.push("ambiguous");
   if (!sure) concerns.push("low_confidence");
 

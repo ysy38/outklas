@@ -12,7 +12,7 @@ import { loadAIConfig } from "./ai/config";
 import { generatorPromptVersion, generatorResponseSchema, generatorSystem, generatorUser } from "./ai/prompts/generator.v3";
 import { acceptabilitySystem, acceptabilityUser } from "./ai/prompts/acceptability.v1";
 import { judgeUser } from "./ai/prompts/judge.v2";
-import { distractorJudgeUser } from "./ai/prompts/distractor-judge.v2";
+import { distractorJudgeUser } from "./ai/prompts/distractor-judge.v3";
 import { createAIService, JudgeNotIndependent } from "./ai/service";
 import type { AIProvider, ModelRequest, ModelResponse } from "./ai/types";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -231,6 +231,7 @@ const review = (patch: Partial<DistractorJudgeReport> = {}): DistractorJudgeRepo
   unintendedCorrectness: 0.05,
   answerClauseReuse: 0.05,
   ambiguity: 0.05,
+  obviouslyWrong: 0.1,
   competentCandidateCouldSelect: false,
   confidence: 0.9,
   reasons: ["the cause does not fit"],
@@ -242,7 +243,7 @@ describe("distractor specs", () => {
     expect(buildDistractorSpecs(spec)).toEqual(dspecs);
     expect(dspecs.map((entry) => entry.option)).toEqual(spec.distractorPlan.map((slot) => slot.option));
     expect(new Set(dspecs.map((entry) => entry.role)).size).toBe(4);
-    expect(dspecs.map((entry) => entry.semanticConstraint.failureMode)).toEqual(["reason_supports_opposite", "condition_cannot_restrict", "impossible_time_order", "contrast_does_not_fit"]);
+    expect(dspecs.map((entry) => entry.semanticConstraint.failureMode)).toEqual(["reason_supports_opposite", "condition_cannot_restrict", "impossible_time_order", "no_real_opposition"]);
     for (const entry of dspecs) {
       expect(entry.relationConstraint.mustNotExpress).toEqual(["discourse_relation:concession"]);
       expect(entry.forbiddenProperties).toContain("reuses_answer_clause");
@@ -329,6 +330,12 @@ describe("distractor validation", () => {
     expect(again.issues.map((issue) => issue.code)).toContain("repeats_rejected_attempt");
   });
 
+  it("rejects a wrong option that restates the stem", () => {
+    const echo = check("E", "Whereas many patients take the prescribed medicine for only a few months");
+    expect(echo.issues.find((issue) => issue.code === "stem_echo")).toMatchObject({ severity: "critical", detail: "patients take prescribed medicine months" });
+    expect(check("E", fine.E).issues.map((issue) => issue.code)).not.toContain("stem_echo");
+  });
+
   it("rejects a wrong option that shares the key's wording so a candidate could match it", () => {
     const echo = check("A", "Because the treatment causes headaches and tiredness in older patients with weak hearts");
     expect(echo.issues.find((issue) => issue.code === "answer_shared_wording")).toMatchObject({ severity: "critical", detail: "treatment causes headaches tiredness" });
@@ -354,6 +361,10 @@ describe("distractor judge decision", () => {
     expect(decide({ unintendedCorrectness: 0.7 }).failures).toContain("unintended_correctness");
     expect(decide({ answerClauseReuse: 0.8 }).failures).toContain("answer_clause_reuse");
     expect(decide({ grammaticalValidity: 0.2 }).failures).toContain("ungrammatical");
+  });
+
+  it("regenerates an option even a weak candidate would dismiss at a glance", () => {
+    expect(decide({ obviouslyWrong: 0.8 })).toMatchObject({ decision: "REGENERATE", failures: ["too_obvious"] });
   });
 
   it("leaves the connector role and relation to the deterministic checks", () => {
@@ -459,7 +470,7 @@ describe("atomic generation", () => {
     expect(record.status).toBe("pending_review");
     expect(record.versions[0].candidate.question.options).toEqual({ A: fine.A, B: skeleton.correctAnswer, C: fine.C, D: fine.D, E: fine.E });
     expect(record.versions[0].candidate.distractorRationales.map((entry) => entry.distractorType)).toEqual(spec.distractorPlan.map((slot) => slot.distractorType));
-    expect(record.provenance).toMatchObject({ pipelineVersion: "atomic.v1", generatorModel: "gen", distractorJudgeModel: "dj", judgeModel: "judge", distractorSpecVersion: "distractor-spec.v2" });
+    expect(record.provenance).toMatchObject({ pipelineVersion: "atomic.v1", generatorModel: "gen", distractorJudgeModel: "dj", judgeModel: "judge", distractorSpecVersion: "distractor-spec.v3" });
     expect(record.provenance.attempts.map((attempt) => `${attempt.stage}:${attempt.option ?? "-"}:${attempt.attempt}`)).toEqual(["skeleton:-:1", "distractor:A:1", "distractor:C:1", "distractor:D:1", "distractor:E:1", "explanation:-:1"]);
     expect(record.provenance.attempts[1].judge).toMatchObject({ model: "dj", decision: "ACCEPT" });
     expect(applyReview(record, { decision: "APPROVE", reviewer: "mora", at: "2026-10-08T13:00:00.000Z" }).generation?.state).toBe("APPROVED");

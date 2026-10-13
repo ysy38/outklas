@@ -6,16 +6,17 @@ export type ModelRole = "analyzer" | "verifier" | "generator" | "distractor" | "
  * The only place model names live. Chosen from ListModels and live probes on 2026-10-07; see
  * docs/architecture/phase-2-plan.md §2 and docs/analysis/phase-2.1-report.md. Analyzer and verifier
  * stay on different models so the blind solve is independent of the analysis pass; every factory writer
- * (generator, distractor) is checked by a different model (distractorJudge, judge).
+ * (generator, distractor) is checked by a different model (distractorJudge, judge). Factory roles run on
+ * Claude since the 2026-10-13 comparison slices (Haiku writes, Sonnet judges).
  */
 export const modelDefaults: Record<ModelRole, string> = {
   analyzer: "gemini-3.1-flash-lite",
   verifier: "gemini-flash-lite-latest",
-  generator: "gemini-flash-lite-latest",
-  distractor: "gemini-flash-lite-latest",
-  distractorJudge: "gemini-3.1-flash-lite",
-  judge: "gemini-3.1-flash-lite",
-  explanation: "gemini-flash-lite-latest",
+  generator: "anthropic:claude-haiku-5-5",
+  distractor: "anthropic:claude-haiku-5-5",
+  distractorJudge: "anthropic:claude-sonnet-5-5",
+  judge: "anthropic:claude-sonnet-5-5",
+  explanation: "anthropic:claude-haiku-5-5",
 };
 
 /** Non-ÖSYM health probes. Order: requested Pro preview, then working Flash defaults. */
@@ -45,6 +46,7 @@ const thresholdEnv: Record<keyof FactoryThresholds, string> = {
   answerReuseTrigramOverlap: "ANSWER_REUSE_TRIGRAM_OVERLAP",
   answerReuseTokenWarn: "ANSWER_REUSE_TOKEN_WARN",
   answerSharedContentWords: "ANSWER_SHARED_CONTENT_WORDS",
+  stemSharedContentWords: "STEM_SHARED_CONTENT_WORDS",
 };
 
 export const providers = ["gemini", "nvidia", "anthropic"] as const;
@@ -78,13 +80,17 @@ export type AIConfig = {
   warnings: string[];
 };
 
+const countThresholds = new Set<keyof FactoryThresholds>(["answerSharedContentWords", "stemSharedContentWords"]);
+
 function loadThresholds(env: Record<string, string | undefined>): FactoryThresholds {
   return Object.fromEntries(
     (Object.keys(defaultFactoryThresholds) as (keyof FactoryThresholds)[]).map((key) => {
       const raw = env[thresholdEnv[key]]?.trim();
       if (!raw) return [key, defaultFactoryThresholds[key]];
       const value = Number(raw);
-      if (!Number.isFinite(value) || value <= 0 || value > 1) throw new Error(`${thresholdEnv[key]} must be a number in (0, 1]`);
+      if (countThresholds.has(key)) {
+        if (!Number.isInteger(value) || value < 1) throw new Error(`${thresholdEnv[key]} must be a whole number of at least 1`);
+      } else if (!Number.isFinite(value) || value <= 0 || value > 1) throw new Error(`${thresholdEnv[key]} must be a number in (0, 1]`);
       return [key, value];
     }),
   ) as FactoryThresholds;

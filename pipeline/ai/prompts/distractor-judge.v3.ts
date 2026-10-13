@@ -3,7 +3,7 @@ import type { DistractorSpec } from "@/modules/factory/distractor-spec";
 import { completeStem, type QuestionSkeleton } from "@/modules/factory/skeleton";
 import { responseSchema } from "./schema";
 
-export const distractorJudgePromptVersion = "distractor-judge.v2";
+export const distractorJudgePromptVersion = "distractor-judge.v3";
 
 export const distractorJudgeHeader = "DISTRACTOR REVIEWER";
 
@@ -18,9 +18,10 @@ Work in this order:
    - unintendedCorrectness: chance that the option is in fact a correct completion.
    - answerClauseReuse: it repeats the correct option's clause behind another connector.
    - ambiguity: chance that a careful reader cannot tell whether it is right or wrong.
+   - obviouslyWrong: chance that even a weak candidate dismisses it at a glance, without reading the logic: absurd or off-topic content, an obviously impossible event, or a plain negation of the main clause.
 3. competentCandidateCouldSelect: "Could a competent YDS candidate reasonably select this option as correct?"
 4. confidence: how sure you are of your judgement overall.
-Grammatical and coherent is NOT enough for a good wrong option: it must also clearly fail as a completed sentence.
+Grammatical and coherent is NOT enough for a good wrong option: it must also clearly fail as a completed sentence. A good wrong option fails on careful reading yet still tempts a weak candidate.
 Which connector the option opens with and which relation it sets up are checked elsewhere; do not judge them.
 reasons: at most four short points in English.`;
 

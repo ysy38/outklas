@@ -13,6 +13,8 @@ export type FactoryThresholds = {
   answerReuseTokenWarn: number;
   /** Content words a wrong option may share with the answer body before matching words gives the key away. */
   answerSharedContentWords: number;
+  /** Content words a wrong option may repeat from the stem before it reads as a restatement of it. */
+  stemSharedContentWords: number;
 };
 
 export const defaultFactoryThresholds: FactoryThresholds = {
@@ -21,6 +23,7 @@ export const defaultFactoryThresholds: FactoryThresholds = {
   answerReuseTrigramOverlap: 0.5,
   answerReuseTokenWarn: 0.6,
   answerSharedContentWords: 4,
+  stemSharedContentWords: 4,
 };
 
 /** Attempt ceilings per stage: a failing stage retries only itself. */

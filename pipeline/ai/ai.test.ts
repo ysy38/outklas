@@ -41,7 +41,7 @@ function fakeProvider(outputs: string[]): AIProvider & { calls: ModelRequest[] }
 describe("config", () => {
   it("keeps model names in one place and lets env override them", () => {
     expect(loadAIConfig({}).models).toEqual(modelDefaults);
-    const config = loadAIConfig({ ANALYZER_MODEL: "a", GENERATOR_MODEL: "same", JUDGE_MODEL: "same", AI_MAX_RETRIES: "2", GEMINI_API_KEY: " k " });
+    const config = loadAIConfig({ ANALYZER_MODEL: "a", GENERATOR_MODEL: "same", JUDGE_MODEL: "same", AI_MAX_RETRIES: "2", GEMINI_API_KEY: " k ", CLAUDE_API_KEY: "c" });
     expect(config.models.analyzer).toBe("a");
     expect(config.apiKey).toBe("k");
     expect(config.maxRetries).toBe(2);
@@ -56,11 +56,24 @@ describe("config", () => {
     expect(parseModel("anthropic:claude-haiku-5-5")).toEqual({ provider: "anthropic", model: "claude-haiku-5-5" });
     expect(sameModel("gemini:gemini-x", "gemini-x")).toBe(true);
     expect(sameModel("nvidia:m", "anthropic:m")).toBe(false);
-    const config = loadAIConfig({ GEMINI_API_KEY: "g", NVIDIA_API_KEY: "n", DISTRACTOR_JUDGE_MODEL: "nvidia:j", FINAL_JUDGE_MODEL: "anthropic:claude-haiku-5-5" });
+    const config = loadAIConfig({ GEMINI_API_KEY: "g", NVIDIA_API_KEY: "n", GENERATOR_MODEL: "g1", DISTRACTOR_MODEL: "g2", EXPLANATION_MODEL: "g3", DISTRACTOR_JUDGE_MODEL: "nvidia:j", FINAL_JUDGE_MODEL: "anthropic:claude-haiku-5-5" });
     expect(config.keys).toEqual({ gemini: "g", nvidia: "n", anthropic: null });
     expect(config.warnings).toEqual(["judge uses anthropic, but its API key is not set."]);
     expect(loadAIConfig({ ANTHROPIC_API_KEY: "a" }).keys.anthropic).toBe("a");
     expect(loadAIConfig({}).nvidiaBaseUrl).toBe("https://integrate.api.nvidia.com/v1");
+  });
+
+  it("runs the factory roles on Claude by default: Haiku writes, Sonnet judges", () => {
+    const { models, warnings } = loadAIConfig({ GEMINI_API_KEY: "g", CLAUDE_API_KEY: "c" });
+    expect([models.generator, models.distractor, models.explanation].map((setting) => parseModel(setting))).toEqual(Array(3).fill({ provider: "anthropic", model: "claude-haiku-5-5" }));
+    expect([models.distractorJudge, models.judge].map((setting) => parseModel(setting))).toEqual(Array(2).fill({ provider: "anthropic", model: "claude-sonnet-5-5" }));
+    expect(warnings).toEqual([]);
+  });
+
+  it("reads share thresholds as fractions and word-count thresholds as whole numbers", () => {
+    expect(loadAIConfig({ ANSWER_REUSE_TOKEN_OVERLAP: "0.7", STEM_SHARED_CONTENT_WORDS: "5" }).thresholds).toMatchObject({ answerReuseTokenOverlap: 0.7, stemSharedContentWords: 5 });
+    expect(() => loadAIConfig({ ANSWER_SHARED_CONTENT_WORDS: "0.5" })).toThrow(/whole number/);
+    expect(() => loadAIConfig({ ANSWER_REUSE_TOKEN_OVERLAP: "4" })).toThrow(/\(0, 1\]/);
   });
 });
 

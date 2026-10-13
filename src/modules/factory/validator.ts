@@ -110,6 +110,12 @@ export function sharedWording(answer: string, option: string): string[] {
   return [...contentWords(optionBody(option))].filter((word) => reference.has(word));
 }
 
+/** Content words a wrong option repeats from the stem: an option that restates the stem stands out as the odd one. */
+export function stemEcho(stem: string, option: string): string[] {
+  const reference = contentWords(stem.replaceAll("----", " "));
+  return [...contentWords(optionBody(option))].filter((word) => reference.has(word));
+}
+
 export const integrityProblems = (text: string): string[] =>
   [
     /[\u0000-\u001f]/.test(text) ? "control_character" : null,
@@ -210,8 +216,11 @@ export function validateCandidate(input: {
   for (const label of distractorLabels) {
     const reuse = clauseReuse(options[correct], options[label], input.thresholds);
     if (reuse.level === "copy") add("connector_swap", "critical", { option: label, detail: `${reuse.tokenOverlap}/${reuse.trigramOverlap}` });
+    const thresholds = input.thresholds ?? defaultFactoryThresholds;
     const shared = sharedWording(options[correct], options[label]);
-    if (shared.length >= (input.thresholds ?? defaultFactoryThresholds).answerSharedContentWords) add("answer_shared_wording", "critical", { option: label, detail: shared.join(" ") });
+    if (shared.length >= thresholds.answerSharedContentWords) add("answer_shared_wording", "critical", { option: label, detail: shared.join(" ") });
+    const echo = stemEcho(stem, options[label]);
+    if (echo.length >= thresholds.stemSharedContentWords) add("stem_echo", "critical", { option: label, detail: echo.join(" ") });
   }
   for (const [i, a] of distractorLabels.entries()) {
     for (const b of distractorLabels.slice(i + 1)) {
