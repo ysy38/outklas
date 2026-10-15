@@ -2,14 +2,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { OfferCards } from "@/components/offer-cards";
 import { PendingButton } from "@/components/pending-button";
-import { launchActive, launchLabel, offers, tl } from "@/content/offers";
+import { freeOffer, launchActive, launchLabel, offers, priceFor, tl } from "@/content/offers";
 import type { CheckoutPlan } from "@/modules/billing/entitlement";
+import { daysUntilExam } from "@/modules/learning/plan";
 import { devCheckoutAllowed } from "@/modules/billing/iyzico";
 import { devCheckoutAction } from "@/server/actions";
 import { currentProfile } from "@/server/auth";
 import { entitlementFor, recordEvent } from "@/server/sessions";
 
-const tierName = { free: "Ücretsiz", gelisim: "Gelişim Paketi", kamp: "Kişisel YDS Kampı" } as const;
+const tierName = { free: freeOffer.name, gelisim: offers.gelisim.name, kamp: offers.kamp.name } as const;
 
 export const metadata = { title: "Paketler" };
 
@@ -39,7 +40,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           </p>
         ) : (
           <div className="mt-8">
-            <OfferCards signedIn tier={access.tier} />
+            <OfferCards signedIn tier={access.tier} daysLeft={daysUntilExam(profile.examDate ?? null)} />
           </div>
         )}
       </section>
@@ -47,6 +48,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   }
 
   const offer = offers[plan];
+  const price = priceFor(plan, access.tier);
   const owned = access.tier === "kamp" || access.tier === plan;
   const dev = devCheckoutAllowed();
   if (!owned && !dev) await recordEvent("checkout_intent", profile.id, { plan });
@@ -56,8 +58,13 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       <p className="text-xs uppercase tracking-[0.18em] text-gold">{offer.eyebrow}</p>
       <h1 className="display mt-2">{offer.name}</h1>
       <p className="mt-4 font-serif text-4xl">
-        {tl(offer.price)} TL <span className="font-sans text-base text-muted">tek seferlik · {offer.days} gün</span>
+        {tl(price)} TL <span className="font-sans text-base text-muted">tek ödeme · {offer.days} gün · KDV dahil</span>
       </p>
+      {price !== offer.price ? (
+        <p className="mt-1 text-sm text-muted">
+          {offer.name} {tl(offer.price)} TL; {offers.gelisim.name} için ödediğin {tl(offer.price - price)} TL düşüldü.
+        </p>
+      ) : null}
       {plan === "kamp" && launchActive() ? <p className="mt-1 text-sm text-muted">{launchLabel()}</p> : null}
       <ul className="mt-6 space-y-2 text-sm leading-6">
         {offer.points.map((point) => (
@@ -67,7 +74,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           </li>
         ))}
       </ul>
-      <p className="mt-4 text-sm text-muted">Abonelik yoktur: bir kez ödersin, {offer.days} gün sonra paket kendiliğinden sona erer.</p>
+      <p className="mt-4 text-sm text-muted">Abonelik yoktur: bir kez ödersin, {offer.days} gün sonra paket kendiliğinden sona erer. Fiyat KDV dahildir.</p>
 
       {owned ? (
         <div className="mt-8 rounded-2xl border border-line bg-card p-5">

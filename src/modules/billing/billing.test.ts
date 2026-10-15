@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canStartPractice, canStartSimulator, isPro, practiceAllowance } from "./entitlement";
+import { canStartPractice, canStartSimulator, hasProgram, isPro, practiceAllowance, simulatorLimit } from "./entitlement";
 import { publishBlockers, type PublishDraft } from "../content/publish";
 
 const ready: PublishDraft = {
@@ -40,5 +40,15 @@ describe("entitlement", () => {
     expect(canStartPractice({ pro: false, answeredToday: 10, limit: 10 })).toBe(false);
     expect(canStartSimulator({ pro: false, completed: 1, limit: 1 })).toBe(false);
     expect(practiceAllowance({ pro: false, answeredToday: 8, limit: 10, requested: 6 })).toBe(2);
+  });
+
+  it("gives Sprint the program and its mocks on top of the free one", () => {
+    const limits = { free: 1, sprint: 4 };
+    expect(hasProgram("free")).toBe(false);
+    expect(hasProgram("gelisim")).toBe(true);
+    expect(simulatorLimit("free", limits)).toBe(1);
+    expect(simulatorLimit("gelisim", limits)).toBe(5);
+    expect(canStartSimulator({ pro: false, completed: 5, limit: simulatorLimit("gelisim", limits) })).toBe(false);
+    expect(canStartSimulator({ pro: true, completed: 50, limit: simulatorLimit("kamp", limits) })).toBe(true);
   });
 });

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { and, eq } from "drizzle-orm";
 import { brand } from "@/brand";
 import { getDb, sessions } from "@/db/client";
+import { simulatorLimit } from "@/modules/billing/entitlement";
 import { currentProfile, readGuestId } from "@/server/auth";
 import { entitlementFor } from "@/server/sessions";
 import { PendingButton } from "@/components/pending-button";
@@ -25,7 +26,7 @@ export default async function SimulatorPage() {
       .where(and(filter, eq(sessions.mode, "simulator"), eq(sessions.status, "submitted"))),
   ]);
   const ydt = profile?.exam === "ydt";
-  const blocked = !access.pro && done.length >= brand.freeSimulators;
+  const blocked = done.length >= simulatorLimit(access.tier, { free: brand.freeSimulators, sprint: brand.sprintSimulators });
   return (
     <section className="landing mx-auto grid w-full max-w-6xl items-center gap-12 px-4 py-12 sm:px-5 sm:py-20 lg:grid-cols-[1fr_0.9fr]">
       <div className="rise-in">
@@ -54,7 +55,10 @@ export default async function SimulatorPage() {
           </p>
         ) : blocked ? (
           <p className="mt-8">
-            Ücretsiz deneme hakkını kullandın. Sınırsız deneme <Link href="/odeme?paket=kamp" className="text-pine">Kişisel YDS Kampı’nda</Link> açık.
+            {access.tier === "gelisim" ? "Sprint’teki deneme haklarını kullandın." : "Ücretsiz deneme hakkını kullandın."}{" "}
+            <Link href={access.tier === "gelisim" ? "/odeme?paket=kamp" : "/fiyat"} className="text-pine">
+              {access.tier === "gelisim" ? "Kamp’ta deneme sınırsız." : `Sprint’te ${brand.sprintSimulators} tam deneme, Kamp’ta sınırsız deneme var.`}
+            </Link>
           </p>
         ) : (
           <form action={startSimulatorAction} className="mt-8">

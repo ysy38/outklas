@@ -43,7 +43,7 @@ export function MobileMenu({ links, account = false, className = "" }: Props) {
         aria-expanded={open}
         aria-controls="mobile-menu"
         onClick={() => setOpen((value) => !value)}
-        className="rounded-full border border-line px-3 py-2 text-sm"
+        className="rounded-full border border-line px-2.5 py-2 text-xs sm:px-3 sm:text-sm"
       >
         {open ? "Kapat" : "Menü"}
       </button>

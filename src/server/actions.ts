@@ -9,7 +9,6 @@ import type { CheckoutPlan } from "@/modules/billing/entitlement";
 import { currentProfile, loginAccount, logoutAccount, markSignedIn, registerAccount } from "./auth";
 import { claimGuestSessions, createSession, devActivate, ensureDailyPlan, entitlementFor, recordEvent, saveAnswer, setFlag, submitSession } from "./sessions";
 import { answerDrill } from "./drills";
-import { checkoutHref } from "@/content/offers";
 
 /** Only same-site paths, so the form cannot be used to bounce people to another domain. */
 function nextPath(formData: FormData) {
@@ -73,7 +72,7 @@ export async function startModeAction(mode: "diagnostic" | "practice" | "simulat
   const profile = await currentProfile();
   if (profile) await markSignedIn();
   const created = await createSession({ mode, profileId: profile?.id ?? null, itemIds });
-  if (created.paywall) redirect(checkoutHref("kamp", Boolean(profile)));
+  if (created.paywall) redirect(profile ? "/odeme" : "/fiyat");
   if (!created.id) return created;
   redirect(`/oturum/${created.id}`);
 }

@@ -5,7 +5,7 @@ import { brand } from "@/brand";
 import { asExam, blueprintFor, type ExamCode, type SectionId } from "@/modules/exam/blueprint";
 import { estimateFromAccuracy, estimateNet, scoreSession, type ScoreItem } from "@/modules/exam/score";
 import { selectDiagnostic, selectItems, selectMock, studyPool, type PoolItem } from "@/modules/exam/select";
-import { canStartSimulator, tierFor, type CheckoutPlan, type PlanCode, type Tier } from "@/modules/billing/entitlement";
+import { canStartSimulator, hasProgram, simulatorLimit, tierFor, type CheckoutPlan, type PlanCode, type Tier } from "@/modules/billing/entitlement";
 import { nextMastery } from "@/modules/learning/mastery";
 import { buildPlan, daysUntilExam, nextStreak, type DailyPlan } from "@/modules/learning/plan";
 import { nextReview } from "@/modules/learning/review";
@@ -110,18 +110,25 @@ export async function createSession(input: {
   } else if (input.mode === "simulator") {
     if (exam === "ydt") return { error: "YDT denemesi çok yakında burada. O zamana kadar seviye testini çözebilir, günlük çalışmana devam edebilirsin." };
     const completed = await completedSimulators({ profileId: input.profileId, guestId });
-    if (!canStartSimulator({ pro: access.pro, completed, limit: brand.freeSimulators })) {
+    const limit = simulatorLimit(access.tier, { free: brand.freeSimulators, sprint: brand.sprintSimulators });
+    if (!canStartSimulator({ pro: access.pro, completed, limit })) {
       await recordEvent("paywall_viewed", input.profileId, { reason: "simulator" });
-      return { paywall: true, error: "Ücretsiz deneme hakkını kullandın. Sınırsız deneme Kişisel YDS Kampı’nda açık." };
+      return {
+        paywall: true,
+        error:
+          access.tier === "gelisim"
+            ? "Sprint’teki deneme haklarını kullandın. Kamp’ta deneme sınırsız."
+            : `Ücretsiz deneme hakkını kullandın. Sprint’te ${brand.sprintSimulators} tam deneme var, Kamp’ta deneme sınırsız.`,
+      };
     }
     picked = selectMock(pool);
     if (picked.length !== 80) return { error: "Deneme şu an hazırlanamadı. Biraz sonra tekrar dene." };
     await recordEvent("simulator_started", input.profileId);
   } else {
     const requested = input.itemIds ?? [];
-    if (!access.pro) {
+    if (!hasProgram(access.tier)) {
       await recordEvent("paywall_viewed", input.profileId, { reason: "practice" });
-      return { paywall: true, error: "Günlük program Kişisel YDS Kampı’nda açılır." };
+      return { paywall: true, error: "Günlük program Sprint ve Kamp’ta açılır." };
     }
     const allowance = requested.length || 8;
     const allowed = new Set(pool.map((item) => item.id));

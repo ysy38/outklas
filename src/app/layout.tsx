@@ -1,20 +1,25 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Manrope, Newsreader } from "next/font/google";
-import { brand } from "@/brand";
+import { Manrope, Newsreader, Plus_Jakarta_Sans } from "next/font/google";
+import { brand, siteUrl } from "@/brand";
 import "./globals.css";
 
 const sans = Manrope({ subsets: ["latin", "latin-ext"], variable: "--font-manrope" });
 const serif = Newsreader({ subsets: ["latin", "latin-ext"], variable: "--font-newsreader" });
+const display = Plus_Jakarta_Sans({
+  subsets: ["latin", "latin-ext"],
+  weight: ["500", "600", "700", "800"],
+  variable: "--font-jakarta",
+});
 
 const description =
   "YDS, e-YDS, YÖKDİL ve e-YÖKDİL için ücretsiz seviye testi, günlük çalışma planı ve gerçek sınav gibi deneme. Her gün neye çalışacağını bilerek puanını yükselt.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(`https://${brand.domain}`),
+  metadataBase: new URL(siteUrl),
   title: {
-    default: "YDS Lab — YDS ve YÖKDİL için günlük çalışma planı",
-    template: "%s · YDS Lab",
+    default: `${brand.name} — YDS ve YÖKDİL için günlük çalışma planı`,
+    template: `%s · ${brand.name}`,
   },
   description,
   applicationName: brand.name,
@@ -23,15 +28,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "tr_TR",
     siteName: brand.name,
-    title: "YDS Lab — daha fazla değil, daha doğru çalış",
+    title: `${brand.name} — daha fazla değil, daha doğru çalış`,
     description,
   },
   twitter: { card: "summary_large_image", title: brand.name, description },
   robots: { index: true, follow: true },
-  alternates: { canonical: "/" },
 };
 
-const themeScript = `try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")}catch(e){}`;
+const themeScript = `try{if(localStorage.getItem("theme")==="dark")document.documentElement.classList.add("dark")}catch(e){}`;
 
 // Cursor's preview browser stamps data-cursor-ref onto the DOM before React hydrates.
 // Strip those marks until the page has loaded, then leave later marks alone.
@@ -39,7 +43,7 @@ const cursorRefScript = `(function(){function strip(node){if(!node)return;if(nod
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" className={`${sans.variable} ${serif.variable}`} suppressHydrationWarning>
+    <html lang="tr" className={`${sans.variable} ${serif.variable} ${display.variable}`} suppressHydrationWarning>
       <body className="min-h-screen antialiased">
         <Script id="theme" strategy="beforeInteractive">
           {themeScript}

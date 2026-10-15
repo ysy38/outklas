@@ -1,4 +1,4 @@
-type FaqPlace = "home" | "score";
+type FaqPlace = "home" | "score" | "prep";
 
 type Faq = {
   question: string;
@@ -11,8 +11,8 @@ export const siteFaqs: readonly Faq[] = [
   {
     question: "YDS'ye nasıl çalışmalıyım?",
     answer:
-      "Daha çok soru çözmek tek başına yetmez. Önce hangi bölümde puan kaybettiğini bul, her gün o açığı kapatacak tek bir işe odaklan, kaçırdığın soruları da belli aralıklarla yeniden çöz. YDS Lab işe 40 soruluk ücretsiz bir seviye testiyle başlar. Aynı yol e-YDS, YÖKDİL ve e-YÖKDİL için de geçerli.",
-    place: ["home"],
+      "Daha çok soru çözmek tek başına yetmez. Önce hangi bölümde puan kaybettiğini bul, her gün o açığı kapatacak tek bir işe odaklan, kaçırdığın soruları da belli aralıklarla yeniden çöz. STARC işe 40 soruluk ücretsiz bir seviye testiyle başlar. Aynı yol e-YDS, YÖKDİL ve e-YÖKDİL için de geçerli.",
+    place: ["home", "prep"],
   },
   {
     question: "YDS'de kaç soru var?",
@@ -35,7 +35,7 @@ export const siteFaqs: readonly Faq[] = [
   {
     question: "YDS kelime nasıl çalışılır?",
     answer:
-      "Uzun ezber listeleri yerine her gün 10 kelimeyle çalış. Kelimeyi tek başına değil, bir cümlenin içinde gör ve anlamını şıklar arasından seç. Yanlış yaptığın kelime birkaç gün sonra tekrar gelir, bildiğin kelime giderek seyrekleşir. YDS Lab’de bu günlük 10 kelime ücretsizdir.",
+      "Uzun ezber listeleri yerine her gün 10 kelimeyle çalış. Kelimeyi tek başına değil, bir cümlenin içinde gör ve anlamını şıklar arasından seç. Yanlış yaptığın kelime birkaç gün sonra tekrar gelir, bildiğin kelime giderek seyrekleşir. STARC’de bu günlük 10 kelime ücretsizdir.",
     place: ["home"],
   },
   {
@@ -48,19 +48,19 @@ export const siteFaqs: readonly Faq[] = [
     question: "YDS çalışma programı nasıl oluşturulur?",
     answer:
       "Programını hedef puanın, sınav tarihin ve günde ayırabildiğin süre belirler. Her gün zayıf olduğun bölümden sorular, önceki yanlışların ve birkaç yeni soru çözersin. Zaten iyi olduğun bölüme o gün vakit harcamazsın.",
-    place: ["home"],
+    place: ["home", "prep"],
   },
   {
-    question: "YDS Lab ücretsiz mi?",
+    question: "STARC ücretsiz mi?",
     answer:
-      "Başlamak ücretsiz: 40 soruluk seviye testi, raporunun ilk 3 bulgusu, her gün 10 kelime ve 10 bağlaç sorusu ve 1 tam deneme için ödeme yapmazsın. Kendin çalışmak istersen Gelişim Paketi 90 gün 499 TL. Programını biz kuralım dersen Kişisel YDS Kampı 180 gün 2.490 TL. Abonelik yoktur, bir kez ödersin.",
+      "Başlamak ücretsiz: 40 soruluk seviye testi, raporunun ilk 3 bulgusu, her gün 10 kelime ve 10 bağlaç sorusu ve 1 tam deneme için ödeme yapmazsın. Sınavına 60 gün ya da daha az varsa Sprint: 60 gün, 499 TL; günlük plan ve 4 tam deneme. Daha fazla varsa Kamp: 180 gün, 2.499 TL; sınırsız deneme. Sprint’ten Kamp’a geçersen ödediğin 499 TL düşülür. Abonelik yoktur, bir kez ödersin; fiyatlar KDV dahil.",
     place: ["home"],
   },
   {
     question: "YDS'de yanlış doğruyu götürür mü?",
     answer:
       "Götürmez. Puanın, doğru sayının 1,25 katıdır. 56 doğrun varsa, 4 yanlışın da olsa 20 yanlışın da olsa puanın 70’tir. Boş bırakmak da yanlış yapmak da puanını düşürmez. YÖKDİL ve e-YÖKDİL’de de kural aynı.",
-    place: ["score"],
+    place: ["score", "prep"],
   },
   {
     question: "70 puan için kaç doğru gerekir?",
@@ -84,7 +84,7 @@ export const siteFaqs: readonly Faq[] = [
     question: "Seviye testinin sonucu resmi puan mı?",
     answer:
       "Hayır. 40 soruluk seviye testi, 80 soruluk sınavda alabileceğin puanı tahmin eder; ÖSYM sonucunun yerini tutmaz. Sorular gerçek sınavdaki bölüm ağırlıklarına göre seçildiği için okuma sorusu burada da çoktur.",
-    place: ["home", "score"],
+    place: ["home", "score", "prep"],
   },
   {
     question: "Soruları yapay zekâ mı seçiyor?",

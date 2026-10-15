@@ -173,7 +173,7 @@ export default async function SetPage({ params }: Props) {
           <p className="text-lg">Setin devamı ve PDF indirme {offers.gelisim.name} ile açılır.</p>
           <p className="mt-1 text-sm text-muted">{offers.gelisim.tagline}</p>
           <Link href="/odeme?paket=gelisim" className="mt-4 inline-block rounded-full bg-pine px-5 py-2.5 text-sm text-cream">
-            {offers.gelisim.cta.replace(" →", "")} · {tl(offers.gelisim.price)} TL
+            {offers.gelisim.name}’e başla · {tl(offers.gelisim.price)} TL
           </Link>
         </div>
       ) : null}

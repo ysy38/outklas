@@ -161,11 +161,11 @@ export function DiagnosticReport({ report, tier, signedIn }: { report: Report; t
         </section>
       ) : null}
 
-      {tier !== "kamp" ? (
+      {tier === "free" ? (
         <section id="paketler" className="scroll-mt-24">
           <h2 className="text-3xl">Peki bundan sonra ne yapmalısın?</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-            İki yol var: araçları alıp kendin çalışırsın ya da hedefine göre programını biz kurarız. İkisi de tek seferlik ödeme; abonelik yok.
+            Sınavına {brand.sprintMaxDays} gün ya da daha az varsa Sprint, daha fazla varsa Kamp. İkisinde de hedefine göre günlük programın hazır gelir. Tek ödeme, abonelik yok, fiyatlar KDV dahil.
           </p>
           <div className="mt-8">
             <OfferCards signedIn={signedIn} tier={tier} />

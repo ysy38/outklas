@@ -2,7 +2,11 @@ export type PlanCode = "free" | "gelisim" | "kamp" | "pro" | "exam_pass" | "lab_
 
 export type CheckoutPlan = "gelisim" | "kamp";
 
-/** free: test + daily drills; gelisim: tools (full report, sets, unlimited drills); kamp: everything, including the daily program. */
+/**
+ * free (Başlangıç): test + daily drills + one mock.
+ * gelisim (sold as Sprint; the code stays because stored subscriptions use it): full report, tools, daily program, a few mocks.
+ * kamp: everything, unlimited mocks.
+ */
 export type Tier = "free" | "gelisim" | "kamp";
 
 const tierOfPlan: Record<PlanCode, Tier> = {
@@ -37,6 +41,16 @@ export function isPro(input: EntitlementInput): boolean {
 
 export function hasTools(tier: Tier): boolean {
   return tier !== "free";
+}
+
+export function hasProgram(tier: Tier): boolean {
+  return tier !== "free";
+}
+
+/** Total completed mocks allowed; Sprint's mocks come on top of the free one. */
+export function simulatorLimit(tier: Tier, limits: { free: number; sprint: number }): number {
+  if (tier === "kamp") return Number.POSITIVE_INFINITY;
+  return tier === "gelisim" ? limits.free + limits.sprint : limits.free;
 }
 
 export function canStartPractice(input: { pro: boolean; answeredToday: number; limit: number }): boolean {

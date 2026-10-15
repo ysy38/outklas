@@ -82,7 +82,7 @@ export function DrillPlayer({
             <p className="text-muted">
               Günlük sınır olmadan çalışmak ve kelime ile bağlaç setlerini indirmek için{" "}
               <Link href="/odeme?paket=gelisim" className="text-pine">
-                Gelişim Paketi’ne bak
+                Sprint’e bak
               </Link>
               .
             </p>

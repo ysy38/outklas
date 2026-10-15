@@ -2,15 +2,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { brand } from "@/brand";
 import { relationHint } from "@/content/drill-connectors";
-import { offers, tl } from "@/content/offers";
+import { offers, priceFor, tl } from "@/content/offers";
 import { currentProfile, readGuestId } from "@/server/auth";
 import { drillOverview, type DrillOverview } from "@/server/drills";
 import { diagnosticReport, latestDiagnosticId } from "@/server/report";
 import { ensureDailyPlan, entitlementFor } from "@/server/sessions";
 import { asExam, blueprintFor } from "@/modules/exam/blueprint";
 import { daysUntilExam } from "@/modules/learning/plan";
-import { formatNumber, freeFindings } from "@/modules/report/report";
-import type { Tier } from "@/modules/billing/entitlement";
+import { freeFindings } from "@/modules/report/report";
+import { hasProgram, type Tier } from "@/modules/billing/entitlement";
 import { PendingButton } from "@/components/pending-button";
 import { saveOnboardingAction, startTodayAction } from "@/server/actions";
 
@@ -110,10 +110,10 @@ export default async function TodayPage() {
     latestDiagnosticId(profile.id),
     readGuestId(),
   ]);
-  const kamp = access.tier === "kamp";
+  const program = hasProgram(access.tier);
   const [plan, report] = await Promise.all([
-    kamp ? ensureDailyPlan(profile.id, profile.dailyMinutes ?? 30, profile.targetScore, profile.examDate) : null,
-    !kamp && sessionId ? diagnosticReport(sessionId, profile.id, guestId ?? "") : null,
+    program ? ensureDailyPlan(profile.id, profile.dailyMinutes ?? 30, profile.targetScore, profile.examDate) : null,
+    !program && sessionId ? diagnosticReport(sessionId, profile.id, guestId ?? "") : null,
   ]);
   const daysLeft = daysUntilExam(profile.examDate);
   const midpoint =
@@ -123,7 +123,6 @@ export default async function TodayPage() {
   const title = (section: string) => blueprint.bands.find((band) => band.section === section)?.title ?? section;
   const skip = (plan?.skipSections ?? []).map(title);
   const weak = overview.weakRelations[0];
-  const worst = report ? [...report.areas].sort((a, b) => b.loss - a.loss)[0] : null;
   return (
     <section className="max-w-2xl">
       <p className="text-xs uppercase tracking-[0.18em] text-gold">{blueprint.title}</p>
@@ -174,7 +173,7 @@ export default async function TodayPage() {
         </p>
       ) : null}
 
-      {kamp && plan ? (
+      {program && plan ? (
         <>
           {daysLeft != null && daysLeft >= 0 && daysLeft <= 14 ? (
             <p className="mt-6 text-sm leading-6 text-muted">Sınavın yaklaştı. Bu yüzden bugün yeni sorulardan çok, daha önce yanlış yaptığın soruları tekrar edeceksin.</p>
@@ -193,55 +192,37 @@ export default async function TodayPage() {
         </>
       ) : null}
 
-      {access.tier === "gelisim" ? (
-        <article className="mt-6 rounded-3xl border border-line bg-card p-6">
-          <p className="text-xs uppercase tracking-[0.16em] text-gold">Bugünkü önerin</p>
-          {worst ? (
-            <>
-              <p className="mt-3 text-xl leading-8">
-                En çok puanı <strong className="font-medium">{worst.title}</strong> bölümünde kaybediyorsun (yaklaşık {formatNumber(worst.loss)} {unit}).
-              </p>
-              <p className="mt-2 text-sm leading-6 text-muted">Kelime ve bağlaç sorularını bitirince bu bölümün rehberini oku, sonra bir seti yazdırıp kâğıt üzerinde çalış.</p>
-            </>
-          ) : (
-            <p className="mt-3 text-sm leading-6 text-muted">Seviye testini çözdüğünde hangi bölüme öncelik vermen gerektiğini burada görürsün.</p>
-          )}
-          <div className="mt-4 flex flex-wrap gap-2 text-sm">
-            {worst ? (
-              <Link href={`/rehber/${worst.section}`} className="rounded-full bg-pine px-4 py-2 text-cream">
-                {worst.title} rehberi
-              </Link>
-            ) : null}
-            <Link href="/setler" className="rounded-full border border-line px-4 py-2 hover:border-pine">
-              Kelime ve bağlaç setleri
-            </Link>
-            <Link href="/rapor" className="rounded-full border border-line px-4 py-2 hover:border-pine">
-              Raporum
-            </Link>
-          </div>
-        </article>
-      ) : null}
-
-      {!kamp ? (
+      {access.tier === "free" ? (
         <article className="mt-6 rounded-3xl border border-pine/40 bg-cream p-6">
-          <p className="text-xs uppercase tracking-[0.16em] text-gold">{offers.kamp.eyebrow}</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-gold">
+            {offers.gelisim.name} ve {offers.kamp.name}
+          </p>
           <p className="mt-2 text-xl">Her gün ne çalışacağını düşünme.</p>
           <p className="mt-2 text-sm leading-6 text-muted">
-            {access.tier === "free" && report
-              ? `Raporunda ${report.findings.length} bulgu var, ${Math.min(freeFindings, report.findings.length)} tanesini gördün. `
-              : ""}
-            {offers.kamp.name}, hedef puanına ve sınav tarihine göre her gün hazır bir görev listesi verir.
+            {report ? `Raporunda ${report.findings.length} bulgu var, ${Math.min(freeFindings, report.findings.length)} tanesini gördün. ` : ""}
+            İki paket de hedef puanına ve sınav tarihine göre her gün hazır bir görev listesi verir.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-            <Link href={access.tier !== "free" ? "/odeme?paket=kamp" : report ? "/rapor#paketler" : "/fiyat"} className="rounded-full bg-pine px-4 py-2 text-cream">
-              {access.tier === "free" ? "Paketleri gör" : `${offers.kamp.name} · ${tl(offers.kamp.price)} TL`}
+            <Link href={report ? "/rapor#paketler" : "/fiyat"} className="rounded-full bg-pine px-4 py-2 text-cream">
+              Paketleri gör
             </Link>
-            {access.tier === "free" && report ? (
+            {report ? (
               <Link href="/rapor" className="text-pine">
                 Raporuma dön →
               </Link>
             ) : null}
           </div>
+        </article>
+      ) : access.tier === "gelisim" ? (
+        <article className="mt-6 rounded-3xl border border-pine/40 bg-cream p-6">
+          <p className="text-xs uppercase tracking-[0.16em] text-gold">{offers.kamp.name}</p>
+          <p className="mt-2 text-xl">Sınırsız deneme ve {offers.kamp.days} gün.</p>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            {offers.kamp.name}’a geçersen {offers.gelisim.name} için ödediğin {tl(offers.gelisim.price)} TL düşülür.
+          </p>
+          <Link href="/odeme?paket=kamp" className="mt-4 inline-block rounded-full bg-pine px-4 py-2 text-sm text-cream">
+            {offers.kamp.name}’a geç · {tl(priceFor("kamp", access.tier))} TL
+          </Link>
         </article>
       ) : null}
     </section>

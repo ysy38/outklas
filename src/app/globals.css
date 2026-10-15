@@ -1,44 +1,57 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #eef4f7;
-  --ink: #122028;
-  --muted: #5c6d7a;
-  --line: #d4e2ea;
-  --pine: #0c5c62;
-  --pine-deep: #083e43;
-  --clay: #b4233a;
-  --moss: #0f766e;
+  --paper: #f7f8fc;
+  --ink: #17243b;
+  --muted: #5c6b82;
+  --line: #e4e8f2;
+  --pine: #4263eb;
+  --pine-deep: #2f4ad4;
+  --teal: #0f9fad;
+  --soft: #e8edff;
+  --progress: #e8f5ef;
+  --night: #121a2e;
+  --clay: #e11d48;
+  --moss: #0f9fad;
   --card: #ffffff;
-  --cream: #f4fafa;
-  --gold: #3c7394;
+  --cream: #f7f8fc;
+  --gold: #4263eb;
   color-scheme: light;
 }
 
 .dark {
-  --paper: #0c100e;
-  --ink: #f4f0e6;
-  --muted: #b7b0a3;
-  --line: #2c3330;
-  --pine: #2f8f7c;
-  --pine-deep: #173f37;
-  --clay: #e39a8c;
-  --moss: #8fceab;
-  --card: #161b18;
-  --cream: #f7f3ea;
-  --gold: #d4bc94;
+  --paper: #0e1524;
+  --ink: #f4f6fb;
+  --muted: #a9b4c8;
+  --line: #2a3550;
+  --pine: #6d84f2;
+  --pine-deep: #3146b0;
+  --teal: #3ec4d0;
+  --soft: #1a2442;
+  --progress: #132e28;
+  --night: #0a1020;
+  --clay: #fda4af;
+  --moss: #3ec4d0;
+  --card: #172033;
+  --cream: #f4f6fb;
+  --gold: #8ea0f6;
   color-scheme: dark;
 }
 
 @theme inline {
   --font-sans: var(--font-manrope), "Segoe UI", sans-serif;
   --font-serif: var(--font-newsreader), Palatino, serif;
+  --font-display: var(--font-jakarta), var(--font-manrope), sans-serif;
   --color-paper: var(--paper);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-pine: var(--pine);
   --color-pine-deep: var(--pine-deep);
+  --color-teal: var(--teal);
+  --color-soft: var(--soft);
+  --color-progress: var(--progress);
+  --color-night: var(--night);
   --color-clay: var(--clay);
   --color-moss: var(--moss);
   --color-card: var(--card);
@@ -91,12 +104,29 @@ body {
   content: "";
   position: absolute;
   inset: 0 0 auto;
-  height: 52rem;
+  height: 48rem;
   pointer-events: none;
   z-index: -1;
   background:
-    radial-gradient(ellipse 42rem 28rem at 88% 8%, color-mix(in srgb, var(--pine) 18%, transparent), transparent 70%),
-    radial-gradient(ellipse 36rem 24rem at 8% 22%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 68%);
+    radial-gradient(ellipse 38rem 30rem at 78% 16%, color-mix(in srgb, var(--pine) 16%, transparent), transparent 68%),
+    radial-gradient(ellipse 26rem 22rem at 92% 38%, color-mix(in srgb, var(--teal) 14%, transparent), transparent 70%),
+    radial-gradient(ellipse 22rem 16rem at 8% 6%, color-mix(in srgb, var(--soft) 80%, transparent), transparent 72%);
+}
+
+.hero-card {
+  width: min(9.15rem, 46%);
+}
+
+@media (min-width: 640px) {
+  .hero-card {
+    width: 12.35rem;
+  }
+}
+
+.landing :is(h1, h2, h3) {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.04em;
 }
 
 .glass {
@@ -142,8 +172,12 @@ body {
   }
 }
 
+.dark .bg-pine {
+  background-color: #4263eb;
+}
+
 .grad {
-  background: linear-gradient(110deg, var(--ink) 10%, var(--pine) 55%, var(--gold) 95%);
+  background: linear-gradient(100deg, var(--ink) 0%, var(--pine) 58%, var(--teal) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -265,6 +299,18 @@ details.faq[open]::details-content {
   }
 }
 
+.path-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: path-draw 2.4s cubic-bezier(0.2, 0.7, 0.2, 1) 0.15s forwards;
+}
+
+@keyframes path-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -296,8 +342,13 @@ details.faq[open]::details-content {
   .rise-in,
   .float,
   .pulse-dot,
-  .page-enter {
+  .page-enter,
+  .path-draw {
     animation: none;
+  }
+
+  .path-draw {
+    stroke-dashoffset: 0;
   }
 
   .lift:hover,
@@ -339,12 +390,15 @@ body,
 @media print {
   .dark {
     --paper: #ffffff;
-    --ink: #122028;
-    --muted: #5c6d7a;
-    --line: #d4e2ea;
+    --ink: #17243b;
+    --muted: #5c6b82;
+    --line: #e4e8f2;
     --card: #ffffff;
-    --pine: #0c5c62;
-    --gold: #3c7394;
+    --pine: #4263eb;
+    --teal: #0f9fad;
+    --soft: #e8edff;
+    --progress: #e8f5ef;
+    --gold: #4263eb;
     color-scheme: light;
   }
 
