@@ -63,9 +63,14 @@ function Logo({ href, withTagline = false, markId }: { href: string; withTagline
         className="h-8 w-8 shrink-0 drop-shadow-[0_10px_18px_rgba(66,99,235,0.35)] transition-transform duration-500 group-hover:-rotate-6 sm:h-10 sm:w-10"
       />
       <span className="min-w-0 leading-none">
-        <span className="block font-display text-[15px] font-extrabold tracking-[0.16em] text-ink sm:text-[17px] sm:tracking-[0.2em]">{brand.name}</span>
-        <span lang="en" className="mt-1 block text-[8px] font-semibold uppercase tracking-[0.16em] text-muted sm:text-[9.5px] sm:tracking-[0.26em]">
-          {brand.descriptor}
+        <span className="inline-grid">
+          <span className="-mr-[0.1em] font-logo text-[17px] font-bold tracking-[0.1em] text-ink sm:text-[21px]">{brand.name}</span>
+          {/* w-0 keeps the descriptor out of the column width, so it always spans exactly the name. */}
+          <span lang="en" className="mt-1.5 flex w-0 min-w-full justify-between text-[7px] font-semibold uppercase text-muted sm:text-[8.5px]">
+            {[...brand.descriptor].map((char, index) => (
+              <span key={index}>{char === " " ? "\u00a0" : char}</span>
+            ))}
+          </span>
         </span>
         {withTagline ? (
           <span lang="en" className="mt-2 block max-w-xs text-[11px] font-medium leading-snug tracking-normal text-muted">

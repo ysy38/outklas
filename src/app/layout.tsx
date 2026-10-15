@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Manrope, Newsreader, Plus_Jakarta_Sans } from "next/font/google";
+import { Manrope, Newsreader, Plus_Jakarta_Sans, Unbounded } from "next/font/google";
 import { brand, siteUrl } from "@/brand";
 import "./globals.css";
 
@@ -11,6 +11,7 @@ const display = Plus_Jakarta_Sans({
   weight: ["500", "600", "700", "800"],
   variable: "--font-jakarta",
 });
+const logo = Unbounded({ subsets: ["latin"], weight: ["700"], variable: "--font-unbounded" });
 
 const description =
   "YDS, e-YDS, YÖKDİL ve e-YÖKDİL için ücretsiz seviye testi, günlük çalışma planı ve gerçek sınav gibi deneme. Her gün neye çalışacağını bilerek puanını yükselt.";
@@ -43,7 +44,7 @@ const cursorRefScript = `(function(){function strip(node){if(!node)return;if(nod
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" className={`${sans.variable} ${serif.variable} ${display.variable}`} suppressHydrationWarning>
+    <html lang="tr" className={`${sans.variable} ${serif.variable} ${display.variable} ${logo.variable}`} suppressHydrationWarning>
       <body className="min-h-screen antialiased">
         <Script id="theme" strategy="beforeInteractive">
           {themeScript}

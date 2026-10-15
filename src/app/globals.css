@@ -45,6 +45,7 @@
   --font-sans: var(--font-manrope), "Segoe UI", sans-serif;
   --font-serif: var(--font-newsreader), Palatino, serif;
   --font-display: var(--font-jakarta), var(--font-manrope), sans-serif;
+  --font-logo: var(--font-unbounded), var(--font-jakarta), sans-serif;
   --color-paper: var(--paper);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
