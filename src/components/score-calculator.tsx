@@ -76,18 +76,18 @@ export function ScoreCalculator() {
         ))}
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_17rem]">
-        <div>
+      <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
+        <div className="min-w-0">
           <p className="text-sm text-muted">Her bölümde kaç doğru beklediğini yaz ya da artı, eksiyle ayarla.</p>
           <ul className="mt-4 space-y-2">
             {rows.map((row) => {
               const value = valueOf(row);
               const stored = correct[row.id];
               return (
-                <li key={row.id} className="rounded-2xl border border-line bg-card/70 px-4 py-3 transition hover:border-pine/50">
-                  <div className="flex items-center justify-between gap-3">
+                <li key={row.id} className="rounded-2xl border border-line bg-card/70 px-3 py-3 transition hover:border-pine/50 sm:px-4">
+                  <div className="flex items-center justify-between gap-2 sm:gap-3">
                     <div className="min-w-0">
-                      <p className="truncate">{row.title}</p>
+                      <p className="text-[15px] leading-snug sm:text-base">{row.title}</p>
                       <p className="text-xs text-muted">
                         {row.count} soru{value > 0 ? ` · ${format(points(value))} puan` : ""}
                       </p>

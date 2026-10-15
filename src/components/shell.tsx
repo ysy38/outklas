@@ -57,14 +57,14 @@ const footerColumns: { title: string; links: [string, string][] }[] = [
 
 function Logo({ href, withTagline = false, markId }: { href: string; withTagline?: boolean; markId: string }) {
   return (
-    <Link href={href} aria-label={`${brand.name} ana sayfa`} className="group flex shrink-0 items-center gap-2.5">
+    <Link href={href} aria-label={`${brand.name} ana sayfa`} className="group flex shrink-0 items-center gap-2 sm:gap-2.5">
       <BrandMark
         id={markId}
-        className="h-9 w-9 shrink-0 drop-shadow-[0_10px_18px_rgba(66,99,235,0.35)] transition-transform duration-500 group-hover:-rotate-6 sm:h-10 sm:w-10"
+        className="h-8 w-8 shrink-0 drop-shadow-[0_10px_18px_rgba(66,99,235,0.35)] transition-transform duration-500 group-hover:-rotate-6 sm:h-10 sm:w-10"
       />
       <span className="min-w-0 leading-none">
         <span className="block font-display text-[15px] font-extrabold tracking-[0.16em] text-ink sm:text-[17px] sm:tracking-[0.2em]">{brand.name}</span>
-        <span lang="en" className="mt-1 block text-[8.5px] font-semibold uppercase tracking-[0.22em] text-muted sm:text-[9.5px] sm:tracking-[0.26em]">
+        <span lang="en" className="mt-1 block text-[8px] font-semibold uppercase tracking-[0.16em] text-muted sm:text-[9.5px] sm:tracking-[0.26em]">
           {brand.descriptor}
         </span>
         {withTagline ? (
@@ -94,7 +94,7 @@ export function PublicHeader() {
           <ThemeToggle />
           <AccountLink className="hidden rounded-full border border-line bg-card px-4 py-2 text-sm font-semibold text-ink transition hover:border-pine sm:inline" />
           <Link href="/teshis" className="rounded-full bg-pine px-2.5 py-2 text-[11px] font-semibold text-white shadow-[0_12px_28px_-14px_rgba(66,99,235,0.85)] transition hover:-translate-y-0.5 sm:px-4 sm:text-sm">
-            Hemen Başla
+            <span className="hidden min-[380px]:inline">Hemen </span>Başla
           </Link>
         </div>
       </div>

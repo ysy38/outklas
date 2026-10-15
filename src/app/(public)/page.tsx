@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { brand, siteUrl } from "@/brand";
-import { HeroStage } from "@/components/hero-stage";
+import { HeroAssembly } from "@/components/hero-assembly";
 import { PendingButton } from "@/components/pending-button";
 import { faqsFor } from "@/content/seo";
 import { ydsBlueprint } from "@/modules/exam/blueprint";
@@ -87,6 +87,71 @@ const stepIcons = [
 const practiceIcons = ["M4 19V9M10 19V5M16 19v-7M22 19H2", "M5 12h14M13 6l6 6-6 6", "M4 16l5-5 3 3 8-8"];
 const smartIcons = ["M12 3v3M5 7l2 2M4 13h3M12 21a6 6 0 1 0-4-10.5", "M4 6h16M4 12h10M4 18h7", "M12 3l2.2 6.4H21l-5.4 4 2 6.6L12 16.2 6.4 20l2-6.6L3 9.4h6.8L12 3Z", "M4 16c2-6 4-8 8-8s6 2 8 8"];
 
+const pulling = [
+  { title: "Okuduğunu anlama", score: "5/10 doğru", level: "Geliştirilmeli", tone: "text-clay", width: 50 },
+  { title: "Dil bilgisi ve yapı", score: "3/5 doğru", level: "Orta", tone: "text-gold", width: 60 },
+  { title: "Cümle tamamlama", score: "3/5 doğru", level: "Orta", tone: "text-gold", width: 60 },
+];
+
+/** Mirrors the sections of the real diagnostic report; values are illustrative. */
+const heroReport = (
+  <div className="overflow-hidden rounded-[28px] bg-card shadow-[0_40px_90px_-40px_rgba(23,36,59,0.55)] ring-1 ring-line">
+    <div className="flex items-center justify-between gap-4 border-b border-line bg-soft/60 px-6 py-3.5">
+      <p className="flex items-center gap-2 text-xs font-semibold text-ink">
+        <span className="pulse-dot h-2 w-2 rounded-full bg-teal" />
+        Seviye raporun
+      </p>
+      <p className="text-xs text-muted">40 soru · örnek değerler</p>
+    </div>
+    <div className="grid grid-cols-[1fr_1.25fr_1fr] divide-x divide-line">
+      <div className="p-6">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine">Tahmini YDS puanı</p>
+        <p className="mt-3 font-display text-5xl font-bold tracking-tight text-ink">60–68</p>
+        <p className="mt-2 text-sm text-muted">Tahmini merkez puan: 64</p>
+        <div className="relative mt-6 h-2 rounded-full bg-soft">
+          <span className="absolute inset-y-0 left-[40%] w-[16%] rounded-full bg-gradient-to-r from-pine to-teal" />
+          <span className="absolute -top-1.5 h-5 w-0.5 rounded-full bg-ink/70" style={{ left: "64%" }} />
+        </div>
+        <div className="mt-2 flex justify-between text-[10px] text-muted">
+          <span>40</span>
+          <span>hedef 72</span>
+          <span>90</span>
+        </div>
+        <p className="mt-5 text-xs leading-5 text-muted">80 soruluk sınavda alabileceğin puanın tahmini aralığı; resmi sonuç değildir.</p>
+      </div>
+      <div className="p-6">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine">Neden 64?</p>
+        <p className="mt-1 text-sm text-muted">Puanını en çok aşağı çeken 3 bölüm</p>
+        <ul className="mt-4 space-y-3.5">
+          {pulling.map((area) => (
+            <li key={area.title}>
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="font-medium text-ink">{area.title}</span>
+                <span className={`text-xs font-semibold ${area.tone}`}>{area.level}</span>
+              </div>
+              <div className="mt-1.5 h-1.5 rounded-full bg-soft">
+                <div className="h-1.5 rounded-full bg-pine" style={{ width: `${area.width}%` }} />
+              </div>
+              <p className="mt-1 text-xs text-muted">{area.score}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="bg-[linear-gradient(160deg,var(--soft),transparent_70%)] p-6">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine">En büyük fırsatın</p>
+        <p className="mt-3 font-display text-4xl font-bold tracking-tight text-ink">
+          64 <span className="text-pine">→</span> 70–76
+        </p>
+        <p className="mt-3 text-sm leading-6 text-muted">Okuma ve dil bilgisindeki açığı kapattığında tahmini aralığın. Garanti değil, bir senaryo.</p>
+        <div className="mt-5 flex items-center gap-3 rounded-2xl bg-card p-3 ring-1 ring-line">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-pine text-sm font-bold text-white">1</span>
+          <p className="text-sm leading-5 text-ink">Planın puanını en çok çeken bölümden başlar.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 export default function HomePage() {
   const faqs = faqsFor("home");
   const jsonLd = {
@@ -125,8 +190,26 @@ export default function HomePage() {
     <div className="landing">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <section className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 pb-8 pt-10 sm:px-5 sm:pt-14 lg:grid-cols-[0.92fr_1.08fr] lg:gap-6 lg:pt-10">
-        <div className="rise-in">
+      <HeroAssembly
+        report={heroReport}
+        caption={
+          <div className="mx-auto flex max-w-3xl items-center justify-center gap-5 text-left">
+            <p className="text-sm leading-6 text-muted">
+              Seviye testini bitirdiğinde ilk bu ekranı görürsün.{" "}
+              <span className="font-medium text-ink">Ücretsiz, yaklaşık {brand.diagnosticMinutes} dakika.</span>
+            </p>
+            <form action={startDiagnosticAction} className="shrink-0">
+              <PendingButton
+                pendingLabel="Test hazırlanıyor…"
+                className="shine rounded-full bg-pine px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_-16px_rgba(66,99,235,0.75)] transition hover:-translate-y-0.5"
+              >
+                Seviyemi ölç →
+              </PendingButton>
+            </form>
+          </div>
+        }
+        copy={
+        <>
           <p lang="en" className="text-[11px] font-semibold uppercase tracking-[0.18em] text-pine">{brand.tagline}</p>
           <h1 className="mt-4 max-w-xl text-[clamp(2.35rem,4.5vw,3.85rem)] leading-[1.12]">
             YDS ve YÖKDİL’e daha fazla değil, <span className="grad">daha doğru</span> çalış.
@@ -168,11 +251,9 @@ export default function HomePage() {
               </li>
             ))}
           </ul>
-        </div>
-        <div className="rise-in rise-in-late">
-          <HeroStage />
-        </div>
-      </section>
+        </>
+        }
+      />
 
       <div className="ribbon border-y border-line bg-card/70 py-4 text-sm text-muted" aria-hidden>
         <div className="ribbon-track">

@@ -42,14 +42,21 @@ export function MobileMenu({ links, account = false, className = "" }: Props) {
         type="button"
         aria-expanded={open}
         aria-controls="mobile-menu"
+        aria-label={open ? "Menüyü kapat" : "Menüyü aç"}
         onClick={() => setOpen((value) => !value)}
-        className="rounded-full border border-line px-2.5 py-2 text-xs sm:px-3 sm:text-sm"
+        className="grid h-9 w-9 place-items-center rounded-full border border-line text-ink"
       >
-        {open ? "Kapat" : "Menü"}
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+          {open ? (
+            <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          ) : (
+            <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          )}
+        </svg>
       </button>
       <div
         id="mobile-menu"
-        className={`absolute right-0 z-50 mt-2 w-52 origin-top-right rounded-2xl border border-line bg-card p-2 text-sm shadow-xl transition duration-200 ease-out ${
+        className={`fixed inset-x-3 top-16 z-50 mt-2 origin-top-right sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:w-52 rounded-2xl border border-line bg-card p-2 text-sm shadow-xl transition duration-200 ease-out ${
           open ? "visible scale-100 opacity-100" : "invisible scale-95 opacity-0"
         }`}
       >

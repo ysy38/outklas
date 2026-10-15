@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Pinned scroll scenes need room and motion; keep in sync with PIN in hero-assembly.tsx. */
+@custom-variant pin (@media (min-width: 1024px) and (min-height: 700px) and (prefers-reduced-motion: no-preference));
+
 :root {
   --paper: #f7f8fc;
   --ink: #17243b;
@@ -117,8 +120,13 @@ body {
   width: min(9.15rem, 46%);
 }
 
+.hero-card-wide {
+  width: min(11.5rem, 56%);
+}
+
 @media (min-width: 640px) {
-  .hero-card {
+  .hero-card,
+  .hero-card-wide {
     width: 12.35rem;
   }
 }
