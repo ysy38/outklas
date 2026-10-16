@@ -95,20 +95,20 @@ const pulling = [
 
 /** Mirrors the sections of the real diagnostic report; values are illustrative. */
 const heroReport = (
-  <div className="overflow-hidden rounded-[28px] bg-card shadow-[0_40px_90px_-40px_rgba(23,36,59,0.55)] ring-1 ring-line">
-    <div className="flex items-center justify-between gap-4 border-b border-line bg-soft/60 px-6 py-3.5">
+  <div className="max-h-[min(72svh,36rem)] overflow-y-auto overflow-x-hidden rounded-2xl bg-card shadow-[0_40px_90px_-40px_rgba(23,36,59,0.55)] ring-1 ring-line sm:rounded-[28px] lg:max-h-none lg:overflow-visible">
+    <div className="flex items-center justify-between gap-3 border-b border-line bg-soft/60 px-4 py-3 sm:gap-4 sm:px-6 sm:py-3.5">
       <p className="flex items-center gap-2 text-xs font-semibold text-ink">
         <span className="pulse-dot h-2 w-2 rounded-full bg-teal" />
         Seviye raporun
       </p>
-      <p className="text-xs text-muted">40 soru · örnek değerler</p>
+      <p className="text-[11px] text-muted sm:text-xs">40 soru · örnek değerler</p>
     </div>
-    <div className="grid grid-cols-[1fr_1.25fr_1fr] divide-x divide-line">
-      <div className="p-6">
+    <div className="grid divide-y divide-line lg:grid-cols-[1fr_1.25fr_1fr] lg:divide-x lg:divide-y-0">
+      <div className="p-4 sm:p-6">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine">Tahmini YDS puanı</p>
-        <p className="mt-3 font-display text-5xl font-bold tracking-tight text-ink">60–68</p>
-        <p className="mt-2 text-sm text-muted">Tahmini merkez puan: 64</p>
-        <div className="relative mt-6 h-2 rounded-full bg-soft">
+        <p className="mt-2 font-display text-4xl font-bold tracking-tight text-ink sm:mt-3 sm:text-5xl">60–68</p>
+        <p className="mt-1.5 text-sm text-muted sm:mt-2">Tahmini merkez puan: 64</p>
+        <div className="relative mt-4 h-2 rounded-full bg-soft sm:mt-6">
           <span className="absolute inset-y-0 left-[40%] w-[16%] rounded-full bg-gradient-to-r from-pine to-teal" />
           <span className="absolute -top-1.5 h-5 w-0.5 rounded-full bg-ink/70" style={{ left: "64%" }} />
         </div>
@@ -117,12 +117,12 @@ const heroReport = (
           <span>hedef 72</span>
           <span>90</span>
         </div>
-        <p className="mt-5 text-xs leading-5 text-muted">80 soruluk sınavda alabileceğin puanın tahmini aralığı; resmi sonuç değildir.</p>
+        <p className="mt-3 hidden text-xs leading-5 text-muted sm:mt-5 sm:block">80 soruluk sınavda alabileceğin puanın tahmini aralığı; resmi sonuç değildir.</p>
       </div>
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine">Neden 64?</p>
         <p className="mt-1 text-sm text-muted">Puanını en çok aşağı çeken 3 bölüm</p>
-        <ul className="mt-4 space-y-3.5">
+        <ul className="mt-3 space-y-2.5 sm:mt-4 sm:space-y-3.5">
           {pulling.map((area) => (
             <li key={area.title}>
               <div className="flex items-baseline justify-between gap-3 text-sm">
@@ -137,13 +137,13 @@ const heroReport = (
           ))}
         </ul>
       </div>
-      <div className="bg-[linear-gradient(160deg,var(--soft),transparent_70%)] p-6">
+      <div className="bg-[linear-gradient(160deg,var(--soft),transparent_70%)] p-4 sm:p-6">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine">En büyük fırsatın</p>
-        <p className="mt-3 font-display text-4xl font-bold tracking-tight text-ink">
+        <p className="mt-2 font-display text-3xl font-bold tracking-tight text-ink sm:mt-3 sm:text-4xl">
           64 <span className="text-pine">→</span> 70–76
         </p>
-        <p className="mt-3 text-sm leading-6 text-muted">Okuma ve dil bilgisindeki açığı kapattığında tahmini aralığın. Garanti değil, bir senaryo.</p>
-        <div className="mt-5 flex items-center gap-3 rounded-2xl bg-card p-3 ring-1 ring-line">
+        <p className="mt-2 text-sm leading-6 text-muted sm:mt-3">Okuma ve dil bilgisindeki açığı kapattığında tahmini aralığın. Garanti değil, bir senaryo.</p>
+        <div className="mt-4 flex items-center gap-3 rounded-2xl bg-card p-3 ring-1 ring-line sm:mt-5">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-pine text-sm font-bold text-white">1</span>
           <p className="text-sm leading-5 text-ink">Planın puanını en çok çeken bölümden başlar.</p>
         </div>
@@ -193,15 +193,15 @@ export default function HomePage() {
       <HeroAssembly
         report={heroReport}
         caption={
-          <div className="mx-auto flex max-w-3xl items-center justify-center gap-5 text-left">
-            <p className="text-sm leading-6 text-muted">
+          <div className="mx-auto flex max-w-3xl flex-col items-stretch gap-3 text-left sm:flex-row sm:items-center sm:justify-center sm:gap-5">
+            <p className="text-center text-sm leading-6 text-muted sm:text-left">
               Seviye testini bitirdiğinde ilk bu ekranı görürsün.{" "}
               <span className="font-medium text-ink">Ücretsiz, yaklaşık {brand.diagnosticMinutes} dakika.</span>
             </p>
             <form action={startDiagnosticAction} className="shrink-0">
               <PendingButton
                 pendingLabel="Test hazırlanıyor…"
-                className="shine rounded-full bg-pine px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_-16px_rgba(66,99,235,0.75)] transition hover:-translate-y-0.5"
+                className="shine w-full rounded-full bg-pine px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_-16px_rgba(66,99,235,0.75)] transition hover:-translate-y-0.5 sm:w-auto"
               >
                 Seviyemi ölç →
               </PendingButton>

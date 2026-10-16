@@ -4,7 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { createHelixField, type HelixPort } from "./helix-field";
 
 /** Keep in sync with the `pin` variant in globals.css. */
-const PIN = "(min-width: 1024px) and (min-height: 700px) and (prefers-reduced-motion: no-preference)";
+const PIN = "(min-height: 540px) and (prefers-reduced-motion: no-preference)";
 const HEADER = 65;
 
 function clamp(value: number, min = 0, max = 1) {
@@ -100,6 +100,7 @@ export function HeroAssembly({ copy, report, caption }: { copy: ReactNode; repor
       prev = time;
       const still = reduce.matches;
       const pinned = pinQuery.matches;
+      const narrow = width < 1024;
 
       const box = section!.getBoundingClientRect();
       const target = pinned ? clamp((HEADER - box.top) / Math.max(1, box.height - height)) : 0;
@@ -119,6 +120,7 @@ export function HeroAssembly({ copy, report, caption }: { copy: ReactNode; repor
       copyEl!.style.opacity = String(1 - copyOut);
       copyEl!.style.transform = copyOut ? `translate3d(0, ${-90 * copyOut}px, 0)` : "";
       copyEl!.style.visibility = copyOut > 0.98 ? "hidden" : "";
+      copyEl!.style.pointerEvents = copyOut > 0.6 ? "none" : "";
 
       cards.current.forEach((card, index) => {
         if (!card) return;
@@ -127,8 +129,9 @@ export function HeroAssembly({ copy, report, caption }: { copy: ReactNode; repor
           card.style.opacity = String(1 - cardsOut);
           return;
         }
-        const x = node.fly[0] * 110 * cardsOut + pointer.x * node.depth;
-        const y = node.fly[1] * 110 * cardsOut + pointer.y * node.depth * 0.6;
+        const fly = narrow ? 70 : 110;
+        const x = node.fly[0] * fly * cardsOut + pointer.x * node.depth;
+        const y = node.fly[1] * fly * cardsOut + pointer.y * node.depth * 0.6;
         card.style.opacity = String(1 - cardsOut);
         card.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) scale(${(1 - 0.08 * cardsOut).toFixed(3)})`;
       });
@@ -136,26 +139,40 @@ export function HeroAssembly({ copy, report, caption }: { copy: ReactNode; repor
       const stageBox = stageEl!.getBoundingClientRect();
       const slotBox = slotEl!.getBoundingClientRect();
       const homeX = slotBox.left - stageBox.left + slotBox.width / 2;
-      const homeY = slotBox.top - stageBox.top + slotBox.height * 0.47;
-      const homeScale = slotBox.height * 0.45;
+      const homeY = slotBox.top - stageBox.top + slotBox.height * (narrow ? 0.52 : 0.47);
+      const homeScale = slotBox.height * (narrow ? 0.4 : 0.45);
       const drift = pinned ? 0 : 0.4 * phase((HEADER - slotBox.top) / slotBox.height, 0, 1);
       const split = pinned ? reveal : drift;
 
+      // Helix always splits; on narrow screens the report fades/scales in (chevron clip
+      // looks broken on a stacked card). Desktop keeps the chevron reveal.
       const half = pinned ? panelEl!.offsetWidth / 2 : slotBox.width * 0.3;
-      const gap = 24;
-      const open = Math.max(0, split * (half + gap) - gap);
-      const bulge = 22 * (1 - split);
-      panelEl!.style.opacity = pinned && split > 0.02 ? "1" : "0";
-      panelEl!.style.clipPath = `polygon(calc(50% - ${open}px) 0, calc(50% - ${open + bulge}px) 50%, calc(50% - ${open}px) 100%, calc(50% + ${open}px) 100%, calc(50% + ${open + bulge}px) 50%, calc(50% + ${open}px) 0)`;
-      panelEl!.style.visibility = pinned && split > 0.02 ? "visible" : "hidden";
+      const gap = narrow ? 16 : 24;
+      const showPanel = pinned && split > 0.02;
+      if (narrow) {
+        const rise = phase(split, 0.15, 1);
+        panelEl!.style.opacity = showPanel ? String(rise) : "0";
+        panelEl!.style.clipPath = "none";
+        panelEl!.style.transform = `translate(-50%, -50%) scale(${(0.92 + 0.08 * rise).toFixed(3)})`;
+        panelEl!.style.visibility = showPanel ? "visible" : "hidden";
+      } else {
+        const open = Math.max(0, split * (half + gap) - gap);
+        const bulge = 22 * (1 - split);
+        panelEl!.style.opacity = showPanel ? "1" : "0";
+        panelEl!.style.clipPath = `polygon(calc(50% - ${open}px) 0, calc(50% - ${open + bulge}px) 50%, calc(50% - ${open}px) 100%, calc(50% + ${open}px) 100%, calc(50% + ${open + bulge}px) 50%, calc(50% + ${open}px) 0)`;
+        panelEl!.style.transform = "translate(-50%, -50%)";
+        panelEl!.style.visibility = showPanel ? "visible" : "hidden";
+      }
 
       captionEl!.style.opacity = String(captionIn);
       captionEl!.style.transform = `translate3d(0, ${(1 - captionIn) * 18}px, 0)`;
       captionEl!.style.visibility = captionIn > 0.02 ? "visible" : "hidden";
 
+      const targetCy = narrow ? height * 0.42 : height * 0.47;
+      const targetScale = narrow ? Math.min(height * 0.42, width * 0.55) : height * 0.5;
       const cx = lerp(homeX, width / 2, move);
-      const cy = lerp(homeY, height * 0.47, move);
-      const scale = lerp(homeScale, height * 0.5, move);
+      const cy = lerp(homeY, targetCy, move);
+      const scale = lerp(homeScale, targetScale, move);
       const ports: HelixPort[] = [];
       cards.current.forEach((card, index) => {
         const port = card?.querySelector<HTMLElement>("[data-port]");
@@ -238,6 +255,7 @@ export function HeroAssembly({ copy, report, caption }: { copy: ReactNode; repor
     stageEl.addEventListener("pointerleave", leave);
     window.addEventListener("scroll", onScroll, { passive: true });
     reduce.addEventListener("change", wake);
+    pinQuery.addEventListener("change", wake);
 
     return () => {
       cancelAnimationFrame(frame);
@@ -248,6 +266,7 @@ export function HeroAssembly({ copy, report, caption }: { copy: ReactNode; repor
       stageEl.removeEventListener("pointerleave", leave);
       window.removeEventListener("scroll", onScroll);
       reduce.removeEventListener("change", wake);
+      pinQuery.removeEventListener("change", wake);
     };
   }, []);
 
@@ -256,17 +275,21 @@ export function HeroAssembly({ copy, report, caption }: { copy: ReactNode; repor
   };
 
   return (
-    <section ref={root} className="relative pin:h-[250svh]">
-      <div ref={stage} className="relative pin:sticky pin:top-[65px] pin:h-[calc(100svh-65px)] pin:overflow-hidden">
+    <section ref={root} className="relative pin:h-[220svh] lg:pin:h-[250svh]">
+      <div ref={stage} className="relative pin:sticky pin:top-[61px] pin:h-[calc(100svh-61px)] pin:overflow-hidden lg:pin:top-[65px] lg:pin:h-[calc(100svh-65px)]">
         <canvas ref={back} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" />
-        <div className="relative mx-auto grid w-full max-w-6xl items-center gap-4 px-4 pb-8 pt-10 sm:px-5 sm:pt-14 lg:grid-cols-[0.92fr_1.08fr] lg:gap-6 lg:pt-10 pin:h-full pin:py-0">
-          <div className="rise-in">
-            <div ref={copyBox} className="will-change-transform">
+        <div className="relative mx-auto grid w-full max-w-6xl items-center gap-4 px-4 pb-8 pt-10 sm:px-5 sm:pt-14 lg:grid-cols-[0.92fr_1.08fr] lg:gap-6 lg:pt-10 pin:h-full pin:grid-cols-1 pin:py-0 lg:pin:grid-cols-[0.92fr_1.08fr]">
+          {/* Pinned mobile: compact copy overlays the top so the helix stays in view. */}
+          <div className="rise-in pin:absolute pin:inset-x-4 pin:top-4 pin:z-30 pin:max-w-xl sm:pin:inset-x-5 lg:pin:relative lg:pin:inset-auto lg:pin:top-auto lg:pin:z-auto lg:pin:max-w-none">
+            <div
+              ref={copyBox}
+              className="will-change-transform pin:rounded-2xl pin:bg-paper/85 pin:p-3.5 pin:shadow-[0_18px_40px_-28px_rgba(23,36,59,0.45)] pin:backdrop-blur-md pin:[&>p:nth-of-type(2)]:hidden pin:[&>p:nth-of-type(3)]:hidden pin:[&>ul]:hidden pin:[&_h1]:mt-2 pin:[&_h1]:text-[1.55rem] pin:[&_h1]:leading-[1.2] pin:[&>div.mt-7]:mt-3.5 pin:[&_a.rounded-full.border]:hidden sm:pin:p-4 lg:pin:bg-transparent lg:pin:p-0 lg:pin:shadow-none lg:pin:backdrop-blur-none lg:pin:[&>p:nth-of-type(2)]:block lg:pin:[&>p:nth-of-type(3)]:block lg:pin:[&>ul]:flex lg:pin:[&_h1]:mt-4 lg:pin:[&_h1]:text-[clamp(2.35rem,4.5vw,3.85rem)] lg:pin:[&_h1]:leading-[1.12] lg:pin:[&>div.mt-7]:mt-7 lg:pin:[&_a.rounded-full.border]:inline-flex"
+            >
               {copy}
             </div>
           </div>
-          <div className="rise-in rise-in-late">
-            <div ref={slot} aria-hidden className="relative mx-auto h-[25rem] w-full max-w-[34rem] sm:h-[28rem] lg:h-[31rem]">
+          <div className="rise-in rise-in-late pin:flex pin:h-full pin:items-end pin:justify-center pin:pb-[18%] sm:pin:items-center sm:pin:pb-0 lg:pin:items-center">
+            <div ref={slot} aria-hidden className="relative mx-auto h-[25rem] w-full max-w-[34rem] sm:h-[28rem] lg:h-[31rem] pin:h-[min(24rem,48svh)] sm:pin:h-[min(28rem,58svh)] lg:pin:h-[31rem]">
               <div ref={register(3)} className="pointer-events-none absolute left-1/2 top-[47%] h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--pine)_20%,transparent),color-mix(in_srgb,var(--teal)_10%,transparent)_50%,transparent_72%)] blur-2xl" />
 
               <article ref={register(0)} className={`${cardClass} left-0 top-[5%]`}>
@@ -339,13 +362,13 @@ export function HeroAssembly({ copy, report, caption }: { copy: ReactNode; repor
         </div>
         <div
           ref={panel}
-          className="absolute left-1/2 top-[47%] z-10 hidden w-[min(62rem,86vw)] -translate-x-1/2 -translate-y-1/2 pin:block"
-          style={{ opacity: 0, visibility: "hidden" }}
+          className="absolute left-1/2 top-[42%] z-10 hidden w-[min(62rem,92vw)] pin:block lg:top-[47%] lg:w-[min(62rem,86vw)]"
+          style={{ opacity: 0, visibility: "hidden", transform: "translate(-50%, -50%)" }}
         >
           {report}
         </div>
         <canvas ref={front} aria-hidden className="pointer-events-none absolute inset-0 z-20 h-full w-full" />
-        <div ref={captionBox} className="absolute inset-x-0 bottom-[3.5%] z-30 hidden px-5 pin:block" style={{ opacity: 0, visibility: "hidden" }}>
+        <div ref={captionBox} className="absolute inset-x-0 bottom-[2.5%] z-30 hidden px-4 pin:block sm:px-5 lg:bottom-[3.5%]" style={{ opacity: 0, visibility: "hidden" }}>
           {caption}
         </div>
       </div>
