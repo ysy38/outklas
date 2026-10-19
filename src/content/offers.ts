@@ -14,12 +14,12 @@ export type Offer = {
 };
 
 export const freeOffer = {
-  name: "Başlangıç",
-  eyebrow: "Önce seviyeni gör",
+  name: "Cümle Röntgeni",
+  eyebrow: "Ücretsiz bilişsel check-up",
   points: [
-    `${brand.diagnosticQuestions} soruluk seviye testi`,
-    "Raporun ilk 3 bulgusu",
-    `Her gün ${brand.freeDailyWords} kelime ve ${brand.freeDailyConnectors} bağlaç`,
+    "Hesap gerektirmeyen ilk çözümleme deneyimi",
+    "Cümlenin iskeleti, kritik ipucu ve çeldirici mekanizması",
+    `Raporun ilk 3 bulgusu · her gün ${brand.freeDailyWords} kelime ve ${brand.freeDailyConnectors} bağlaç`,
     `${brand.freeSimulators} tam deneme`,
   ],
 };
@@ -32,14 +32,14 @@ export const offers: Record<CheckoutPlan, Offer> = {
     price: brand.prices.gelisim,
     days: brand.accessDays.gelisim,
     points: [
-      "Seviye testinin tam raporu, bütün bulgularıyla",
-      "Hedef puanına ve sınav tarihine göre günlük çalışma planı",
+      "Teşhis raporunun tamamı; öncelikli gelişim alanların",
+      "Her gün kısa, hedefe odaklı kişisel çalışma planı",
+      "Cümle Röntgeni ve çeldirici otopsisi ile çözümleme pratiği",
       `${brand.sprintSimulators} tam deneme (80 soru, 180 dakika)`,
       "Günlük sınır olmadan kelime ve bağlaç alıştırması",
       "Yanlışların aralıklı tekrarla yeniden karşına çıkar",
-      "Kelime ve bağlaç setleri (yazdırılabilir, PDF)",
     ],
-    tagline: "Kısa sürede doğru yere odaklan.",
+    tagline: "50–65 bandında sıkışmayı tek sınav döneminde kırmak için.",
     cta: `Sprint’e başla, ${tl(brand.prices.gelisim)} TL tek ödeme →`,
   },
   kamp: {
@@ -50,12 +50,12 @@ export const offers: Record<CheckoutPlan, Offer> = {
     days: brand.accessDays.kamp,
     points: [
       "Sprint’teki her şey",
-      "Sınırsız tam deneme",
+      "Sınırsız tam deneme ve uzun dönem bilişsel takip",
       `${brand.accessDays.kamp} gün erişim; sınav tarihini değiştirirsen plan yeni tarihe göre kurulur`,
       "İlerleme takibi ve her gün güncellenen puan tahmini",
       `Sprint’ten geçiyorsan ödediğin ${tl(brand.prices.gelisim)} TL düşülür`,
     ],
-    tagline: "Sen hedefini söyle, ne yapacağını biz söyleyelim.",
+    tagline: "Hedef puanına kadar kesintisiz lab. Tek ödeme, abonelik yok.",
     cta: `Kampa başla, ${tl(brand.prices.kamp)} TL tek ödeme →`,
   },
 };

@@ -53,7 +53,7 @@ export const siteFaqs: readonly Faq[] = [
   {
     question: "STARC ücretsiz mi?",
     answer:
-      "Başlamak ücretsiz: 40 soruluk seviye testi, raporunun ilk 3 bulgusu, her gün 10 kelime ve 10 bağlaç sorusu ve 1 tam deneme için ödeme yapmazsın. Sınavına 60 gün ya da daha az varsa Sprint: 60 gün, 499 TL; günlük plan ve 4 tam deneme. Daha fazla varsa Kamp: 180 gün, 2.499 TL; sınırsız deneme. Sprint’ten Kamp’a geçersen ödediğin 499 TL düşülür. Abonelik yoktur, bir kez ödersin; fiyatlar KDV dahil.",
+      "Başlamak ücretsiz: Cümle Röntgeni deneyimi, seviye testinin ilk bulguları, her gün 10 kelime ve 10 bağlaç sorusu ve 1 tam deneme için ödeme yapmazsın. Sınavına 45 gün ya da daha az varsa Sprint: 45 gün, 3.450 TL; günlük plan ve 4 tam deneme. Daha fazla varsa Kamp: 180 gün, 5.950 TL; sınırsız deneme. Sprint’ten Kamp’a geçersen ödediğin 3.450 TL düşülür. Abonelik yoktur, bir kez ödersin; fiyatlar KDV dahil.",
     place: ["home"],
   },
   {

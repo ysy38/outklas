@@ -7,15 +7,20 @@ export const brand = {
   sub: "Seviyeni ve hedefini ölçer, her gün sana en çok puan kazandıracak çalışmayı gösterir. YDS, e-YDS, YÖKDİL ve e-YÖKDİL için.",
   /** TL, KDV dahil. `gelisim` is the checkout code of the package sold as Sprint. */
   prices: {
-    gelisim: 499,
-    kamp: 2499,
+    gelisim: 3450,
+    kamp: 5950,
   },
   accessDays: {
-    gelisim: 60,
+    gelisim: 45,
     kamp: 180,
   },
   /** At or under this many days to the exam we recommend Sprint, above it Kamp. */
-  sprintMaxDays: 60,
+  sprintMaxDays: 45,
+  /** Optional installment display for Sprint (3 × amount); checkout remains single pay. */
+  installment: {
+    gelisim: 1250,
+    kamp: 2150,
+  },
   /** Kamp is sold at the founder price until this day; the label on the card shows the date. */
   launchUntil: "2026-12-31",
   diagnosticQuestions: 40,

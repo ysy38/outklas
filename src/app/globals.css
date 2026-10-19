@@ -192,6 +192,23 @@ body {
   color: transparent;
 }
 
+@keyframes reading-laser-dash {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.reading-laser {
+  stroke-dasharray: 6 8;
+  animation: reading-laser-dash 1.2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reading-laser {
+    animation: none;
+  }
+}
+
 .link-underline {
   background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
   transition: background-size 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), color 0.2s ease;

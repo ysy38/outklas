@@ -11,7 +11,7 @@ import { entitlementFor } from "@/server/sessions";
 
 export const metadata: Metadata = {
   title: "Fiyat",
-  description: `Başlangıç ücretsiz. Sprint ${tl(brand.prices.gelisim)} TL / ${brand.accessDays.gelisim} gün, Kamp ${tl(brand.prices.kamp)} TL / ${brand.accessDays.kamp} gün. Tek ödeme, abonelik yok, KDV dahil.`,
+  description: `Cümle Röntgeni ücretsiz. Sprint ${tl(brand.prices.gelisim)} TL / ${brand.accessDays.gelisim} gün, Kamp ${tl(brand.prices.kamp)} TL / ${brand.accessDays.kamp} gün. Tek ödeme, abonelik yok, KDV dahil.`,
   alternates: { canonical: "/fiyat" },
 };
 
@@ -60,11 +60,11 @@ export default async function PricingPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <p className="text-xs uppercase tracking-[0.18em] text-gold">Fiyat</p>
       <h1 className="display-xl mt-4 max-w-3xl font-serif">
-        Önce seviyeni ölç. <span className="grad">Sonra yolunu seç.</span>
+        Önce değeri gör. <span className="grad">Sonra yolunu seç.</span>
       </h1>
       <EditorialNote path="/fiyat" className="mt-4" />
       <p className="mt-4 max-w-2xl text-base leading-8 text-muted sm:text-lg">
-        {brand.diagnosticQuestions} soruluk seviye testi ücretsiz ve üyelik istemez. Sınavına {brand.sprintMaxDays} gün ya da daha az varsa Sprint, daha fazla varsa Kamp. İki paket de tek ödemedir; abonelik yok, fiyatlar KDV dahil. Sprint’ten Kamp’a geçersen ödediğin tutar düşülür.
+        Cümle Röntgeni ücretsizdir ve hesap istemez. Sınavına {brand.sprintMaxDays} gün ya da daha az varsa Sprint ({tl(brand.prices.gelisim)} TL / {brand.accessDays.gelisim} gün), daha fazla varsa Kamp ({tl(brand.prices.kamp)} TL / {brand.accessDays.kamp} gün). İki paket de tek ödemedir; abonelik yok, fiyatlar KDV dahil. İstersen 3 taksit görünümüyle karşılaştır (Sprint 3 × {tl(brand.installment.gelisim)} TL, Kamp 3 × {tl(brand.installment.kamp)} TL); checkout tek ödemedir. Sprint’ten Kamp’a geçersen ödediğin tutar düşülür.
       </p>
 
       <div className="mt-10 grid items-stretch gap-4 lg:grid-cols-[0.8fr_2fr]">

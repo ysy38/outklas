@@ -2,7 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { brand, siteUrl } from "@/brand";
 import { HeroAssembly } from "@/components/hero-assembly";
+import {
+  ArchitectureSection,
+  MotorSection,
+  PricingTeaserSection,
+  ReadingModelSection,
+  ScienceSection,
+} from "@/components/landing-signature";
 import { PendingButton } from "@/components/pending-button";
+import { funnelSteps } from "@/content/landing-signature";
 import { faqsFor } from "@/content/seo";
 import { ydsBlueprint } from "@/modules/exam/blueprint";
 import { startDiagnosticAction } from "@/server/actions";
@@ -32,20 +40,14 @@ const problems = [
 ];
 
 const compare = [
-  ["Kaynak", "Video, kitap, soru yığını", "Sadece o gün işine yarayan çalışma"],
-  ["Plan", "Herkese aynı program", "Seviyene göre hazırlanan plan"],
-  ["Yanlışlar", "Çözümü okuyup geçmek", "Yanlışın nedenini görüp benzer sorularla pekiştirmek"],
-  ["Deneme", "Sadece puan ve doğru sayısı", "Hangi bölümde puan kaybettiğin"],
+  ["Okuma", "Kelimeye takılıp cümleyi baştan okumak", "Özne + bağlaç + yüklem kilidi"],
+  ["Yanlışlar", "Doğru şıkkı ezberlemek", "Çeldiricinin neden cazip göründüğünü görmek"],
+  ["Plan", "Herkese aynı program", "Teşhise göre günlük nokta atışı görev"],
+  ["Deneme", "Sadece puan ve doğru sayısı", "Hangi bölümde ve hangi tuzakta puan kaybettiğin"],
   ["Hedef", "“Daha çok çalış”", "“Bugün sana en çok puan kazandıracak konuya çalış”"],
 ];
 
-const steps = [
-  { title: "Seviye testi", body: "Üye olmadan 40 soruluk testi çözersin. Tahmini puanını ve puanını aşağı çeken bölümleri görürsün." },
-  { title: "Eksiklerin", body: "Hangi bölümlerde puan kaybettiğini görürsün." },
-  { title: "Doğru sorular", body: "Her seferinde o an en çok işine yarayacak sorular seçilir." },
-  { title: "Günün görevi", body: "Her gün kısa ve net bir çalışma görevi alırsın." },
-  { title: "Puan tahmini", body: "Hedefe ne kadar yaklaştığın her gün yeniden hesaplanır." },
-];
+const steps = funnelSteps;
 
 const practicePoints = [
   "Giriş yaptığında seni onlarca menü karşılamaz; bugün ne yapacağını hemen görürsün.",
@@ -81,7 +83,6 @@ const stepIcons = [
   "M4 19V9M10 19V5M16 19v-7M22 19H2",
   "M12 21a9 9 0 1 0-9-9M12 12l4-2M12 7v5",
   "M12 3v3M5 7l2 2M19 7l-2 2M8 14h8M9 18h6",
-  "M4 16l5-5 3 3 8-8M14 6h6v6",
 ];
 
 const practiceIcons = ["M4 19V9M10 19V5M16 19v-7M22 19H2", "M5 12h14M13 6l6 6-6 6", "M4 16l5-5 3 3 8-8"];
@@ -196,14 +197,14 @@ export default function HomePage() {
           <div className="mx-auto flex max-w-3xl flex-col items-stretch gap-3 text-left sm:flex-row sm:items-center sm:justify-center sm:gap-5">
             <p className="text-center text-sm leading-6 text-muted sm:text-left">
               Seviye testini bitirdiğinde ilk bu ekranı görürsün.{" "}
-              <span className="font-medium text-ink">Ücretsiz, yaklaşık {brand.diagnosticMinutes} dakika.</span>
+              <span className="font-medium text-ink">Ücretsiz · önce değer, sonra hesap.</span>
             </p>
             <form action={startDiagnosticAction} className="shrink-0">
               <PendingButton
                 pendingLabel="Test hazırlanıyor…"
                 className="shine w-full rounded-full bg-pine px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_-16px_rgba(66,99,235,0.75)] transition hover:-translate-y-0.5 sm:w-auto"
               >
-                Seviyemi ölç →
+                Cümle Röntgenini dene →
               </PendingButton>
             </form>
           </div>
@@ -229,7 +230,7 @@ export default function HomePage() {
                 pendingLabel="Test hazırlanıyor…"
                 className="shine w-full rounded-full bg-pine px-6 py-3.5 text-sm font-semibold text-white shadow-[0_16px_36px_-16px_rgba(66,99,235,0.75)] transition hover:-translate-y-0.5 sm:w-auto"
               >
-                Ücretsiz seviyemi ölç →
+                Cümle Röntgenini dene →
               </PendingButton>
             </form>
             <a href="#nasil" className="rounded-full border border-line bg-card px-6 py-3.5 text-center text-sm font-semibold text-ink shadow-sm transition hover:border-pine">
@@ -237,7 +238,7 @@ export default function HomePage() {
             </a>
           </div>
           <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">
-            {["Ücretsiz", "Kayıt zorunluluğu yok", `Yaklaşık ${brand.diagnosticMinutes} dakika`].map((point) => (
+            {["Ücretsiz", "Kayıt zorunluluğu yok", "Önce değer, sonra hesap"].map((point) => (
               <li key={point}>
                 <span aria-hidden className="mr-1.5 text-pine">✓</span>
                 {point}
@@ -286,6 +287,9 @@ export default function HomePage() {
         </div>
       </section>
 
+      <MotorSection />
+      <ReadingModelSection />
+
       <section className="border-y border-line bg-card/80">
         <div className="mx-auto grid w-full max-w-6xl items-start gap-12 px-4 py-20 sm:px-5 sm:py-24 lg:grid-cols-[0.85fr_1.15fr]">
           <div data-rise className="lg:sticky lg:top-28">
@@ -319,15 +323,15 @@ export default function HomePage() {
           <div data-rise className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-xl">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pine">Nasıl çalışıyor?</p>
-              <h2 className="mt-3 text-4xl leading-[1.15] sm:text-5xl">Çözdüğün her soru planını biraz daha netleştirir.</h2>
+              <h2 className="mt-3 text-4xl leading-[1.15] sm:text-5xl">Önce merak. Sonra teşhis. Sonra rota.</h2>
             </div>
             <div className="max-w-md">
               <p className="leading-8 text-muted">
-                Soru çözdükçe sistem seni daha iyi tanır ve önerileri buna göre değişir. Sabit bir program yerine seninle birlikte güncellenen bir plan.
+                Ücretsiz deneyim kendi başına anlamlıdır; seni hemen kayıt duvarına itmez. Derinlik hesap sonrası artar; ücretli plan rotayı açar.
               </p>
               <form action={startDiagnosticAction} className="mt-6">
                 <PendingButton pendingLabel="Test hazırlanıyor…" className="shine rounded-full bg-pine px-6 py-3.5 text-sm font-semibold text-white shadow-[0_16px_36px_-16px_rgba(66,99,235,0.75)] transition hover:-translate-y-0.5">
-                  Ücretsiz seviyemi ölç →
+                  Cümle Röntgenini dene →
                 </PendingButton>
               </form>
               <Link href="/yontem" className="link-underline mt-4 inline-block text-sm font-medium text-pine">
@@ -335,7 +339,7 @@ export default function HomePage() {
               </Link>
             </div>
           </div>
-          <ol className="relative mt-14 grid gap-x-6 gap-y-10 sm:grid-cols-2 xl:grid-cols-5">
+          <ol className="relative mt-14 grid gap-x-6 gap-y-10 sm:grid-cols-2 xl:grid-cols-4">
             <span aria-hidden className="route-line absolute left-[8%] right-[8%] top-8 hidden h-px xl:block" />
             {steps.map((step, index) => (
               <li key={step.title} data-rise className="relative">
@@ -351,6 +355,9 @@ export default function HomePage() {
           </ol>
         </div>
       </section>
+
+      <ArchitectureSection />
+      <ScienceSection />
 
       <section id="analiz" className="relative scroll-mt-24 overflow-hidden bg-night text-white">
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_80%_0%,rgba(47,107,255,0.38),transparent_52%)]" />
@@ -523,7 +530,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-20 sm:px-5 sm:py-24 lg:grid-cols-3">
+      <section className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-20 sm:px-5 sm:py-24 lg:grid-cols-2">
         <article data-rise className="lift rounded-[28px] bg-card p-7 shadow-[0_24px_60px_-36px_rgba(23,36,59,0.28)] ring-1 ring-line">
           <h2 className="text-3xl">Her gün 10 kelime, 10 bağlaç.</h2>
           <p className="mt-3 text-sm leading-7 text-muted">YDS’de en çok puan kaybettiren iki konu. Yanlış yaptıkların birkaç gün sonra tekrar karşına çıkar, bildiklerin giderek seyrekleşir. Dünkü sonucunla bugünkünü yan yana görürsün.</p>
@@ -532,16 +539,9 @@ export default function HomePage() {
           <h2 className="text-3xl">Puan tahminin her gün güncellenir.</h2>
           <p className="mt-3 text-sm leading-7 text-muted">Bugün tahminin 64 ile 72 arasındaysa, birkaç hafta sonra 68 ile 76 arasına çıkabilir. Örneğin okumada doğru oranın %48’den %61’e yükselirse, hedefine kalan puanın büyük kısmı buradan gelir.</p>
         </article>
-        <article data-rise className="lift rounded-[28px] bg-soft p-7 shadow-[0_24px_60px_-36px_rgba(23,36,59,0.28)] ring-1 ring-line">
-          <h2 className="text-3xl">Başlamak ücretsiz.</h2>
-          <p className="mt-3 text-sm leading-7 text-muted">
-            Seviye testi, raporun ilk 3 bulgusu, her gün {brand.freeDailyWords} kelime ve {brand.freeDailyConnectors} bağlaç, {brand.freeSimulators} tam deneme ücretsiz. Sınavına {brand.sprintMaxDays} gün ya da daha az varsa Sprint {brand.prices.gelisim} TL; daha fazla varsa Kamp {brand.prices.kamp.toLocaleString("tr-TR")} TL. İkisinde de günlük planın hazır; tek ödeme, KDV dahil.
-          </p>
-          <Link href="/fiyat" className="link-underline mt-5 inline-block text-sm font-semibold text-pine">
-            Fiyatlar ve sınav takvimi →
-          </Link>
-        </article>
       </section>
+
+      <PricingTeaserSection />
 
       <section id="sss" className="scroll-mt-24 border-t border-line">
         <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-20 sm:px-5 sm:py-24 lg:grid-cols-[0.8fr_1.2fr]">
@@ -569,15 +569,15 @@ export default function HomePage() {
           <div data-rise className="max-w-xl">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pine">Hemen başla</p>
             <h2 className="mt-2 text-3xl leading-tight text-ink sm:text-4xl">
-              Daha çok saat çalışmana gerek yok. <span className="grad">Neye çalışacağını bilmen yeter.</span>
+              Bir sorunun cevabını bulmakla, <span className="grad">neden o cevap olduğunu anlamak</span> aynı şey değil.
             </h2>
-            <p className="mt-3 max-w-md text-base leading-7 text-muted sm:text-lg">Önce seviyeni ölç. Puanını neyin aşağı çektiğini gör, sonra yolunu seç.</p>
+            <p className="mt-3 max-w-md text-base leading-7 text-muted sm:text-lg">Cümle Röntgeni ile başla. Sonra profilini genişlet, rotanı kur.</p>
             <form action={startDiagnosticAction} className="mt-5">
               <PendingButton pendingLabel="Test hazırlanıyor…" className="shine rounded-full bg-pine px-6 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_-16px_rgba(66,99,235,0.75)] transition hover:-translate-y-0.5">
-                Ücretsiz seviyemi ölç →
+                Cümle Röntgenini dene →
               </PendingButton>
             </form>
-            <p className="mt-3 text-sm text-muted">Ücretsiz · Kayıt zorunluluğu yok · Yaklaşık {brand.diagnosticMinutes} dakika</p>
+            <p className="mt-3 text-sm text-muted">Ücretsiz · Kayıt zorunluluğu yok · Önce değer, sonra hesap</p>
           </div>
           <div className="relative mx-auto aspect-[4/3] w-full max-w-2xl overflow-hidden rounded-[28px] sm:aspect-[16/9] lg:mx-0 lg:max-w-none">
             <img src="/marketing/summit.jpg" alt="" width={1280} height={720} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover object-center" />
