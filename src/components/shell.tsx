@@ -58,9 +58,10 @@ const footerColumns: { title: string; links: [string, string][] }[] = [
 function Logo({ href, withTagline = false, markId }: { href: string; withTagline?: boolean; markId: string }) {
   return (
     <Link href={href} aria-label={`${brand.wordmark} ana sayfa`} className="group flex min-w-0 shrink items-center gap-1.5 sm:gap-2.5">
-      <span className="brand-chip transition-transform duration-500 group-hover:-rotate-3">
-        <BrandMark id={markId} className="h-[1.35rem] w-[1.35rem] sm:h-6 sm:w-6" />
-      </span>
+      <BrandMark
+        id={markId}
+        className="h-8 w-8 shrink-0 transition-transform duration-500 group-hover:-rotate-3 sm:h-9 sm:w-9"
+      />
       <span className="min-w-0 leading-none">
         <span className="font-logo text-[16px] font-bold lowercase tracking-[-0.04em] text-ink sm:text-[22px]">
           outklas<span className="text-pine">.</span>

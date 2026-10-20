@@ -14,12 +14,12 @@ const display = Plus_Jakarta_Sans({
 const logo = Unbounded({ subsets: ["latin"], weight: ["700"], variable: "--font-unbounded" });
 
 const description =
-  "Türkiye’de YDS, e-YDS, YÖKDİL ve e-YÖKDİL hazırlığı: Cümle Röntgeni, kişisel teşhis ve günlük adaptif plan. Video izlemeden isabetli çalış — ÖSYM formatına kalibre.";
+  "Türkiye’de YDS, e-YDS, YÖKDİL ve e-YÖKDİL hazırlığı: Cümle Röntgeni, kişisel teşhis ve günlük adaptif plan. Video izlemeden isabetli çalış. ÖSYM formatına kalibre.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: `${brand.wordmark} — YDS, e-YDS ve YÖKDİL için teşhis temelli hazırlık`,
+    default: `${brand.wordmark} · YDS, e-YDS ve YÖKDİL için teşhis temelli hazırlık`,
     template: `%s · ${brand.wordmark}`,
   },
   description,
@@ -45,12 +45,12 @@ export const metadata: Metadata = {
     type: "website",
     locale: "tr_TR",
     siteName: brand.wordmark,
-    title: `${brand.wordmark} — YDS & YÖKDİL’de daha isabetli çalış`,
+    title: `${brand.wordmark} · YDS & YÖKDİL’de daha isabetli çalış`,
     description,
   },
   twitter: {
     card: "summary_large_image",
-    title: `${brand.wordmark} — YDS, e-YDS ve YÖKDİL teşhis temelli hazırlık`,
+    title: `${brand.wordmark} · YDS, e-YDS ve YÖKDİL teşhis temelli hazırlık`,
     description,
   },
   robots: { index: true, follow: true },

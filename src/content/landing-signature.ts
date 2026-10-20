@@ -55,7 +55,7 @@ export const xrayDemo = {
     { tag: "İpucu", text: "which → tanımlayan yan cümle" },
   ],
   answer: "B) which",
-  trap: "A) what — boşluktan sonra tam bir yan cümle var; what buraya sığmaz. Cazibe: ‘şey’ anlamı aramak.",
+  trap: "A) what: boşluktan sonra tam bir yan cümle var; what buraya sığmaz. Cazibe: ‘şey’ anlamı aramak.",
 } as const;
 
 export const distractorTypes = [

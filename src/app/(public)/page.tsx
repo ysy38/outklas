@@ -25,7 +25,7 @@ const problems = [
   {
     tag: "01 · Plato",
     quote: "Çalışıyorum… puan yerinde sayıyor.",
-    body: "Her hafta deneme, kelime, kitap. Net aynı bandda. Eksik olan çaba değil — hangi açığın puanı tuttuğunu bilmemek.",
+    body: "Her hafta deneme, kelime, kitap. Net aynı bandda. Eksik olan çaba değil: hangi açığın puanı tuttuğunu bilmemek.",
   },
   {
     tag: "02 · Yön yok",
@@ -221,7 +221,7 @@ export default function HomePage() {
             <span className="text-pine">Daha isabetli</span> çalış.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
-            Saatlerce video izlemek, yüzlerce soru çözmek zorunda değilsin. Önce İngilizce soruları nerede ve neden kaçırdığını gör; sonra sadece ihtiyacın olan yere odaklan — teşhis temelli bir{" "}
+            Saatlerce video izlemek, yüzlerce soru çözmek zorunda değilsin. Önce İngilizce soruları nerede ve neden kaçırdığını gör; sonra sadece ihtiyacın olan yere odaklan. Teşhis temelli bir{" "}
             <span className="font-medium text-ink">YDS / YÖKDİL çalışma programı</span>.
           </p>
           <p className="mt-3 max-w-xl text-sm leading-7 text-muted">
@@ -284,7 +284,8 @@ export default function HomePage() {
             </h2>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-[#a7aa9e]">
               Bu tembellik değil. Kaynak da yetmiyor değil. Asıl dert şu:{" "}
-              <span className="font-medium text-[#f4f3eb]">yanlış yere harcanan saat</span> — ve herkesin aynı programı dayatması.
+              <span className="font-medium text-[#f4f3eb]">yanlış yere harcanan saat</span>
+              {" "}ve herkesin aynı programı dayatması.
             </p>
           </div>
 
@@ -306,7 +307,8 @@ export default function HomePage() {
 
           <p data-rise className="mt-10 max-w-2xl text-base leading-7 text-[#a7aa9e] sm:text-lg sm:leading-8">
             Eksik olan bir video daha değil.{" "}
-            <span className="font-semibold text-pine">Nerede puan kaçırdığını gösteren teşhis</span> — sonra sadece o noktaya isabet.
+            <span className="font-semibold text-pine">Nerede puan kaçırdığını gösteren teşhis</span>
+            ; sonra sadece o noktaya isabet.
           </p>
         </div>
       </section>

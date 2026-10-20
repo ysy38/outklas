@@ -18,7 +18,7 @@ export function MotorSection() {
             YÖKDİL Sağlık cümle analizi: <span className="text-pine">Röntgen</span>, Neşter, Otopsi.
           </h2>
           <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">
-            Doğru şıkkı bulmakla, neden o şık olduğunu anlamak aynı şey değil. Branş seç, katmanı değiştir, kelimeye ve şıkka tıkla — örnek lab canlıdır.
+            Doğru şıkkı bulmakla, neden o şık olduğunu anlamak aynı şey değil. Branş seç, katmanı değiştir, kelimeye ve şıkka tıkla. Örnek lab canlıdır.
           </p>
         </div>
 
@@ -77,7 +77,7 @@ export function ReadingModelSection() {
               <span className="text-teal" aria-hidden>
                 ✓
               </span>
-              {brand.wordmark}: zıtlık → yüklem → hedef — üç kilit nokta
+              {brand.wordmark}: zıtlık → yüklem → hedef. Üç kilit nokta.
             </li>
           </ul>
         </div>
@@ -204,21 +204,21 @@ export function PricingTeaserSection() {
             </form>
           </article>
 
-          <article data-rise className="lift relative flex flex-col rounded-[28px] bg-pine p-6 text-pine-ink shadow-[0_24px_60px_-36px_rgba(215,255,98,0.45)]">
-            <span className="absolute -top-3 right-6 rounded-full bg-card px-3 py-1 text-xs font-semibold text-pine">En çok tercih edilen</span>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine-ink/70">{brand.accessDays.gelisim} günlük yoğun kamp</p>
-            <h3 className="mt-2 text-2xl text-pine-ink">Sprint</h3>
-            <p className="mt-4 font-display text-4xl font-bold tracking-tight text-pine-ink">
+          <article data-rise className="lift relative flex flex-col rounded-[28px] bg-night p-6 text-[#f4f3eb] shadow-[0_24px_60px_-36px_rgba(8,9,7,0.55)] ring-1 ring-pine/40">
+            <span className="absolute -top-3 right-6 rounded-full bg-pine px-3 py-1 text-xs font-semibold text-pine-ink">En çok tercih edilen</span>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine">{brand.accessDays.gelisim} günlük yoğun kamp</p>
+            <h3 className="mt-2 text-2xl text-[#f4f3eb]">Sprint</h3>
+            <p className="mt-4 font-display text-4xl font-bold tracking-tight text-[#f4f3eb]">
               ₺{tl(brand.prices.gelisim)}{" "}
-              <span className="font-sans text-sm font-medium text-pine-ink/70">/ sınav dönemi</span>
+              <span className="font-sans text-sm font-medium text-[#a7aa9e]">/ sınav dönemi</span>
             </p>
-            <p className="mt-1 text-xs text-pine-ink/70">veya 3 × ₺{tl(brand.installment.gelisim)} görünümü · checkout tek ödeme</p>
-            <ul className="mt-5 flex-1 space-y-2 text-sm leading-6 text-pine-ink/85">
+            <p className="mt-1 text-xs text-[#a7aa9e]">veya 3 × ₺{tl(brand.installment.gelisim)} görünümü · checkout tek ödeme</p>
+            <ul className="mt-5 flex-1 space-y-2 text-sm leading-6 text-[#cfd2c6]">
               <li>✓ Tam teşhis + günlük anti-plato planı</li>
               <li>✓ Cümle Röntgeni & çeldirici otopsisi</li>
               <li>✓ {brand.sprintSimulators} tam deneme · sınırsız kelime/bağlaç</li>
             </ul>
-            <Link href="/fiyat" className="shine mt-6 rounded-full bg-night px-5 py-3 text-center text-sm font-semibold text-pine transition hover:-translate-y-0.5">
+            <Link href="/fiyat" className="shine mt-6 rounded-full bg-pine px-5 py-3 text-center text-sm font-semibold text-pine-ink transition hover:-translate-y-0.5">
               Sprint’i seç →
             </Link>
           </article>
