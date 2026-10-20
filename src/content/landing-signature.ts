@@ -1,4 +1,4 @@
-/** Signature landing blocks adapted from the Outklas brief; brand stays STARC. */
+/** Signature landing blocks for the Outklas motor / reading-model narrative. */
 
 export const motorPillars = [
   {
@@ -34,7 +34,7 @@ export const readingModes = {
     ],
   },
   starc: {
-    label: "STARC iskelet kilidi",
+    label: "outklas. iskelet kilidi",
     caption: "Zihin üç noktaya dokunur: zıtlık bağlacı → ana yüklem → hedef fikir.",
     metrics: [
       ["Odak ritmi", "3 kilit nokta"],

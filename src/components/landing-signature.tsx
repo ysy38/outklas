@@ -13,9 +13,9 @@ export function MotorSection() {
     <section id="motor" className="scroll-mt-24 border-y border-line bg-[linear-gradient(180deg,var(--soft)_0%,var(--paper)_55%,var(--paper)_100%)]">
       <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-5 sm:py-24">
         <div data-rise className="max-w-3xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pine">{brand.name} motoru</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pine">{brand.wordmark} motoru</p>
           <h2 className="mt-3 text-4xl sm:text-5xl">
-            Canlı Cümle Röntgeni, <span className="grad">Kelime Neşteri</span> ve Çeldirici Otopsisi.
+            YÖKDİL Sağlık cümle analizi: <span className="text-pine">Röntgen</span>, Neşter, Otopsi.
           </h2>
           <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">
             Doğru şıkkı bulmakla, neden o şık olduğunu anlamak aynı şey değil. Branş seç, katmanı değiştir, kelimeye ve şıkka tıkla — örnek lab canlıdır.
@@ -36,16 +36,16 @@ export function MotorSection() {
           <XrayLab />
         </div>
 
-        <div data-rise className="mt-6 flex flex-col gap-4 rounded-[24px] bg-night p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div data-rise className="mt-6 flex flex-col gap-4 rounded-[24px] bg-night p-5 text-[#f4f3eb] sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8eb4ff]">İlk deneyim</p>
-            <p className="mt-1 text-lg font-semibold text-white sm:text-xl">Lab’ı beğendiysen kendi profilinle devam et.</p>
-            <p className="mt-1 text-sm text-white/70">Ücretsiz · hesap zorunlu değil · önce değer, sonra kayıt</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-pine">İlk deneyim</p>
+            <p className="mt-1 text-lg font-semibold sm:text-xl">Lab’ı beğendiysen kendi profilinle devam et.</p>
+            <p className="mt-1 text-sm text-[#a7aa9e]">Ücretsiz · hesap zorunlu değil · önce değer, sonra kayıt</p>
           </div>
           <form action={startDiagnosticAction} className="shrink-0">
             <PendingButton
               pendingLabel="Hazırlanıyor…"
-              className="shine w-full rounded-full bg-pine px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_-16px_rgba(66,99,235,0.75)] transition hover:-translate-y-0.5 sm:w-auto"
+              className="shine w-full rounded-full bg-pine px-5 py-3 text-sm font-semibold shadow-[0_16px_36px_-16px_rgba(215,255,98,0.55)] transition hover:-translate-y-0.5 sm:w-auto"
             >
               Cümle Röntgenini dene →
             </PendingButton>
@@ -64,7 +64,7 @@ export function ReadingModelSection() {
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pine">Okuma modeli karşılaştırması</p>
           <h2 className="mt-3 text-4xl sm:text-5xl">Aynı cümle. İki zihin.</h2>
           <p className="mt-4 max-w-md text-lg leading-8 text-muted">
-            Soldaki tuşlarla klasik kaos ile {brand.name} iskelet kilidi arasında geç. Göz yolu, metrikler ve açıklama birlikte değişir.
+            Soldaki tuşlarla klasik kaos ile {brand.wordmark} iskelet kilidi arasında geç. Göz yolu, metrikler ve açıklama birlikte değişir.
           </p>
           <ul className="mt-6 space-y-2 text-sm text-muted">
             <li className="flex gap-2">
@@ -77,7 +77,7 @@ export function ReadingModelSection() {
               <span className="text-teal" aria-hidden>
                 ✓
               </span>
-              {brand.name}: zıtlık → yüklem → hedef — üç kilit nokta
+              {brand.wordmark}: zıtlık → yüklem → hedef — üç kilit nokta
             </li>
           </ul>
         </div>
@@ -95,9 +95,9 @@ export function ArchitectureSection() {
       <div className="mx-auto grid w-full max-w-6xl gap-12 px-4 py-20 sm:px-5 sm:py-24 lg:grid-cols-[0.95fr_1.05fr]">
         <div data-rise className="lg:sticky lg:top-28 lg:self-start">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pine">80 soruluk tam sınav mimarisi</p>
-          <h2 className="mt-3 text-4xl sm:text-5xl">Sadece tek bir cümlede değil; sınavın tamamında seni 70+ bandına taşır.</h2>
+          <h2 className="mt-3 text-4xl sm:text-5xl">50 puandan 70 puana YDS: cümleden sınav refleksine.</h2>
           <p className="mt-5 leading-8 text-muted">
-            Klasik kurslar gramer yükler. {brand.name} sınav refleksini ve günlük planı inşa eder: hangi tipte neden takıldığını takip eder, her gün o açığa gider.
+            Klasik kurslar gramer yükler. {brand.wordmark} sınav refleksini ve e-YDS süre yönetimini inşa eder: hangi tipte neden takıldığını takip eder, her gün o açığa gider.
           </p>
           <ul className="mt-6 space-y-2.5 text-sm text-ink">
             {architecturePoints.map((point) => (
@@ -116,7 +116,7 @@ export function ArchitectureSection() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine">Çeldirici kategorileri</p>
             <h3 className="mt-2 text-2xl sm:text-3xl">Sınavda en çok puan kaybettiren 5 çeldirici türü</h3>
             <p className="mt-3 text-sm leading-7 text-muted">
-              {brand.name} her soruda şıkları bu bilişsel tuzak filtresinden geçirerek analiz eder.
+              {brand.wordmark} her soruda şıkları bu bilişsel tuzak filtresinden geçirerek analiz eder.
             </p>
             <ol className="mt-6 space-y-3">
               {distractorTypes.map((item) => (
@@ -204,21 +204,21 @@ export function PricingTeaserSection() {
             </form>
           </article>
 
-          <article data-rise className="lift relative flex flex-col rounded-[28px] bg-pine p-6 text-white shadow-[0_24px_60px_-36px_rgba(66,99,235,0.55)]">
+          <article data-rise className="lift relative flex flex-col rounded-[28px] bg-pine p-6 text-pine-ink shadow-[0_24px_60px_-36px_rgba(215,255,98,0.45)]">
             <span className="absolute -top-3 right-6 rounded-full bg-card px-3 py-1 text-xs font-semibold text-pine">En çok tercih edilen</span>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">{brand.accessDays.gelisim} günlük yoğun kamp</p>
-            <h3 className="mt-2 text-2xl text-white">Sprint</h3>
-            <p className="mt-4 font-display text-4xl font-bold tracking-tight text-white">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine-ink/70">{brand.accessDays.gelisim} günlük yoğun kamp</p>
+            <h3 className="mt-2 text-2xl text-pine-ink">Sprint</h3>
+            <p className="mt-4 font-display text-4xl font-bold tracking-tight text-pine-ink">
               ₺{tl(brand.prices.gelisim)}{" "}
-              <span className="font-sans text-sm font-medium text-white/70">/ sınav dönemi</span>
+              <span className="font-sans text-sm font-medium text-pine-ink/70">/ sınav dönemi</span>
             </p>
-            <p className="mt-1 text-xs text-white/70">veya 3 × ₺{tl(brand.installment.gelisim)} görünümü · checkout tek ödeme</p>
-            <ul className="mt-5 flex-1 space-y-2 text-sm leading-6 text-white/85">
+            <p className="mt-1 text-xs text-pine-ink/70">veya 3 × ₺{tl(brand.installment.gelisim)} görünümü · checkout tek ödeme</p>
+            <ul className="mt-5 flex-1 space-y-2 text-sm leading-6 text-pine-ink/85">
               <li>✓ Tam teşhis + günlük anti-plato planı</li>
               <li>✓ Cümle Röntgeni & çeldirici otopsisi</li>
               <li>✓ {brand.sprintSimulators} tam deneme · sınırsız kelime/bağlaç</li>
             </ul>
-            <Link href="/fiyat" className="shine mt-6 rounded-full bg-card px-5 py-3 text-center text-sm font-semibold text-pine transition hover:-translate-y-0.5">
+            <Link href="/fiyat" className="shine mt-6 rounded-full bg-night px-5 py-3 text-center text-sm font-semibold text-pine transition hover:-translate-y-0.5">
               Sprint’i seç →
             </Link>
           </article>

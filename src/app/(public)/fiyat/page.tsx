@@ -47,7 +47,7 @@ export default async function PricingPage() {
     name: `${brand.name} YDS ve YÖKDİL hazırlık`,
     description: `YDS, e-YDS, YÖKDİL ve e-YÖKDİL için ${brand.diagnosticQuestions} soruluk seviye testi, günlük çalışma planı ve tam deneme.`,
     brand: { "@type": "Brand", name: brand.name },
-    image: `${siteUrl}/brand/starc-mark-512.png`,
+    image: `${siteUrl}/brand/outklas-mark-512.png`,
     url: `${siteUrl}/fiyat`,
     offers: [
       offer(freeOffer.name, 0, `${freeOffer.points.join(", ")}.`),

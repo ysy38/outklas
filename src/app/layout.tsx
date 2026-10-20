@@ -14,29 +14,54 @@ const display = Plus_Jakarta_Sans({
 const logo = Unbounded({ subsets: ["latin"], weight: ["700"], variable: "--font-unbounded" });
 
 const description =
-  "YDS, e-YDS, YÖKDİL ve e-YÖKDİL için ücretsiz seviye testi, günlük çalışma planı ve gerçek sınav gibi deneme. Her gün neye çalışacağını bilerek puanını yükselt.";
+  "Türkiye’de YDS, e-YDS, YÖKDİL ve e-YÖKDİL hazırlığı: Cümle Röntgeni, kişisel teşhis ve günlük adaptif plan. Video izlemeden isabetli çalış — ÖSYM formatına kalibre.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: `${brand.name} — YDS ve YÖKDİL için günlük çalışma planı`,
-    template: `%s · ${brand.name}`,
+    default: `${brand.wordmark} — YDS, e-YDS ve YÖKDİL için teşhis temelli hazırlık`,
+    template: `%s · ${brand.wordmark}`,
   },
   description,
-  applicationName: brand.name,
-  keywords: ["YDS", "e-YDS", "YÖKDİL", "e-YÖKDİL", "YDS puan hesaplama", "YÖKDİL puan hesaplama", "YDS deneme"],
+  applicationName: brand.wordmark,
+  keywords: [
+    "YDS hazırlık Türkiye",
+    "e-YDS hazırlık",
+    "YÖKDİL hazırlık",
+    "e-YÖKDİL",
+    "YÖKDİL Sağlık",
+    "YÖKDİL Sosyal",
+    "YÖKDİL Fen",
+    "YDS çalışma programı",
+    "video izlemeden YÖKDİL hazırlık",
+    "YÖKDİL Sağlık cümle analizi",
+    "50 puandan 70 puana YDS",
+    "e-YDS süre yönetimi",
+    "Cümle Röntgeni",
+    "ÖSYM YDS",
+    "outklas",
+  ],
   openGraph: {
     type: "website",
     locale: "tr_TR",
-    siteName: brand.name,
-    title: `${brand.name} — daha fazla değil, daha doğru çalış`,
+    siteName: brand.wordmark,
+    title: `${brand.wordmark} — YDS & YÖKDİL’de daha isabetli çalış`,
     description,
   },
-  twitter: { card: "summary_large_image", title: brand.name, description },
+  twitter: {
+    card: "summary_large_image",
+    title: `${brand.wordmark} — YDS, e-YDS ve YÖKDİL teşhis temelli hazırlık`,
+    description,
+  },
   robots: { index: true, follow: true },
+  other: {
+    "geo.region": "TR",
+    "geo.placename": "Türkiye",
+  },
 };
 
-const themeScript = `try{if(localStorage.getItem("theme")==="dark")document.documentElement.classList.add("dark")}catch(e){}`;
+/** Dark (Carbon Olive-Black) is the Outklas default; only light if the user opted in. */
+const themeScript = `try{if(localStorage.getItem("theme")!=="light")document.documentElement.classList.add("dark")}catch(e){document.documentElement.classList.add("dark")}`;
 
 // Cursor's preview browser stamps data-cursor-ref onto the DOM before React hydrates.
 // Strip those marks until the page has loaded, then leave later marks alone.
@@ -44,7 +69,7 @@ const cursorRefScript = `(function(){function strip(node){if(!node)return;if(nod
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" className={`${sans.variable} ${serif.variable} ${display.variable} ${logo.variable}`} suppressHydrationWarning>
+    <html lang="tr" className={`dark ${sans.variable} ${serif.variable} ${display.variable} ${logo.variable}`} suppressHydrationWarning>
       <body className="min-h-screen antialiased">
         <Script id="theme" strategy="beforeInteractive">
           {themeScript}

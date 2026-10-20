@@ -3,41 +3,62 @@
 /* Pinned scroll scenes need height and motion; keep in sync with PIN in hero-assembly.tsx. */
 @custom-variant pin (@media (min-height: 540px) and (prefers-reduced-motion: no-preference));
 
+/*
+  Outklas dual surface:
+  - Light = warm paper / ink stamp (readable olive for text, acid only on fills)
+  - Dark  = Carbon Olive-Black + Acid Lime neon
+*/
 :root {
-  --paper: #f7f8fc;
-  --ink: #17243b;
-  --muted: #5c6b82;
-  --line: #e4e8f2;
-  --pine: #4263eb;
-  --pine-deep: #2f4ad4;
-  --teal: #0f9fad;
-  --soft: #e8edff;
-  --progress: #e8f5ef;
-  --night: #121a2e;
-  --clay: #e11d48;
-  --moss: #0f9fad;
-  --card: #ffffff;
-  --cream: #f7f8fc;
-  --gold: #4263eb;
+  --paper: #f3f2eb;
+  --ink: #14150f;
+  --muted: #5c6056;
+  --line: #ddd9c8;
+  /* Text / ring / border accent — deep olive, readable on paper */
+  --pine: #3f5c0a;
+  --pine-deep: #2f4507;
+  --pine-ink: #101408;
+  --teal: #0d7a5c;
+  --soft: #ebe9df;
+  --progress: #e4ecd4;
+  --night: #14150f;
+  --clay: #c73d2e;
+  --moss: #0d7a5c;
+  --card: #fffcf7;
+  --cream: #f3f2eb;
+  --gold: #3f5c0a;
+  /* Bright acid reserved for CTA fills + glows */
+  --acid: #d7ff62;
+  --shadow: 23 28 12;
+  /* Mark on paper: dark chip + cream frame + acid arrow (see .brand-chip) */
+  --mark-frame: #f4f3eb;
+  --mark-arrow: #d7ff62;
+  --mark-chip: #14150f;
   color-scheme: light;
 }
 
 .dark {
-  --paper: #0e1524;
-  --ink: #f4f6fb;
-  --muted: #a9b4c8;
-  --line: #2a3550;
-  --pine: #6d84f2;
-  --pine-deep: #3146b0;
-  --teal: #3ec4d0;
-  --soft: #1a2442;
-  --progress: #132e28;
-  --night: #0a1020;
-  --clay: #fda4af;
-  --moss: #3ec4d0;
-  --card: #172033;
-  --cream: #f4f6fb;
-  --gold: #8ea0f6;
+  --paper: #10110f;
+  --ink: #f4f3eb;
+  --muted: #a7aa9e;
+  --line: #2a2e24;
+  --pine: #d7ff62;
+  --pine-deep: #b8e045;
+  --pine-ink: #101408;
+  --teal: #57e5a8;
+  --soft: #161814;
+  --progress: #1a2416;
+  --night: #080907;
+  --clay: #ff6b57;
+  --moss: #57e5a8;
+  --card: #191c16;
+  --cream: #f4f3eb;
+  --gold: #d7ff62;
+  --acid: #d7ff62;
+  --shadow: 0 0 0;
+  /* On carbon, chip blends; frame stays cream, arrow acid */
+  --mark-frame: color-mix(in srgb, #f4f3eb 55%, transparent);
+  --mark-arrow: #d7ff62;
+  --mark-chip: #191c16;
   color-scheme: dark;
 }
 
@@ -52,6 +73,7 @@
   --color-line: var(--line);
   --color-pine: var(--pine);
   --color-pine-deep: var(--pine-deep);
+  --color-pine-ink: var(--pine-ink);
   --color-teal: var(--teal);
   --color-soft: var(--soft);
   --color-progress: var(--progress);
@@ -61,6 +83,7 @@
   --color-card: var(--card);
   --color-cream: var(--cream);
   --color-gold: var(--gold);
+  --color-acid: var(--acid);
 }
 
 html {
@@ -77,6 +100,16 @@ body {
   background: var(--paper);
   color: var(--ink);
   text-rendering: optimizeLegibility;
+}
+
+/* Warm paper wash — soft acid glow without washing out type */
+html:not(.dark) body {
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse 55% 42% at 92% -4%, color-mix(in srgb, var(--acid) 28%, transparent), transparent 70%),
+    radial-gradient(ellipse 40% 32% at 4% 8%, color-mix(in srgb, var(--teal) 10%, transparent), transparent 68%),
+    linear-gradient(180deg, #f7f6f0 0%, var(--paper) 42%, #efece3 100%);
+  background-attachment: fixed;
 }
 
 .display {
@@ -112,9 +145,15 @@ body {
   pointer-events: none;
   z-index: -1;
   background:
-    radial-gradient(ellipse 38rem 30rem at 78% 16%, color-mix(in srgb, var(--pine) 16%, transparent), transparent 68%),
-    radial-gradient(ellipse 26rem 22rem at 92% 38%, color-mix(in srgb, var(--teal) 14%, transparent), transparent 70%),
-    radial-gradient(ellipse 22rem 16rem at 8% 6%, color-mix(in srgb, var(--soft) 80%, transparent), transparent 72%);
+    radial-gradient(ellipse 38rem 30rem at 78% 16%, color-mix(in srgb, var(--acid) 22%, transparent), transparent 68%),
+    radial-gradient(ellipse 26rem 22rem at 92% 38%, color-mix(in srgb, var(--teal) 12%, transparent), transparent 70%),
+    radial-gradient(ellipse 22rem 16rem at 8% 6%, color-mix(in srgb, var(--soft) 90%, transparent), transparent 72%);
+}
+
+html:not(.dark) .landing::before {
+  background:
+    radial-gradient(ellipse 36rem 28rem at 82% 12%, color-mix(in srgb, var(--acid) 32%, transparent), transparent 66%),
+    radial-gradient(ellipse 24rem 20rem at 10% 4%, color-mix(in srgb, var(--pine) 8%, transparent), transparent 70%);
 }
 
 .hero-card {
@@ -181,15 +220,69 @@ body {
   }
 }
 
-.dark .bg-pine {
-  background-color: #4263eb;
+/*
+  Fills always use bright acid (readable punch on paper + neon on carbon).
+  text-pine / border-pine stay on --pine (deep olive in light, acid in dark).
+*/
+.bg-pine,
+.bg-pine-deep {
+  background-color: var(--acid) !important;
+  color: var(--pine-ink) !important;
+  box-shadow: 0 14px 36px -16px color-mix(in srgb, var(--acid) 55%, transparent);
+}
+
+.from-pine {
+  --tw-gradient-from: var(--acid) !important;
 }
 
 .grad {
-  background: linear-gradient(100deg, var(--ink) 0%, var(--pine) 58%, var(--teal) 100%);
+  background: linear-gradient(100deg, var(--ink) 0%, var(--pine) 48%, var(--teal) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.grad-acid {
+  color: var(--pine);
+}
+
+/* Premium paper cards in light */
+html:not(.dark) .lift,
+html:not(.dark) .glass {
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent),
+    0 18px 40px -28px rgb(var(--shadow) / 0.28);
+}
+
+html:not(.dark) header {
+  background: color-mix(in srgb, var(--card) 78%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--line) 85%, var(--pine) 15%);
+}
+
+/* Logo chip: keeps open-box mark readable on warm paper */
+.brand-chip {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.7rem;
+  background: var(--mark-chip);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent),
+    0 10px 22px -14px rgb(var(--shadow) / 0.45);
+}
+
+@media (min-width: 640px) {
+  .brand-chip {
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 0.8rem;
+  }
+}
+
+.dark .brand-chip {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--acid) 18%, transparent);
 }
 
 @keyframes reading-laser-dash {

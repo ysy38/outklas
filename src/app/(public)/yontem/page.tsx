@@ -8,7 +8,7 @@ export const dynamic = "force-static";
 
 const title = `Yöntem: ${brand.name} neye çalışacağını nasıl belirler?`;
 const description =
-  "Seviye testi, puan tahmini, bölüm bazında puan kaybı, soru seçimi ve tekrar aralıkları: STARC’nin hangi veriye bakıp nasıl karar verdiği.";
+  "Seviye testi, puan tahmini, bölüm bazında puan kaybı, soru seçimi ve tekrar aralıkları: outklas’ın hangi veriye bakıp nasıl karar verdiği.";
 
 export const metadata: Metadata = {
   title: "Yöntem",
@@ -59,7 +59,7 @@ const blocks = [
     id: "sinirlar",
     title: "Neyi iddia etmiyoruz",
     body: [
-      "Seviye testinin sonucu resmi puan değildir; ÖSYM sonucunun yerini tutmaz. Deneme ekranı e-YDS’ye benzer ama ÖSYM arayüzünün birebir kopyası değildir. STARC’nin ÖSYM ile bir bağlantısı yoktur.",
+      "Seviye testinin sonucu resmi puan değildir; ÖSYM sonucunun yerini tutmaz. Deneme ekranı e-YDS’ye benzer ama ÖSYM arayüzünün birebir kopyası değildir. outklas’ın ÖSYM ile bir bağlantısı yoktur.",
     ],
   },
 ];

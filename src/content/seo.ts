@@ -11,7 +11,7 @@ export const siteFaqs: readonly Faq[] = [
   {
     question: "YDS'ye nasıl çalışmalıyım?",
     answer:
-      "Daha çok soru çözmek tek başına yetmez. Önce hangi bölümde puan kaybettiğini bul, her gün o açığı kapatacak tek bir işe odaklan, kaçırdığın soruları da belli aralıklarla yeniden çöz. STARC işe 40 soruluk ücretsiz bir seviye testiyle başlar. Aynı yol e-YDS, YÖKDİL ve e-YÖKDİL için de geçerli.",
+      "Daha çok soru çözmek tek başına yetmez. Önce hangi bölümde puan kaybettiğini bul, her gün o açığı kapatacak tek bir işe odaklan, kaçırdığın soruları da belli aralıklarla yeniden çöz. outklas. işe 40 soruluk ücretsiz bir seviye testiyle başlar. Aynı yol e-YDS, YÖKDİL ve e-YÖKDİL için de geçerli.",
     place: ["home", "prep"],
   },
   {
@@ -35,7 +35,7 @@ export const siteFaqs: readonly Faq[] = [
   {
     question: "YDS kelime nasıl çalışılır?",
     answer:
-      "Uzun ezber listeleri yerine her gün 10 kelimeyle çalış. Kelimeyi tek başına değil, bir cümlenin içinde gör ve anlamını şıklar arasından seç. Yanlış yaptığın kelime birkaç gün sonra tekrar gelir, bildiğin kelime giderek seyrekleşir. STARC’de bu günlük 10 kelime ücretsizdir.",
+      "Uzun ezber listeleri yerine her gün 10 kelimeyle çalış. Kelimeyi tek başına değil, bir cümlenin içinde gör ve anlamını şıklar arasından seç. Yanlış yaptığın kelime birkaç gün sonra tekrar gelir, bildiğin kelime giderek seyrekleşir. outklas’ta bu günlük 10 kelime ücretsizdir.",
     place: ["home"],
   },
   {
@@ -51,7 +51,7 @@ export const siteFaqs: readonly Faq[] = [
     place: ["home", "prep"],
   },
   {
-    question: "STARC ücretsiz mi?",
+    question: "outklas. ücretsiz mi?",
     answer:
       "Başlamak ücretsiz: Cümle Röntgeni deneyimi, seviye testinin ilk bulguları, her gün 10 kelime ve 10 bağlaç sorusu ve 1 tam deneme için ödeme yapmazsın. Sınavına 45 gün ya da daha az varsa Sprint: 45 gün, 3.450 TL; günlük plan ve 4 tam deneme. Daha fazla varsa Kamp: 180 gün, 5.950 TL; sınırsız deneme. Sprint’ten Kamp’a geçersen ödediğin 3.450 TL düşülür. Abonelik yoktur, bir kez ödersin; fiyatlar KDV dahil.",
     place: ["home"],

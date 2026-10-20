@@ -1,10 +1,11 @@
 export const brand = {
-  name: "STARC",
-  tagline: "Smart Testing, Assessment, Recommendation & Coaching",
-  domain: "starc.run",
-  hero: "YDS ve YÖKDİL’e daha fazla değil, daha doğru çalış.",
-  descriptor: "Exam Intelligence",
-  sub: "Seviyeni ve hedefini ölçer, her gün sana en çok puan kazandıracak çalışmayı gösterir. YDS, e-YDS, YÖKDİL ve e-YÖKDİL için.",
+  name: "outklas",
+  wordmark: "outklas.",
+  tagline: "YDS · e-YDS · YÖKDİL için teşhis temelli hazırlık",
+  domain: "outklas.com",
+  hero: "Daha çok değil. Daha isabetli çalış.",
+  descriptor: "Sınav istihbaratı",
+  sub: "Önce nerede puan kaçırdığını gör, sonra sadece ihtiyacın olan yere odaklan. Türkiye’de YDS, e-YDS, YÖKDİL ve e-YÖKDİL için Cümle Röntgeni, teşhis ve günlük adaptif plan.",
   /** TL, KDV dahil. `gelisim` is the checkout code of the package sold as Sprint. */
   prices: {
     gelisim: 3450,

@@ -78,7 +78,7 @@ export function XrayLab() {
     <div className="overflow-hidden rounded-[28px] bg-card shadow-[0_24px_60px_-36px_rgba(23,36,59,0.35)] ring-1 ring-line">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-night px-4 py-3.5 text-white sm:px-6">
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="rounded-md bg-pine px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]">{brand.name} motoru</span>
+          <span className="rounded-md bg-pine px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]">{brand.wordmark} motoru</span>
           <span className="text-xs text-white/65">Canlı Cümle Röntgeni · Kelime Neşteri · Çeldirici Otopsisi</span>
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/70">Örnek</span>
         </div>
@@ -251,7 +251,7 @@ export function XrayLab() {
           {wordInfo ? <p className="mt-3 rounded-xl border border-pine/25 bg-soft px-3.5 py-3 text-xs leading-6 text-ink">{wordInfo}</p> : null}
 
           <div className="mt-5 flex items-start gap-3 rounded-xl border border-pine/25 bg-soft p-4">
-            <span className="mt-0.5 shrink-0 rounded bg-pine px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white">{brand.name} teşhisi</span>
+            <span className="mt-0.5 shrink-0 rounded bg-pine px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em]">{brand.wordmark} teşhisi</span>
             <p className="text-sm leading-6 text-ink">{data.diagnosis[mode]}</p>
           </div>
         </div>

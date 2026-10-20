@@ -21,7 +21,7 @@ const copy = {
     ],
   },
   starc: {
-    badge: `${brand.name} iskelet kilidi`,
+    badge: `${brand.wordmark} iskelet kilidi`,
     caption: (
       <>
         <strong className="text-teal">Neşter kilit:</strong> Zihin yalnızca 3 noktaya dokunur:{" "}
@@ -82,27 +82,27 @@ export function ReadingModel() {
               : "rounded-lg px-3 py-2 text-xs font-bold text-muted transition hover:bg-soft hover:text-ink"
           }
         >
-          ✓ {brand.name} zihni (neşter)
+          ✓ {brand.wordmark} zihni (neşter)
         </button>
       </div>
 
       <div className="relative rounded-2xl border border-line bg-paper p-4 sm:p-5">
-        <svg viewBox="0 0 400 170" className="h-40 w-full" aria-hidden>
-          <text x="12" y="28" fill="#94A3B8" fontSize="11.5">
+        <svg viewBox="0 0 400 170" className="h-40 w-full text-ink" aria-hidden>
+          <text x="12" y="28" className="fill-muted" fontSize="11.5">
             Notwithstanding the initial skepticism among
           </text>
-          <text x="12" y="54" fill="#94A3B8" fontSize="11.5">
+          <text x="12" y="54" className="fill-muted" fontSize="11.5">
             epidemiologists regarding vector-borne transmission,
           </text>
-          {ours ? <rect x="8" y="68" width="235" height="22" rx="4" fill="rgba(66,99,235,0.12)" /> : null}
-          <text x="12" y="83" fill="#17243B" fontWeight="bold" fontSize="12">
+          {ours ? <rect x="8" y="68" width="235" height="22" rx="4" fill="rgba(215,255,98,0.18)" /> : null}
+          <text x="12" y="83" className="fill-ink" fontWeight="bold" fontSize="12">
             longitudinal cohort studies confirmed
           </text>
-          <text x="12" y="110" fill="#94A3B8" fontSize="11.5">
+          <text x="12" y="110" className="fill-muted" fontSize="11.5">
             that climate anomalies directly accelerate
           </text>
-          {ours ? <rect x="8" y="124" width="210" height="22" rx="4" fill="rgba(15,163,148,0.12)" /> : null}
-          <text x="12" y="139" fill="#0FA394" fontWeight="bold" fontSize="12">
+          {ours ? <rect x="8" y="124" width="210" height="22" rx="4" fill="rgba(215,255,98,0.16)" /> : null}
+          <text x="12" y="139" className="fill-pine" fontWeight="bold" fontSize="12">
             pathogen replication rates.
           </text>
 

@@ -57,25 +57,16 @@ const footerColumns: { title: string; links: [string, string][] }[] = [
 
 function Logo({ href, withTagline = false, markId }: { href: string; withTagline?: boolean; markId: string }) {
   return (
-    <Link href={href} aria-label={`${brand.name} ana sayfa`} className="group flex shrink-0 items-center gap-2 sm:gap-2.5">
-      <BrandMark
-        id={markId}
-        className="h-8 w-8 shrink-0 drop-shadow-[0_10px_18px_rgba(66,99,235,0.35)] transition-transform duration-500 group-hover:-rotate-6 sm:h-10 sm:w-10"
-      />
+    <Link href={href} aria-label={`${brand.wordmark} ana sayfa`} className="group flex min-w-0 shrink items-center gap-1.5 sm:gap-2.5">
+      <span className="brand-chip transition-transform duration-500 group-hover:-rotate-3">
+        <BrandMark id={markId} className="h-[1.35rem] w-[1.35rem] sm:h-6 sm:w-6" />
+      </span>
       <span className="min-w-0 leading-none">
-        <span className="inline-grid">
-          <span className="-mr-[0.1em] font-logo text-[17px] font-bold tracking-[0.1em] text-ink sm:text-[21px]">{brand.name}</span>
-          {/* w-0 keeps the descriptor out of the column width, so it always spans exactly the name. */}
-          <span lang="en" className="mt-1.5 flex w-0 min-w-full justify-between text-[7px] font-semibold uppercase text-muted sm:text-[8.5px]">
-            {[...brand.descriptor].map((char, index) => (
-              <span key={index}>{char === " " ? "\u00a0" : char}</span>
-            ))}
-          </span>
+        <span className="font-logo text-[16px] font-bold lowercase tracking-[-0.04em] text-ink sm:text-[22px]">
+          outklas<span className="text-pine">.</span>
         </span>
         {withTagline ? (
-          <span lang="en" className="mt-2 block max-w-xs text-[11px] font-medium leading-snug tracking-normal text-muted">
-            {brand.tagline}
-          </span>
+          <span className="mt-2 block max-w-xs text-[11px] font-medium leading-snug tracking-normal text-muted">{brand.tagline}</span>
         ) : null}
       </span>
     </Link>
@@ -84,8 +75,8 @@ function Logo({ href, withTagline = false, markId }: { href: string; withTagline
 
 export function PublicHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-card/80 shadow-[0_16px_40px_-32px_rgba(23,36,59,0.35)] backdrop-blur-xl">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-1.5 px-3 py-3 sm:gap-4 sm:px-5">
+    <header className="sticky top-0 z-40 border-b border-line bg-paper/85 shadow-[0_16px_40px_-32px_rgba(8,9,7,0.55)] backdrop-blur-xl">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-5 sm:py-3">
         <Logo href="/" markId="mark-header" />
         <nav className="hidden items-center gap-6 text-sm font-medium text-muted lg:flex">
           {publicLinks.map(([label, href]) => (
@@ -94,12 +85,15 @@ export function PublicHeader() {
             </Link>
           ))}
         </nav>
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <MobileMenu links={publicLinks} account className="lg:hidden" />
           <ThemeToggle />
           <AccountLink className="hidden rounded-full border border-line bg-card px-4 py-2 text-sm font-semibold text-ink transition hover:border-pine sm:inline" />
-          <Link href="/teshis" className="rounded-full bg-pine px-2.5 py-2 text-[11px] font-semibold text-white shadow-[0_12px_28px_-14px_rgba(66,99,235,0.85)] transition hover:-translate-y-0.5 sm:px-4 sm:text-sm">
-            <span className="hidden min-[380px]:inline">Hemen </span>Başla
+          <Link
+            href="/teshis"
+            className="max-w-[9.5rem] truncate rounded-full bg-pine px-2.5 py-2 text-[11px] font-semibold shadow-[0_12px_28px_-14px_rgba(215,255,98,0.55)] transition hover:-translate-y-0.5 sm:max-w-none sm:px-4 sm:text-sm"
+          >
+            Ücretsiz dene ↗
           </Link>
         </div>
       </div>
@@ -123,12 +117,12 @@ export function PublicFooter() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="max-w-sm">
           <Logo href="/" withTagline markId="mark-footer" />
-          <p className="mt-4 font-display text-2xl leading-tight text-ink">Daha fazla değil, daha doğru çalış.</p>
+          <p className="mt-4 font-display text-2xl leading-tight text-ink">Daha çok değil. Daha isabetli çalış.</p>
           <p className="mt-3 text-sm leading-6 text-muted">
-            YDS, e-YDS, YÖKDİL ve e-YÖKDİL için seviye testi, günlük çalışma planı ve deneme sınavı. ÖSYM ile bir bağlantısı yoktur.
+            Türkiye’de YDS, e-YDS, YÖKDİL ve e-YÖKDİL: teşhis, Cümle Röntgeni, günlük adaptif plan. ÖSYM ile bir bağlantısı yoktur.
           </p>
-          <Link href="/teshis" className="mt-5 inline-block rounded-full bg-pine px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5">
-            Ücretsiz seviye testine başla
+          <Link href="/teshis" className="mt-5 inline-block rounded-full bg-pine px-5 py-3 text-sm font-semibold transition hover:-translate-y-0.5">
+            Ücretsiz dene ↗
           </Link>
         </div>
         <nav className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-muted">
@@ -158,7 +152,7 @@ export function PublicFooter() {
         ))}
       </div>
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-5 text-xs text-muted sm:px-5">
-        <span>© 2026 {brand.name}. Tüm hakları saklıdır.</span>
+        <span>© 2026 {brand.wordmark} Tüm hakları saklıdır.</span>
         <span>YDS · e-YDS · YÖKDİL · e-YÖKDİL</span>
       </div>
     </footer>

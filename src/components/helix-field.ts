@@ -58,9 +58,9 @@ function ramp(stops: string[], t: number) {
   return a.map((v, index) => Math.round(v + (b[index] - v) * f));
 }
 
-/** Top of the helix is indigo, the base settles into teal, matching the brand gradient. */
-const LIGHT_STOPS = ["#6a7cf0", "#4263eb", "#2f6fe4", "#1f8fd0", "#0f9fad"];
-const DARK_STOPS = ["#9aa9ff", "#6d84f2", "#4f8dff", "#3fb5e8", "#3ec4d0"];
+/** Acid lime → mint helix, matching Outklas Carbon Olive-Black accents. */
+const LIGHT_STOPS = ["#d7ff62", "#b8e045", "#7dcf6a", "#3eb888", "#0f9f7a"];
+const DARK_STOPS = ["#f0ff9a", "#d7ff62", "#9ae87a", "#57e5a8", "#3ec4a0"];
 
 function sprite(rgb: number[], hot: boolean, dark: boolean) {
   const size = 64;
@@ -288,7 +288,7 @@ export function createHelixField(back: HTMLCanvasElement, front: HTMLCanvasEleme
 
     const net = frame.network * (1 - split);
     if (net > 0.01) {
-      const [er, eg, eb] = dark ? [142, 160, 246] : [66, 99, 235];
+      const [er, eg, eb] = dark ? [215, 255, 98] : [155, 184, 42];
       bctx.lineWidth = 0.8;
       for (const [i, j] of edges) {
         const depth = (nz[i] + nz[j]) / 2;

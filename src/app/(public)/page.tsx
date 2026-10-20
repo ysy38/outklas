@@ -23,19 +23,19 @@ const ribbon = ["YDS", "e-YDS", "YÖKDİL", "e-YÖKDİL", "80 soru", "180 dakika
 
 const problems = [
   {
-    tag: "Kaynak çok",
-    title: "Neye çalışacağına karar vermek bile yorucu.",
-    body: "Kitaplar, videolar, soru bankaları… Herkese aynı sırayla çalıştıran bir program en çok senin zamanını harcar.",
+    tag: "01 · Plato",
+    quote: "Çalışıyorum… puan yerinde sayıyor.",
+    body: "Her hafta deneme, kelime, kitap. Net aynı bandda. Eksik olan çaba değil — hangi açığın puanı tuttuğunu bilmemek.",
   },
   {
-    tag: "Ezbere soru çözmek",
-    title: "Çok soru çözmek tek başına yetmez.",
-    body: "Neden yanlış yaptığını anlamadan yüz soru daha çözersen, büyük ihtimalle aynı hatayı tekrar edersin.",
+    tag: "02 · Yön yok",
+    quote: "Bugün neye çalışacağımı bilmiyorum.",
+    body: "Önünde binlerce soru ve video var. Karar yorgunluğu başlıyor; en kolay olanı seçiyorsun, en çok puan getireni değil.",
   },
   {
-    tag: "Yol haritası yok",
-    title: "Hedefin belli ama oraya nasıl gideceğin belli değil.",
-    body: "64’ten 72’ye çıkmak istiyorsun ama hangi konunun sana kaç puan kazandıracağını bilmiyorsun.",
+    tag: "03 · Aynı tuzak",
+    quote: "İki şık arasında kalıp yine yanılıyorum.",
+    body: "Doğruyu görüyorsun ama neden diğerinin cazip geldiğini çözmüyorsun. Ertesi denemede aynı çeldirici yine seni çekiyor.",
   },
 ];
 
@@ -201,25 +201,31 @@ export default function HomePage() {
             </p>
             <form action={startDiagnosticAction} className="shrink-0">
               <PendingButton
-                pendingLabel="Test hazırlanıyor…"
-                className="shine w-full rounded-full bg-pine px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_-16px_rgba(66,99,235,0.75)] transition hover:-translate-y-0.5 sm:w-auto"
+                pendingLabel="Hazırlanıyor…"
+                className="shine w-full rounded-full bg-pine px-5 py-3 text-sm font-semibold shadow-[0_16px_36px_-16px_rgba(215,255,98,0.55)] transition hover:-translate-y-0.5 sm:w-auto"
               >
-                Cümle Röntgenini dene →
+                3 dakikada keşfet ↗
               </PendingButton>
             </form>
           </div>
         }
         copy={
         <>
-          <p lang="en" className="text-[11px] font-semibold uppercase tracking-[0.18em] text-pine">{brand.tagline}</p>
-          <h1 className="mt-4 max-w-xl text-[clamp(2.35rem,4.5vw,3.85rem)] leading-[1.12]">
-            YDS ve YÖKDİL’e daha fazla değil, <span className="grad">daha doğru</span> çalış.
+          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-pine">
+            <span className="h-px w-6 bg-pine" aria-hidden />
+            {brand.tagline}
+          </p>
+          <h1 className="mt-4 max-w-xl text-[clamp(2.1rem,6.5vw,3.85rem)] leading-[1.08]">
+            Daha çok değil.
+            <br />
+            <span className="text-pine">Daha isabetli</span> çalış.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
-            {brand.name} seviyeni ve hedefini ölçer, çözdüğün her soruyu takip eder ve her gün sana en çok puan kazandıracak çalışmayı gösterir. Saatlerce ders, video ya da bitmeyen soru bankası yok.
+            Saatlerce video izlemek, yüzlerce soru çözmek zorunda değilsin. Önce İngilizce soruları nerede ve neden kaçırdığını gör; sonra sadece ihtiyacın olan yere odaklan — teşhis temelli bir{" "}
+            <span className="font-medium text-ink">YDS / YÖKDİL çalışma programı</span>.
           </p>
           <p className="mt-3 max-w-xl text-sm leading-7 text-muted">
-            YÖKDİL ve e-YÖKDİL’de de puan aynı şekilde hesaplanır: 80 soru, 180 dakika, her doğru 1,25 puan.{" "}
+            YÖKDİL Sağlık / Sosyal / Fen ve e-YDS süre yönetimi aynı çerçevede: 80 soru, 180 dakika, her doğru 1,25 puan.{" "}
             <Link href="/yds-puan-hesaplama" className="link-underline font-medium text-pine">
               Puanını hesapla →
             </Link>
@@ -227,27 +233,23 @@ export default function HomePage() {
           <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
             <form action={startDiagnosticAction}>
               <PendingButton
-                pendingLabel="Test hazırlanıyor…"
-                className="shine w-full rounded-full bg-pine px-6 py-3.5 text-sm font-semibold text-white shadow-[0_16px_36px_-16px_rgba(66,99,235,0.75)] transition hover:-translate-y-0.5 sm:w-auto"
+                pendingLabel="Hazırlanıyor…"
+                className="shine w-full rounded-full bg-pine px-6 py-3.5 text-sm font-semibold shadow-[0_16px_36px_-16px_rgba(215,255,98,0.55)] transition hover:-translate-y-0.5 sm:w-auto"
               >
-                Cümle Röntgenini dene →
+                3 dakikada keşfet ↗
               </PendingButton>
             </form>
-            <a href="#nasil" className="rounded-full border border-line bg-card px-6 py-3.5 text-center text-sm font-semibold text-ink shadow-sm transition hover:border-pine">
-              Nasıl çalışıyor?
+            <a href="#nasil" className="rounded-full border border-line bg-card/80 px-6 py-3.5 text-center text-sm font-semibold text-ink transition hover:border-pine">
+              Yöntemi incele ↓
             </a>
           </div>
-          <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">
-            {["Ücretsiz", "Kayıt zorunluluğu yok", "Önce değer, sonra hesap"].map((point) => (
-              <li key={point}>
-                <span aria-hidden className="mr-1.5 text-pine">✓</span>
-                {point}
-              </li>
-            ))}
-          </ul>
+          <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+            <span className="h-1.5 w-1.5 rounded-full bg-pine" aria-hidden />
+            Ücretsiz ilk deneyim · Kayıt gerektirmez · Yaklaşık 3 dakika
+          </p>
           <ul className="mt-5 flex flex-wrap gap-2">
             {exams.map((exam) => (
-              <li key={exam} className="rounded-full border border-line bg-card px-3 py-1 text-xs font-semibold text-muted shadow-sm">
+              <li key={exam} className="rounded-full border border-line bg-card px-3 py-1 text-xs font-semibold text-muted">
                 {exam}
               </li>
             ))}
@@ -267,23 +269,45 @@ export default function HomePage() {
         </div>
       </div>
 
-      <section className="mx-auto w-full max-w-6xl px-4 py-20 text-center sm:px-5 sm:py-24">
-        <div data-rise>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pine">Asıl sorun ne?</p>
-          <h2 className="mx-auto mt-3 max-w-3xl text-4xl sm:text-5xl">Sorun kaynak eksikliği değil.</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-muted">
-            YDS’ye hazırlanan herkesin önünde binlerce soru, video, kitap ve deneme var. Asıl zor olan şu soruya cevap vermek: <span className="font-medium text-ink">Şimdi hangisine çalışmalıyım?</span>
+      <section className="relative overflow-hidden border-y border-line bg-night text-[#f4f3eb]">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,rgba(215,255,98,0.14),transparent_48%),radial-gradient(ellipse_at_90%_80%,rgba(255,107,87,0.1),transparent_42%)]"
+        />
+        <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-5 sm:py-24">
+          <div data-rise className="max-w-3xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pine">Tanıdık geldi mi?</p>
+            <h2 className="mt-3 text-4xl leading-[1.08] sm:text-5xl">
+              Çalışıyorsun.
+              <br />
+              <span className="text-pine">Puanın kıpırdamıyor.</span>
+            </h2>
+            <p className="mt-5 max-w-2xl text-lg leading-8 text-[#a7aa9e]">
+              Bu tembellik değil. Kaynak da yetmiyor değil. Asıl dert şu:{" "}
+              <span className="font-medium text-[#f4f3eb]">yanlış yere harcanan saat</span> — ve herkesin aynı programı dayatması.
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-3 md:grid-cols-3">
+            {problems.map((item) => (
+              <article
+                key={item.tag}
+                data-rise
+                className="flex flex-col rounded-[24px] border border-white/10 bg-white/[0.04] p-6 text-left backdrop-blur-sm transition hover:border-pine/35 hover:bg-white/[0.07] sm:p-7"
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-pine">{item.tag}</p>
+                <h3 className="mt-4 font-display text-2xl leading-snug tracking-tight text-[#f4f3eb] sm:text-[1.65rem]">
+                  “{item.quote}”
+                </h3>
+                <p className="mt-4 flex-1 text-sm leading-7 text-[#a7aa9e]">{item.body}</p>
+              </article>
+            ))}
+          </div>
+
+          <p data-rise className="mt-10 max-w-2xl text-base leading-7 text-[#a7aa9e] sm:text-lg sm:leading-8">
+            Eksik olan bir video daha değil.{" "}
+            <span className="font-semibold text-pine">Nerede puan kaçırdığını gösteren teşhis</span> — sonra sadece o noktaya isabet.
           </p>
-        </div>
-        <div className="mt-12 grid gap-4 text-left md:grid-cols-3">
-          {problems.map((item, index) => (
-            <article key={item.tag} data-rise className="lift rounded-[28px] bg-card p-7 text-left shadow-[0_24px_60px_-36px_rgba(23,36,59,0.28)] ring-1 ring-line">
-              <span className="grid h-10 w-10 place-items-center rounded-2xl bg-soft text-sm font-bold text-pine">0{index + 1}</span>
-              <p className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-pine">{item.tag}</p>
-              <h3 className="mt-2 text-2xl leading-snug">{item.title}</h3>
-              <p className="mt-3 text-sm leading-7 text-muted">{item.body}</p>
-            </article>
-          ))}
         </div>
       </section>
 
@@ -295,17 +319,17 @@ export default function HomePage() {
           <div data-rise className="lg:sticky lg:top-28">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pine">Farkımız</p>
             <h2 className="mt-3 text-4xl sm:text-5xl">
-              Başkaları kaynak verir. <span className="grad">Biz neye çalışacağını söyleriz.</span>
+              Başkaları kaynak verir. <span className="text-pine">Biz neye çalışacağını söyleriz.</span>
             </h2>
             <p className="mt-5 max-w-md leading-8 text-muted">
-              {brand.name} bir soru bankası ya da video kursu değil. Seviyene ve hedefine bakıp her gün neye çalışman gerektiğine karar veren bir sistem.
+              {brand.wordmark} bir soru bankası ya da video kursu değil. Çalışan temposuna uygun, teşhis temelli bir YDS / YÖKDİL çalışma programı.
             </p>
           </div>
           <div data-rise className="overflow-hidden rounded-[28px] bg-card shadow-[0_24px_60px_-36px_rgba(23,36,59,0.28)] ring-1 ring-line">
             <div className="hidden grid-cols-[0.8fr_1fr_1.2fr] border-b border-line bg-soft text-sm sm:grid">
               <p className="px-5 py-4 text-muted">Konu</p>
               <p className="border-l border-line px-5 py-4 text-muted">Genelde</p>
-              <p className="border-l border-line px-5 py-4 font-semibold text-pine">{brand.name}’de</p>
+              <p className="border-l border-line px-5 py-4 font-semibold text-pine">{brand.wordmark}</p>
             </div>
             {compare.map(([need, old, ours]) => (
               <div key={need} className="grid border-b border-line text-sm last:border-0 hover:bg-soft sm:grid-cols-[0.8fr_1fr_1.2fr]">
@@ -323,14 +347,14 @@ export default function HomePage() {
           <div data-rise className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-xl">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pine">Nasıl çalışıyor?</p>
-              <h2 className="mt-3 text-4xl leading-[1.15] sm:text-5xl">Önce merak. Sonra teşhis. Sonra rota.</h2>
+              <h2 className="mt-3 text-4xl leading-[1.15] sm:text-5xl">YDS çalışma programı: teşhis → rota → sprint.</h2>
             </div>
             <div className="max-w-md">
               <p className="leading-8 text-muted">
                 Ücretsiz deneyim kendi başına anlamlıdır; seni hemen kayıt duvarına itmez. Derinlik hesap sonrası artar; ücretli plan rotayı açar.
               </p>
               <form action={startDiagnosticAction} className="mt-6">
-                <PendingButton pendingLabel="Test hazırlanıyor…" className="shine rounded-full bg-pine px-6 py-3.5 text-sm font-semibold text-white shadow-[0_16px_36px_-16px_rgba(66,99,235,0.75)] transition hover:-translate-y-0.5">
+                <PendingButton pendingLabel="Test hazırlanıyor…" className="shine rounded-full bg-pine px-6 py-3.5 text-sm font-semibold shadow-[0_16px_36px_-16px_rgba(215,255,98,0.55)] transition hover:-translate-y-0.5">
                   Cümle Röntgenini dene →
                 </PendingButton>
               </form>
@@ -343,7 +367,7 @@ export default function HomePage() {
             <span aria-hidden className="route-line absolute left-[8%] right-[8%] top-8 hidden h-px xl:block" />
             {steps.map((step, index) => (
               <li key={step.title} data-rise className="relative">
-                <span className="relative z-10 grid h-16 w-16 place-items-center rounded-full bg-card text-pine shadow-[0_16px_40px_-18px_rgba(66,99,235,0.45)] ring-1 ring-line">
+                <span className="relative z-10 grid h-16 w-16 place-items-center rounded-full bg-card text-pine shadow-[0_16px_40px_-18px_rgba(215,255,98,0.45)] ring-1 ring-line">
                   <Glyph d={stepIcons[index]} />
                 </span>
                 <h3 className="mt-4 text-sm font-semibold text-pine">
@@ -359,88 +383,84 @@ export default function HomePage() {
       <ArchitectureSection />
       <ScienceSection />
 
-      <section id="analiz" className="relative scroll-mt-24 overflow-hidden bg-night text-white">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_80%_0%,rgba(47,107,255,0.38),transparent_52%)]" />
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-[linear-gradient(180deg,transparent,#06101f)]" />
-        <svg aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-28 w-full text-[#0b1c38]" viewBox="0 0 1440 120" preserveAspectRatio="none">
-          <path fill="currentColor" d="M0 80 180 50 340 78 520 36 760 72 980 28 1180 64 1440 40V120H0Z" opacity="0.9" />
-          <path fill="#10284d" d="M0 96 220 70 460 100 700 58 980 92 1200 66 1440 88V120H0Z" />
-        </svg>
+      <section id="analiz" className="relative scroll-mt-24 overflow-hidden bg-night text-[#f4f3eb]">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_80%_0%,rgba(215,255,98,0.18),transparent_52%)]" />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-[linear-gradient(180deg,transparent,#080907)]" />
         <div className="relative mx-auto grid w-full max-w-6xl items-center gap-12 px-4 py-20 sm:px-5 sm:py-24 lg:grid-cols-[0.82fr_1.18fr]">
           <div data-rise>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8eb4ff]">Uygulama</p>
-            <h2 className="mt-3 text-4xl text-white sm:text-5xl">
-              Karmaşık bir panel yok. <span className="text-[#8eb6ff]">Sadece bugünün işi.</span>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pine">Uygulama · e-YDS süre yönetimi</p>
+            <h2 className="mt-3 text-4xl text-[#f4f3eb] sm:text-5xl">
+              Karmaşık bir panel yok. <span className="text-pine">Sadece bugünün işi.</span>
             </h2>
             <ul className="mt-8 space-y-5">
               {practicePoints.map((point, index) => (
                 <li key={point} className="flex gap-4">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/10 text-[#9ec4ff] ring-1 ring-white/15">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/5 text-pine ring-1 ring-white/10">
                     <Glyph d={practiceIcons[index]} />
                   </span>
-                  <p className="pt-1 text-sm leading-7 text-white/75">{point}</p>
+                  <p className="pt-1 text-sm leading-7 text-[#a7aa9e]">{point}</p>
                 </li>
               ))}
             </ul>
           </div>
           <div data-rise className="relative" aria-hidden>
-            <div className="rounded-[28px] border border-white/10 bg-[#0d2244]/90 p-4 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.65)] backdrop-blur-xl sm:p-5 lg:pr-52">
+            <div className="rounded-[28px] border border-white/10 bg-[#161814]/95 p-4 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.65)] backdrop-blur-xl sm:p-5 lg:pr-52">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/50">{brand.domain}/bugun</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">{brand.domain}/bugun</p>
                   <p className="mt-1 text-lg font-semibold">İyi akşamlar, Deniz.</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-white/50">Pazartesi</p>
-                  <span className="mt-1 inline-block rounded-full bg-[#2f6bff] px-3 py-1.5 text-xs font-semibold">Devam et →</span>
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-white/45">Pazartesi</p>
+                  <span className="mt-1 inline-block rounded-full bg-pine px-3 py-1.5 text-xs font-semibold text-pine-ink">Devam et →</span>
                 </div>
               </div>
               <div className="mt-4 flex flex-wrap gap-1.5">
                 {appNav.map((item, index) => (
-                  <span key={item} className={`rounded-full px-2.5 py-1 text-[11px] ${index === 0 ? "bg-white/15 text-white" : "text-white/55"}`}>
+                  <span key={item} className={`rounded-full px-2.5 py-1 text-[11px] ${index === 0 ? "bg-white/10 text-[#f4f3eb]" : "text-white/50"}`}>
                     {item}
                   </span>
                 ))}
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-white/50">Tahmini puan</p>
+                <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-white/45">Tahmini puan</p>
                   <p className="mt-1 text-4xl font-bold tracking-tight">64,8</p>
-                  <p className="text-xs text-[#8dffe0]">bu ay +2,6</p>
+                  <p className="text-xs text-teal">bu ay +2,6</p>
                   <div className="mt-4 flex h-16 items-end gap-1.5">
                     {bars.map((height, index) => (
-                      <span key={index} className="flex-1 rounded-t bg-gradient-to-t from-[#2457ea] to-[#7cf0ff]" style={{ height: `${height}%` }} />
+                      <span key={index} className="flex-1 rounded-t bg-gradient-to-t from-[#3a4a12] to-pine" style={{ height: `${height}%` }} />
                     ))}
                   </div>
                 </div>
-                <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-white/50">Bugünün görevi</p>
+                <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-white/45">Bugünün görevi</p>
                   <p className="mt-2 text-2xl font-semibold">Bağlaçlar</p>
-                  <p className="mt-1 text-xs text-white/60">12 soru · 18 dakika</p>
-                  <span className="mt-6 inline-block rounded-full border border-[#8eb4ff] px-3 py-1.5 text-xs text-[#cfe0ff]">Göreve başla</span>
+                  <p className="mt-1 text-xs text-white/55">12 soru · 18 dakika</p>
+                  <span className="mt-6 inline-block rounded-full border border-pine/40 px-3 py-1.5 text-xs text-pine">Göreve başla</span>
                 </div>
-                <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-white/50">En çok puan kazanabileceğin yer</p>
+                <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-white/45">En çok puan kazanabileceğin yer</p>
                   <p className="mt-2 text-sm font-medium">Dil bilgisi · zıtlık bağlaçları</p>
-                  <p className="mt-1 text-xs text-white/60">%61 doğru · puana etkisi yüksek</p>
+                  <p className="mt-1 text-xs text-white/55">%61 doğru · puana etkisi yüksek</p>
                 </div>
-                <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-white/50">Son günlerde</p>
+                <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-white/45">e-YDS süre yönetimi</p>
                   <p className="mt-2 text-sm font-medium">Okuma hızın düşüyor</p>
-                  <p className="mt-1 text-xs text-white/60">Süreye dikkat ettiğinde doğru oranın düşmüyor.</p>
+                  <p className="mt-1 text-xs text-white/55">Süreye dikkat ettiğinde doğru oranın düşmüyor.</p>
                 </div>
               </div>
             </div>
-            <div className="relative mt-4 rounded-[24px] border border-white/10 bg-[#12305f] p-4 shadow-2xl lg:absolute lg:right-0 lg:top-14 lg:mt-0 lg:w-52">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">Örnek plan</p>
+            <div className="relative mt-4 rounded-[24px] border border-white/10 bg-[#1c2118] p-4 shadow-2xl lg:absolute lg:right-0 lg:top-14 lg:mt-0 lg:w-52">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/50">Örnek plan</p>
               <p className="mt-2 text-2xl font-bold">
-                64 <span className="text-white/40">→</span> 72
+                64 <span className="text-white/35">→</span> 72
               </p>
-              <p className="text-xs text-white/60">Hedefe 8 puan kaldı</p>
+              <p className="text-xs text-white/55">Hedefe 8 puan kaldı</p>
               <svg viewBox="0 0 220 90" className="mt-3 w-full" aria-hidden>
-                <path d="M4 72 C 40 70, 60 58, 90 50 S 150 28, 216 12 V 90 H 4 Z" fill="rgba(126,232,255,0.18)" />
-                <path d="M4 72 C 40 70, 60 58, 90 50 S 150 28, 216 12" fill="none" stroke="#7ee8ff" strokeWidth="3" />
-                <circle cx="216" cy="12" r="4" fill="#ffffff" />
+                <path d="M4 72 C 40 70, 60 58, 90 50 S 150 28, 216 12 V 90 H 4 Z" fill="rgba(215,255,98,0.14)" />
+                <path d="M4 72 C 40 70, 60 58, 90 50 S 150 28, 216 12" fill="none" stroke="#d7ff62" strokeWidth="3" />
+                <circle cx="216" cy="12" r="4" fill="#f4f3eb" />
               </svg>
             </div>
           </div>
@@ -518,7 +538,7 @@ export default function HomePage() {
             <p className="mt-4 max-w-xl leading-8 text-muted">
               e-YDS ve e-YÖKDİL’deki gibi ekranda çözülen, gerçek sınav zorluğunda tam denemeler. Süre geri sayar; soruları işaretleyebilir, emin olmadığın şıkları eleyebilirsin. Bitince puanını ve en çok puan kaybettiğin bölümü görürsün. Ekran, ÖSYM’nin birebir kopyası değildir.
             </p>
-            <Link href="/deneme" className="shine mt-7 inline-block rounded-full bg-pine px-6 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_-16px_rgba(66,99,235,0.75)] transition hover:-translate-y-0.5">
+            <Link href="/deneme" className="shine mt-7 inline-block rounded-full bg-pine px-6 py-3 text-sm font-semibold shadow-[0_16px_36px_-16px_rgba(215,255,98,0.55)] transition hover:-translate-y-0.5">
               Denemeye göz at →
             </Link>
           </div>
@@ -573,7 +593,7 @@ export default function HomePage() {
             </h2>
             <p className="mt-3 max-w-md text-base leading-7 text-muted sm:text-lg">Cümle Röntgeni ile başla. Sonra profilini genişlet, rotanı kur.</p>
             <form action={startDiagnosticAction} className="mt-5">
-              <PendingButton pendingLabel="Test hazırlanıyor…" className="shine rounded-full bg-pine px-6 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_-16px_rgba(66,99,235,0.75)] transition hover:-translate-y-0.5">
+              <PendingButton pendingLabel="Test hazırlanıyor…" className="shine rounded-full bg-pine px-6 py-3 text-sm font-semibold shadow-[0_16px_36px_-16px_rgba(215,255,98,0.55)] transition hover:-translate-y-0.5">
                 Cümle Röntgenini dene →
               </PendingButton>
             </form>
