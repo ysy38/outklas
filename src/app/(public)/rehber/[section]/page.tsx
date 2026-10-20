@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { GuideDeep } from "@/components/guide-deep";
 import { skillName } from "@/content/labels";
+import { deepGuideFor } from "@/content/guide-labs";
 import { rehberBySection } from "@/content/rehber";
 import { and, answers, eq, getDb, inArray, items, mastery } from "@/db/client";
 import { ydsBlueprint, type SectionId } from "@/modules/exam/blueprint";
@@ -13,7 +15,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { section } = await params;
   const band = ydsBlueprint.bands.find((item) => item.section === section);
   const note = rehberBySection(section);
+  const deep = deepGuideFor(section);
   if (!band || !note) return { title: "Rehber" };
+  if (deep) {
+    return {
+      title: { absolute: deep.seoTitle },
+      description: deep.seoDescription,
+      alternates: { canonical: `/rehber/${section}` },
+      openGraph: {
+        title: deep.seoTitle,
+        description: deep.seoDescription,
+      },
+    };
+  }
   return {
     title: `${band.title} nasıl çözülür`,
     description: note.measures,
@@ -26,39 +40,47 @@ export default async function GuideSectionPage({ params }: Props) {
   const band = ydsBlueprint.bands.find((item) => item.section === section);
   const note = rehberBySection(section);
   if (!band || !note) notFound();
+  const deep = deepGuideFor(section);
   const profile = await currentProfile();
   const stats = profile ? await sectionStats(profile.id, band.section) : null;
   const readingSkills = profile && band.section === "reading" ? await readingBreakdown(profile.id) : [];
 
   return (
-    <article className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-10 sm:px-5 sm:py-16 lg:grid-cols-[1.1fr_0.9fr]">
+    <article className="landing mx-auto grid w-full max-w-6xl gap-8 px-4 py-10 sm:px-5 sm:py-16 lg:grid-cols-[1.15fr_0.85fr]">
       <div>
         <p className="text-xs uppercase tracking-[0.18em] text-gold">
           <Link href="/rehber" className="hover:text-ink">
             Rehber
           </Link>
           {" · "}
-          {band.to - band.from + 1} soru
+          {band.to - band.from + 1} soru · {band.title}
         </p>
-        <h1 className="display mt-3">{band.title}</h1>
-        <p className="mt-4 max-w-xl leading-8 text-muted">{note.measures}</p>
-        <h2 className="mt-10 text-3xl">Nasıl çözülür?</h2>
-        <ol className="mt-4 space-y-3">
-          {note.steps.map((step, index) => (
-            <li key={step} className="flex gap-3 text-sm leading-6">
-              <span className="font-serif text-gold">{index + 1}</span>
-              <span>{step}</span>
-            </li>
-          ))}
-        </ol>
-        <h2 className="mt-10 text-3xl">Sık yapılan hatalar</h2>
-        <ul className="mt-4 space-y-2 text-sm leading-6 text-muted">
-          {note.misses.map((miss) => (
-            <li key={miss}>{miss}</li>
-          ))}
-        </ul>
+        {deep ? (
+          <GuideDeep guide={deep} />
+        ) : (
+          <>
+            <h1 className="display mt-3">{band.title}</h1>
+            <p className="mt-4 max-w-xl leading-8 text-muted">{note.measures}</p>
+            <h2 className="mt-10 text-3xl">Nasıl çözülür?</h2>
+            <ol className="mt-4 space-y-3">
+              {note.steps.map((step, index) => (
+                <li key={step} className="flex gap-3 text-sm leading-6">
+                  <span className="font-serif text-gold">{index + 1}</span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+            <h2 className="mt-10 text-3xl">Sık yapılan hatalar</h2>
+            <ul className="mt-4 space-y-2 text-sm leading-6 text-muted">
+              {note.misses.map((miss) => (
+                <li key={miss}>{miss}</li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
-      <aside className="space-y-4">
+
+      <aside className="space-y-4 lg:sticky lg:top-28 lg:self-start">
         <div className="rounded-[28px] border border-line bg-card p-6">
           <p className="text-xs uppercase tracking-[0.16em] text-gold">İpucu</p>
           <p className="mt-3 leading-7">{note.tip}</p>
@@ -71,11 +93,16 @@ export default async function GuideSectionPage({ params }: Props) {
                 {stats.correct}/{stats.answered}
               </p>
               <p className="mt-2 text-sm leading-6 text-muted">
-                Bu bölümde çözdüğün soruların doğru sayısı. {stats.wrong > 0 ? `${stats.wrong} yanlışın var; gerçek sınavda bu, ${(Math.round(stats.wrong * 125) / 100).toLocaleString("tr-TR")} puan kaybı demek.` : "Henüz yanlışın yok."}
+                Bu bölümde çözdüğün soruların doğru sayısı.{" "}
+                {stats.wrong > 0
+                  ? `${stats.wrong} yanlışın var; gerçek sınavda bu, ${(Math.round(stats.wrong * 125) / 100).toLocaleString("tr-TR")} puan kaybı demek.`
+                  : "Henüz yanlışın yok."}
               </p>
             </>
           ) : (
-            <p className="mt-3 text-sm leading-6 text-muted">Bu bölümden henüz soru çözmedin. Seviye testini çözünce sonuçların burada görünür.</p>
+            <p className="mt-3 text-sm leading-6 text-muted">
+              Bu bölümden henüz soru çözmedin. Seviye testini çözünce sonuçların burada görünür.
+            </p>
           )}
           {readingSkills.length > 0 ? (
             <ul className="mt-4 space-y-2 text-sm">
@@ -87,10 +114,18 @@ export default async function GuideSectionPage({ params }: Props) {
               ))}
             </ul>
           ) : null}
-          <Link href={profile ? "/bugun" : "/teshis"} className="mt-5 inline-block rounded-full bg-pine px-4 py-2 text-sm text-cream">
+          <Link href={profile ? "/bugun" : "/teshis"} className="mt-5 inline-block rounded-full bg-pine px-4 py-2 text-sm font-semibold text-pine-ink">
             {profile ? "Bugünün çalışmasına dön" : "Seviye testine başla"}
           </Link>
         </div>
+        {deep ? (
+          <div className="rounded-[28px] border border-pine/25 bg-soft p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine">outklas. standardı</p>
+            <p className="mt-2 text-sm leading-6 text-ink">
+              Yapısal kanıt → anlam kontrolü → çeldirici otopsisi. Kuralı ezberlemek değil; soruyu çözmek ve gerekçeyi görmek.
+            </p>
+          </div>
+        ) : null}
       </aside>
     </article>
   );

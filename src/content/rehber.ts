@@ -12,7 +12,7 @@ export const rehber: Rehber[] = [
   {
     section: "vocabulary",
     measures:
-      "6 soru. Çoğunlukla akademik kelimeler ve birlikte kullanılan kalıplar sorulur. Kelimenin anlamını bilmek yetmez; cümleye oturması gerekir.",
+      "6 soru. Akademik kelime, bağlam ve collocation. Sözlük anlamı yetmez; cümleye oturan birlikteliği ve çeldiricinin neden cazip geldiğini de görmelisin.",
     steps: [
       "Şıklara bakmadan cümleyi oku ve boşluğa ne gelmesi gerektiğini kendi sözlerinle söyle.",
       "Her şıkkı tek tek boşluğa koyup cümleyi baştan oku.",
@@ -22,12 +22,12 @@ export const rehber: Rehber[] = [
       "Sözlük anlamı uyuyor diye hemen işaretlemek.",
       "Kalıbı tek kelime sanmak. Örneğin “contingent on” birlikte kullanılır; “contingent” tek başına aynı anlamı vermez.",
     ],
-    tip: "Anlamı yakın olan şık her zaman doğru şık değildir. Cümleye en iyi oturan kelimeyi seç.",
+    tip: "Anlam, bağlam, birliktelik: üç kontrol. Anlamı yakın olan şık her zaman doğru şık değildir.",
   },
   {
     section: "grammar",
     measures:
-      "10 soru. Zamanlar, bağlaçlar, ilgi cümleleri, edilgen yapı ve edatlar sorulur. Kuralı bilmek yetmez; cümlenin hangi yapıyı istediğini görmen gerekir.",
+      "10 soru. Zamanlar, bağlaçlar, ilgi cümleleri, edilgen yapı ve edatlar. Kuralı hatırlamak yetmez; yapısal kanıtı bul, anlamı doğrula, çeldiriciyi gerekçesiyle ele.",
     steps: [
       "Önce fiilin zamanına ve öznenin tekil mi çoğul mu olduğuna bak.",
       "Bağlaç soruluyorsa, iki cümlenin birbirini destekleyip desteklemediğini ya da zıt mı olduğunu belirle.",
@@ -37,12 +37,12 @@ export const rehber: Rehber[] = [
       "Kuralı hatırlayıp cümlenin kalanını okumadan işaretlemek.",
       "Bağlaçların anlamını karıştırmak: “however” zıtlık bildirir, “so” sonuç bildirir.",
     ],
-    tip: "Şıkkı yerine koyduktan sonra cümleyi içinden sesli okur gibi oku. Bir yerde takılıyorsan yapı uymuyordur.",
+    tip: "Önce yapısal kanıt, sonra anlam, en son şıklar. Despite + -ing ile although + çekimli fiili karıştırma.",
   },
   {
     section: "cloze",
     measures:
-      "2 paragraf, 10 boşluk. Boşluklar tek başına çözülmez; önce paragrafın ne anlattığını anlaman gerekir.",
+      "2 paragraf, 10 boşluk. Tek cümle değil; paragrafın anlam akışı, birliktelikler ve cümleler arası ilişkiler birlikte izlenir.",
     steps: [
       "Boşluklara takılmadan paragrafı baştan sona bir kez oku.",
       "Boşluktan önceki ve sonraki cümle aynı yönde mi ilerliyor, yoksa zıt mı, buna bak.",
@@ -53,12 +53,12 @@ export const rehber: Rehber[] = [
       "Yalnızca boşluğun hemen önündeki birkaç kelimeye bakmak.",
       "Bağlacın iki cümle arasında kurduğu ilişkiyi gözden kaçırmak.",
     ],
-    tip: "Boşluğu doldurmadan önce paragrafın ne anlattığını tek cümleyle özetle. Bu özete uymayan şıkları ele.",
+    tip: "Her boşluğu hem kendi cümlesi içinde hem paragrafın bütününde değerlendir. İlişkiyi tanı, sonra şıkları ele.",
   },
   {
     section: "sentence",
     measures:
-      "10 soru. Cümlenin bir kısmı boş bırakılır. Seçtiğin parça, cümlenin geri kalanıyla anlam ilişkisini korumalıdır.",
+      "10 soru. Verilen bölümle tamamlayıcı arasındaki dilbilgisel ve anlamsal ilişkiyi kurarsın; konu ortaklığı yetmez.",
     steps: [
       "Verilen parçadaki bağlaca bak: because, but, so that, whereas gibi.",
       "Şıklara geçmeden boşluğa ne gelmesi gerektiğini kendi sözlerinle söyle.",
@@ -69,7 +69,7 @@ export const rehber: Rehber[] = [
       "Zıtlık gereken yerde sebep bildiren şıkkı seçmek.",
       "Cümlenin başındaki fikri unutup yalnızca sonuna odaklanmak.",
     ],
-    tip: "Önce iki parça arasındaki ilişkiyi belirle: sebep mi, zıtlık mı, sonuç mu, koşul mu? Bu ilişkiyi kurmayan şıkları hiç düşünme.",
+    tip: "Önce anlam beklentisini kur: sebep mi, zıtlık mı, sonuç mu, koşul mu? Kapsamı şişiren şıkları ele.",
   },
   {
     section: "translation",
