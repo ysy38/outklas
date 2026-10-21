@@ -74,7 +74,7 @@ export const rehber: Rehber[] = [
   {
     section: "translation",
     measures:
-      "6 soru: İngilizceden Türkçeye ve Türkçeden İngilizceye. Kelimesi kelimesine değil, anlamı eksiksiz aktaran şıkkı bulman gerekir.",
+      "6 soru: İngilizceden Türkçeye ve Türkçeden İngilizceye. Kelimeleri değil; sözdizimi, bağlaç, kiplik ve kapsam ilişkilerini koruyan seçeneği bulursun.",
     steps: [
       "Kaynak cümlede zamanı, özneyi ve “-meli, -ebilir” gibi kipleri işaretle.",
       "Bunlardan biri şıkta değişmişse, gerisi ne kadar düzgün olursa olsun o şıkkı ele.",
@@ -85,12 +85,12 @@ export const rehber: Rehber[] = [
       "Olumsuz bir cümleyi olumlu çeviren şıkkı fark etmemek.",
       "Amaç bildiren yapıyı yasak bildiren yapıyla karıştırmak.",
     ],
-    tip: "Bir şıkta fazladan ya da eksik bir kelime varsa dikkat et; çoğu zaman cümlenin anlamını değiştiren o kelimedir.",
+    tip: "Akıcı Türkçe yetmez. Although’u because’a çeviren veya may’i kesinliğe yükselten şıkkı ele.",
   },
   {
     section: "reading",
     measures:
-      "5 metin, 20 soru. Puanın dörtte biri buradan gelir. Ayrıntı, çıkarım ve ana fikir soruları aynı metinden gelse de farklı beceriler ister.",
+      "5 metin, 20 soru. Puanın dörtte biri buradan gelir. Amaç seçeneği değil, metinsel kanıtı bulmak: açık bilgi, çıkarım ve iddia kapsamı.",
     steps: [
       "Soruları okumadan önce metni bir kez oku ve ana fikri tek cümleyle aklında tut.",
       "Ayrıntı sorusunun cevabı metinde açıkça yazar. Çıkarım sorusunun cevabı yazmaz; metinden çıkarman gerekir.",
@@ -101,7 +101,7 @@ export const rehber: Rehber[] = [
       "Çıkarım sorusunu ayrıntı sorusu gibi çözmeye çalışmak.",
       "Bir metnin cevabını başka bir metnin sorusuna taşımak.",
     ],
-    tip: "“Okumam kötü” deme. Belki ayrıntı sorularını yapıyor ama çıkarım sorularında puan kaybediyorsundur. Hangisi olduğunu bilmek, neye çalışacağını gösterir.",
+    tip: "Konuya uygun olmak, metin tarafından desteklenmek değildir. all / every / eliminate gibi kapsam şişiricilerine bak.",
   },
   {
     section: "dialogue",

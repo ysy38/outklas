@@ -82,7 +82,16 @@ export function GuideDeep({ guide, path }: { guide: DeepGuide; path: string }) {
             Sen de çöz →
           </a>
         </div>
-        <p className="mt-5 text-base font-medium leading-relaxed text-ink sm:text-xl sm:leading-8">{guide.worked.stem}</p>
+        {guide.worked.passage ? (
+          <div className="mt-5 rounded-2xl border border-line/80 bg-paper/70 p-4 sm:p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine">Passage</p>
+            <p className="mt-2 text-sm leading-7 text-ink sm:text-[15px] sm:leading-8">{guide.worked.passage}</p>
+          </div>
+        ) : null}
+        {guide.worked.prompt ? <p className="mt-4 text-sm font-medium text-muted">{guide.worked.prompt}</p> : null}
+        <p className={`text-base font-medium leading-relaxed text-ink sm:text-xl sm:leading-8 ${guide.worked.passage || guide.worked.prompt ? "mt-3" : "mt-5"}`}>
+          {guide.worked.stem}
+        </p>
         <ul className="mt-5 space-y-2 text-sm text-ink">
           {guide.worked.options.map((item) => (
             <li

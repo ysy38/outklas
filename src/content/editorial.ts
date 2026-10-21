@@ -26,6 +26,8 @@ export const updatedAt: Record<string, string> = {
   "/rehber/vocabulary": "2026-10-21",
   "/rehber/cloze": "2026-10-21",
   "/rehber/sentence": "2026-10-21",
+  "/rehber/translation": "2026-10-21",
+  "/rehber/reading": "2026-10-21",
 };
 
 export function formatUpdated(day: string) {

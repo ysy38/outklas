@@ -63,7 +63,13 @@ export function GuideLab({ lab }: { lab: GuideLabItem }) {
       </div>
 
       <div className="p-4 sm:p-6">
-        <p className="text-base font-medium leading-relaxed text-ink sm:text-xl sm:leading-8">{lab.stem}</p>
+        {lab.passage ? (
+          <div className="rounded-2xl border border-line bg-soft/80 p-3.5 sm:p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-pine">Passage</p>
+            <p className="mt-2 text-sm leading-7 text-ink">{lab.passage}</p>
+          </div>
+        ) : null}
+        <p className={`text-base font-medium leading-relaxed text-ink sm:text-xl sm:leading-8 ${lab.passage ? "mt-4" : ""}`}>{lab.stem}</p>
         <p className="mt-3 text-sm text-muted">{lab.prompt}</p>
         <p className="mt-2 text-xs leading-5 text-muted">Yanlış şıkta yalnızca neden yanlış olduğunu görürsün. Doğruyu kendin bulmaya devam et. Sağdaki Ele ile şıkkı çiz.</p>
 

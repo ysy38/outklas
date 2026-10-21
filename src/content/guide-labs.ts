@@ -8,6 +8,7 @@ export type GuideOption = {
 };
 
 export type GuideWorked = {
+  passage?: string;
   stem: string;
   prompt?: string;
   options: GuideOption[];
@@ -19,6 +20,7 @@ export type GuideWorked = {
 export type GuideLabItem = {
   code: string;
   minutes: string;
+  passage?: string;
   stem: string;
   prompt: string;
   options: GuideOption[];
@@ -641,6 +643,366 @@ export const deepGuides: Partial<Record<SectionId, DeepGuide>> = {
     disclaimer:
       "Bu sayfadaki sorular outklas. için özgün örneklerdir; çıkmış ÖSYM soruları değildir. Cloze test ile cümle tamamlama farklı soru biçimleridir; güncel dağılım için ÖSYM kaynaklarına bak.",
     ctaLine: "outklas. Sentence Lab: Cümleyi tamamla, anlam ilişkisini doğrula ve çeldiricinin neden işlemediğini öğren.",
+    ctaPrimary: { href: "/teshis", label: "Ücretsiz alıştırmayla test et →" },
+    ctaSecondary: { href: "/bugun", label: "Günlük çalışmaya bak" },
+  },
+
+  translation: {
+    section: "translation",
+    seoTitle: "YDS Çeviri Soruları: Açıklamalı Örnekler | outklas.",
+    seoDescription:
+      "YDS ve YÖKDİL çeviri sorularını anlam, sözdizimi, bağlaç, kiplik ve çeldirici analiziyle çöz. Açıklamalı sorularla pratik yap.",
+    h1: "YDS Çeviri Soruları: Doğru Seçenek Nasıl Bulunur?",
+    lead: "YDS çeviri sorularında doğru seçenek, kaynak cümlenin yalnızca kelimelerini değil; dilbilgisel yapısını, anlam ilişkilerini ve iddia kapsamını da korumalıdır.",
+    approach:
+      "outklas. çeviri yaklaşımı: Önce cümlenin iskeletini çıkar, sonra anlam ilişkilerini belirle ve son olarak seçeneklerin neyi değiştirdiğini incele. Kelimeleri değil, anlam ilişkilerini çevir.",
+    layersTitle: "Çeviri sorularında hangi kanıtları aramalısın?",
+    layers: [
+      { title: "Sözdizimi", body: "Ana cümle ve yan cümleler arasındaki ilişki korunuyor mu?" },
+      { title: "Anlambilim", body: "Cümledeki eylem, durum ve ilişkiler aynı anlamı taşıyor mu?" },
+      { title: "Zaman ve görünüş", body: "Eylemin ne zaman gerçekleştiği ve nasıl sunulduğu değişmiş mi?" },
+      { title: "Kiplik", body: "Olasılık, zorunluluk veya kesinlik derecesi korunuyor mu?" },
+      {
+        title: "Olumsuzluk ve kapsam",
+        body: "Olumsuzluk hangi ifadeyi etkiliyor? “Her zaman”, “yalnızca” veya “büyük ölçüde” gibi sınırlayıcılar korunmuş mu?",
+      },
+    ],
+    layersNote:
+      "Bir seçenekteki kelimeler tanıdık olabilir. Ancak neden-sonuç ilişkisinin karşıtlığa dönüşmesi, bir koşulun kesin bir sonuca çevrilmesi veya olasılığın kesinlik gibi sunulması anlamı değiştirir.",
+    workedTitle: "Açıklamalı örnek soru",
+    workedSteps: {
+      structural: "1. Cümle röntgeni",
+      meaning: "2. Korunan ilişkiler",
+      autopsy: "3. Çeldirici otopsisi",
+    },
+    worked: {
+      stem: "Although the policy was introduced to reduce waste, its effectiveness depends largely on whether local authorities enforce it consistently.",
+      prompt: "Bu cümlenin anlamını en doğru biçimde karşılayan Türkçe çeviri hangisidir?",
+      options: [
+        {
+          id: "A",
+          text: "A) Politika atığı azalttığı için uygulamaya konmuştur ve etkililiği yerel yetkililerin onu her zaman desteklemesine bağlıdır.",
+          correct: false,
+          autopsy:
+            "İlişki değişimi: Although karşıtlık kurarken because neden bildirir. Ayrıca “tutarlı biçimde uygulamak” ile “her zaman desteklemek” aynı anlama gelmez.",
+        },
+        {
+          id: "B",
+          text: "B) Politika atığı azaltmak amacıyla uygulamaya konmuş olsa da, etkililiği büyük ölçüde yerel yetkililerin politikayı tutarlı biçimde uygulayıp uygulamamasına bağlıdır.",
+          correct: true,
+          autopsy:
+            "Although ödünlemesini, to reduce amacını, depends largely on koşulluluğunu ve whether … consistently belirsizliğini birlikte korur.",
+        },
+        {
+          id: "C",
+          text: "C) Yerel yetkililer politikayı tutarlı biçimde uyguladıkları sürece, politikanın atığı azaltmak amacıyla uygulamaya konmuş olması gerekmez.",
+          correct: false,
+          autopsy: "Mantıksal kayma: Uygulamaya ilişkin koşulu, politikanın başlangıçtaki amacıyla ilgili gereklilik gibi sunar.",
+        },
+        {
+          id: "D",
+          text: "D) Politika atığı azaltmak amacıyla uygulamaya konmuştur; bu nedenle yerel yetkililerin onu tutarlı biçimde uygulayıp uygulamaması etkililiğini etkilemez.",
+          correct: false,
+          autopsy: "Anlamın tersine çevrilmesi: Kaynak cümle etkililiğin uygulamaya bağlı olduğunu söylerken seçenek bunun etkisiz olduğunu iddia eder.",
+        },
+        {
+          id: "E",
+          text: "E) Politika atığı azaltmayı başarmış olsa da, yerel yetkililer onu yalnızca tutarlı biçimde uygulamak zorundadır.",
+          correct: false,
+          autopsy:
+            "Zaman ve kapsam hatası: Kaynak cümle politikanın atığı azaltmayı başardığını söylemez; “büyük ölçüde bağlı olma” da “yalnızca … zorunda olma” anlamına gelmez.",
+        },
+      ],
+      structural: [
+        "Although: Karşıtlık / ödünleme ilişkisi kurar (“… olsa da”).",
+        "was introduced to reduce: Politikanın hangi amaçla uygulamaya konduğunu belirtir.",
+        "depends largely on: Etkililiğin büyük ölçüde bir koşula bağlı olduğunu söyler.",
+        "whether … enforce it consistently: Yerel yetkililerin politikayı tutarlı biçimde uygulayıp uygulamaması meselesini ifade eder.",
+      ],
+      meaning: [
+        "Karşıtlık (although) neden ilişkisine (because) dönüşmemeli.",
+        "“Büyük ölçüde bağlı” ifadesi “etkisiz” veya “yalnızca zorunlu”a çevrilmemeli.",
+        "Amaç (to reduce) başarı iddiasına (başarmış) yükseltilmemeli.",
+      ],
+      rule: {
+        title: "Çeviride dört kontrol",
+        body: "1) Ana cümleyi ve yan cümleleri ayır. 2) Bağlaçların kurduğu mantıksal ilişkiyi belirle. 3) Zamanı, olumsuzluğu ve kesinlik derecesini kontrol et. 4) Her seçenekte kaynak cümlede olmayan bir iddia eklenip eklenmediğini incele. Bir seçeneğin akıcı Türkçe olması yeterli değildir; anlamı değiştirmeden doğal Türkçe kurması gerekir.",
+      },
+    },
+    nextTitle: "Çeviride dört kontrol",
+    nextSteps: [
+      "Ana cümleyi ve yan cümleleri ayır.",
+      "Bağlaçların kurduğu mantıksal ilişkiyi belirle.",
+      "Zamanı, olumsuzluğu ve kesinlik derecesini kontrol et.",
+      "Her seçenekte kaynak cümlede olmayan bir iddia eklenip eklenmediğini incele.",
+    ],
+    misses: {
+      title: "En sık yapılan hatalar",
+      items: [
+        "Tanıdık kelimeleri görünce hemen işaretlemek.",
+        "Although / because / so gibi ilişkileri karıştırmak.",
+        "Olasılığı (may, not necessarily) kesinliğe çevirmek.",
+        "Kaynakta olmayan bir başarı veya zorunluluk iddiası eklemek.",
+      ],
+    },
+    beyondTitle: "Anlamı değiştirmeden çevir",
+    beyondBody:
+      "Akıcı Türkçe tek başına doğru cevap değildir. Doğru seçenek, kaynak cümlenin iskeletini ve anlam ilişkilerini bozmadan yeniden kurar. Yanlışını ilişki değişimi, kapsam şişirme, kiplik kayması veya tersine çevirme olarak sınıflandır.",
+    errorKinds: {
+      title: "Yanlışını hangi kanıt hatasına bağla?",
+      items: [
+        "İlişki değişimi (karşıtlık ↔ neden)",
+        "Kapsam / olumsuzluk kayması",
+        "Kiplik veya zaman hatası",
+        "Anlamın tersine çevrilmesi",
+        "Kaynakta olmayan iddia ekleme",
+      ],
+    },
+    lab: {
+      code: "Translation Lab · 01",
+      minutes: "Anlam ve yapı · yaklaşık 45 saniye",
+      stem: "The findings do not necessarily indicate that the intervention failed; rather, they suggest that its effects may vary across populations.",
+      prompt: "Cümlenin anlamını en doğru biçimde karşılayan çeviriyi seç.",
+      options: [
+        {
+          id: "A",
+          text: "A) Bulgular, müdahalenin başarısız olduğunu kesin olarak gösterir; ancak etkileri farklı toplumlarda değişmez.",
+          correct: false,
+          autopsy:
+            "do not necessarily indicate ifadesini “kesin olarak gösterir”e çevirir; may vary belirsizliğini de “değişmez” diye tersine çevirir.",
+        },
+        {
+          id: "B",
+          text: "B) Bulgular müdahalenin başarısız olmadığını kanıtlar ve bütün toplumlarda aynı etkiyi yarattığını gösterir.",
+          correct: false,
+          autopsy:
+            "“Kanıtlar” ve “bütün toplumlarda aynı etki” kaynak cümlenin sınırlı, ihtiyatlı iddiasını aşırı güçlendirir ve bozar.",
+        },
+        {
+          id: "C",
+          text: "C) Bulgular, müdahalenin mutlaka başarısız olduğu anlamına gelmez; aksine, etkilerinin farklı topluluklarda değişebileceğine işaret eder.",
+          correct: true,
+          autopsy:
+            "not necessarily, rather ve may vary yapılarını korur: kesin başarısızlık iddiası yok; etkilerin topluluklara göre değişebileceği önerilir.",
+        },
+        {
+          id: "D",
+          text: "D) Müdahalenin etkileri toplumlar arasında değiştiği için bulgular onun başarısız olduğunu göstermez.",
+          correct: false,
+          autopsy:
+            "Kaynak cümledeki “aksi yönde öneri”yi neden-sonuç ilişkisine çevirir; rather ile kurulan düzeltme ilişkisi kaybolur.",
+        },
+        {
+          id: "E",
+          text: "E) Bulgular, müdahalenin etkilerinin bütün toplumlarda değiştiğini ve bu nedenle başarısız olduğunu kanıtlar.",
+          correct: false,
+          autopsy:
+            "may vary belirsizliğini “bütün toplumlarda değişti” kesinliğine çevirir ve başarısızlık sonucunu kaynakta olmayan biçimde ekler.",
+        },
+      ],
+      revealTitle: "Çevirimi analiz et",
+      structural: "not necessarily + rather + may vary: ihtiyatlı olumsuzluk, düzeltme ve olasılık birlikte korunmalı.",
+      meaning:
+        "Bulgular başarısızlığı kesin göstermez; aksine etkilerin topluluklara göre değişebileceğine işaret eder. İlişki: düzeltme / sınırlama, kesin kanıt değil.",
+    },
+    sources: [
+      {
+        cite: "Dinçer, Antonova-Unlu & Kumcu (2022)",
+        title: "Assessing the use of multiple-choice translation items in English proficiency tests",
+        venue: "Applied Linguistics Review, 13(4), 461-475",
+        summary:
+          "YDS’deki çoktan seçmeli çeviri maddelerinin algılanan zorluğunu ve ölçme geçerliliğini inceler. Bulgular, çeviri maddelerinin diğer bölümlere göre daha kolay algılandığını ve genel teste kıyasla daha ılımlı bir dış geçerlik gösterdiğini raporlar; bu maddelerin puanı şişirebileceğine dikkat çeker.",
+        productClaim:
+          "Makul ürün kararı: çeviri alıştırmasında kelime eşlemesi değil, bağlaç, kiplik ve kapsam ilişkilerini bozan çeldiricileri görünür kılmak. Bu çalışma, outklas.’ın belirli bir çeviri taktiğinin YDS puanını kesin yükselttiğini kanıtlamaz.",
+        doi: "https://doi.org/10.1515/applirev-2019-0064",
+      },
+    ],
+    disclaimer:
+      "Bu sayfadaki sorular outklas. için özgün örneklerdir; çıkmış ÖSYM soruları değildir. Sınav formatı için nihai kaynak ÖSYM kılavuzu ve kitapçığıdır.",
+    ctaLine: "outklas. Translation Lab: İskeleti çıkar, ilişkiyi koru ve çeldiricinin neyi değiştirdiğini gör.",
+    ctaPrimary: { href: "/teshis", label: "Ücretsiz alıştırmayla test et →" },
+    ctaSecondary: { href: "/bugun", label: "Günlük çalışmaya bak" },
+  },
+
+  reading: {
+    section: "reading",
+    seoTitle: "YDS Okuduğunu Anlama: Paragraf Soruları | outklas.",
+    seoDescription:
+      "YDS ve YÖKDİL okuduğunu anlama sorularını ana fikir, çıkarım, ayrıntı ve metinsel kanıt analiziyle çöz. Açıklamalı paragraf soruları çöz.",
+    h1: "YDS Okuduğunu Anlama: Paragraf Soruları Nasıl Çözülür?",
+    lead: "YDS ve YÖKDİL okuduğunu anlama sorularında amaç, paragraftaki her kelimeyi Türkçeye çevirmek değildir. Asıl amaç; metnin ana fikrini, belirli ayrıntıları, neden-sonuç ilişkilerini ve yazarın iddiasının sınırlarını doğru belirlemektir.",
+    approach:
+      "outklas. okuma yaklaşımı: Sorunun ne istediğini belirle, ilgili metinsel kanıtı bul ve seçenekleri bu kanıtın desteklediği kapsam içinde değerlendir. Seçeneği değil, metindeki kanıtı takip et.",
+    layersTitle: "Okuduğunu anlama sorularında hangi beceriler ölçülür?",
+    layers: [
+      { title: "Ana fikir", body: "Paragrafın temel mesajı nedir?" },
+      { title: "Ayrıntı", body: "Metinde hangi bilgi açıkça verilmiştir?" },
+      { title: "Çıkarım", body: "Metindeki bilgilerden hangi sonuç makul biçimde çıkarılabilir?" },
+      { title: "Gönderim", body: "It, they, this, such gibi ifadeler hangi kavrama gönderme yapar?" },
+      {
+        title: "Söylem ilişkisi",
+        body: "Cümleler arasında karşıtlık, açıklama, örnekleme veya sonuç ilişkisi var mı?",
+      },
+      { title: "İddia kapsamı", body: "Yazar “bazı” mı diyor, “çoğu” mu, yoksa “tümü” mü?" },
+    ],
+    layersNote:
+      "Bir seçenek metindeki konuyla ilgili olabilir ama yine de yanlış olabilir. Çünkü konuya uygun olmak, metin tarafından desteklenmekle aynı şey değildir.",
+    workedTitle: "Açıklamalı paragraf sorusu",
+    workedSteps: {
+      structural: "1. Metindeki kanıtı bul",
+      meaning: "2. Kapsam kontrolü",
+      autopsy: "3. Çeldirici otopsisi",
+    },
+    worked: {
+      passage:
+        "Urban green roofs are increasingly used to reduce heat absorption in densely built areas. By covering rooftops with vegetation, cities can create surfaces that remain cooler than conventional roofing materials under certain conditions. Green roofs may also retain some rainwater, reducing the amount that immediately enters drainage systems. However, their performance depends on factors such as substrate depth, plant selection and local climate. As a result, green roofs should not be treated as a universal substitute for broader urban water-management and heat-reduction strategies.",
+      stem: "Which of the following can be inferred from the passage?",
+      prompt: "Metinden çıkarılabilecek en doğru sonucu seç.",
+      options: [
+        {
+          id: "A",
+          text: "A) Green roofs eliminate the need for conventional urban drainage systems.",
+          correct: false,
+          autopsy:
+            "Aşırı genelleme: Metin yağmur suyunun drenaj sistemlerine hemen ulaşan miktarının azalabileceğini söyler; drenaj sistemlerinin gereksiz hâle geldiğini söylemez.",
+        },
+        {
+          id: "B",
+          text: "B) Every green roof performs equally well regardless of local climate.",
+          correct: false,
+          autopsy: "Metinle çelişki: Performansın yerel iklime bağlı olduğu açıkça belirtilmiştir.",
+        },
+        {
+          id: "C",
+          text: "C) Green roofs can provide environmental benefits, but their effectiveness depends on design and local conditions.",
+          correct: true,
+          autopsy:
+            "Doğru çıkarım: Faydaları (ısı / yağmur suyu) ve bu faydaların tasarım ile yerel koşullara bağlılığını birlikte korur.",
+        },
+        {
+          id: "D",
+          text: "D) The main purpose of green roofs is to prevent all rainfall from entering drainage systems.",
+          correct: false,
+          autopsy:
+            "Amaç ve miktar hatası: Metin yağmur suyunun bir kısmının tutulabileceğini söyler; bütün yağışın engellendiğini veya bunun tek temel amaç olduğunu söylemez.",
+        },
+        {
+          id: "E",
+          text: "E) Cities that install green roofs no longer need other strategies to reduce urban heat.",
+          correct: false,
+          autopsy:
+            "Kapsam hatası: Son cümle, yeşil çatıların daha geniş stratejilerin evrensel bir ikamesi olarak görülmemesi gerektiğini açıkça belirtir.",
+        },
+      ],
+      structural: [
+        "Yeşil çatılar, belirli koşullarda ısı emilimini azaltabilir ve yağmur suyunun bir bölümünü tutabilir.",
+        "Performansları bitki seçimi, alt tabaka derinliği ve yerel iklim gibi etkenlere bağlıdır.",
+        "C seçeneği bu iki bilgiyi birlikte korur: fayda vardır, ancak etkililik koşullara bağlıdır.",
+      ],
+      meaning: [
+        "Doğru çıkarım metinde kelimesi kelimesine yazılmak zorunda değildir; ama metindeki bilgilerle gerekçelendirilebilir olmalıdır.",
+        "all, every, never, eliminate, only gibi ifadeler seçeneğin kapsamını şişirip şişirmediğini kontrol etmek için yararlıdır.",
+        "Kendi bilgilerinle mantıklı görünen bir sonuç, metin desteklemiyorsa doğru değildir.",
+      ],
+      rule: {
+        title: "Çıkarım sorularında temel kural",
+        body: "Doğru çıkarım, metinde kelimesi kelimesine yazılmak zorunda değildir; ancak metindeki bilgilerle gerekçelendirilebilir olmalıdır. Konuya uygun olmak, metin tarafından desteklenmekle aynı şey değildir.",
+      },
+    },
+    nextTitle: "Paragraf sorularını dört adımda çöz",
+    nextSteps: [
+      "Soru kökünü sınıflandır. Ana fikir mi, ayrıntı mı, çıkarım mı, gönderim mi soruluyor?",
+      "İlgili kanıtı bul. Bütün paragrafı yeniden çevirmek yerine, soruyla ilişkili cümleleri incele.",
+      "Seçeneklerin kapsamını kontrol et. “Bazı”yı “tümü”ne, “olabilir”i “kesinlikle olur”a dönüştüren seçeneklere dikkat et.",
+      "Kanıtla doğrula. Doğru seçenek metindeki bir veya birkaç ifadeyle desteklenebilmeli; yanlış seçenek çelişki, aşırı genelleme veya desteklenmeyen çıkarım içermelidir.",
+    ],
+    misses: {
+      title: "En sık yapılan hatalar",
+      items: [
+        "Paragrafın konusunu anlamayı, ana fikri bulmakla karıştırmak.",
+        "Metinde geçen bir kelimeyi içerdiği için seçeneği doğru kabul etmek.",
+        "Metnin söylemediği bir sonucu kendi genel bilgisine dayanarak çıkarmak.",
+        "Olasılığı kesinliğe dönüştüren seçenekleri fark etmemek.",
+        "Bir ayrıntıyı paragrafın ana fikri sanmak.",
+      ],
+    },
+    beyondTitle: "Metinsel kanıtı takip et",
+    beyondBody:
+      "Okuma bölümünde “doğru cevabı bul” yetmez; “doğru cevabın metinsel kanıtını bul” gerekir. Yanlışını çelişki, aşırı genelleme, desteklenmeyen çıkarım veya kapsam hatası olarak ayır.",
+    errorKinds: {
+      title: "Yanlışını hangi kanıt hatasına bağla?",
+      items: [
+        "Metinle çelişki",
+        "Aşırı genelleme / kapsam şişirme",
+        "Desteklenmeyen çıkarım",
+        "Ayrıntıyı ana fikir sanma",
+        "Olasılığı kesinliğe çevirme",
+      ],
+    },
+    lab: {
+      code: "Reading Lab · 01",
+      minutes: "Çıkarım · B2-C1 · yaklaşık 60 saniye",
+      passage:
+        "Some universities have introduced recorded lectures to give students greater flexibility. Students can revisit difficult sections and study at times that suit their schedules. Nevertheless, recorded lectures do not automatically improve learning outcomes. Their value may depend on how students use them and whether the recordings are integrated with other learning activities, such as discussion and practice.",
+      stem: "Which of the following is best supported by the passage?",
+      prompt: "Metinsel kanıtı en iyi koruyan seçeneği seç.",
+      options: [
+        {
+          id: "A",
+          text: "A) Recorded lectures are more effective than classroom teaching for all students.",
+          correct: false,
+          autopsy: "Metin sınıf öğretimiyle genel bir üstünlük karşılaştırması yapmaz; “all students” kapsamını da şişirir.",
+        },
+        {
+          id: "B",
+          text: "B) Students who use recorded lectures always achieve better results.",
+          correct: false,
+          autopsy:
+            "do not automatically improve learning outcomes ifadesiyle çelişir; always kesinliği metinde yoktur.",
+        },
+        {
+          id: "C",
+          text: "C) Recorded lectures can offer flexibility, but their educational value may depend on how they are used.",
+          correct: true,
+          autopsy:
+            "Esneklik faydasını ve “otomatik iyileşme yok / kullanıma bağlı değer” sınırını birlikte koruyan desteklenen çıkarımdır.",
+        },
+        {
+          id: "D",
+          text: "D) Universities should replace discussion and practice with recorded lectures.",
+          correct: false,
+          autopsy:
+            "Metin tartışma ve pratiği kayıtlarla bütünleştirmenin değerini vurgular; bunların yerini alma önerisi yoktur.",
+        },
+        {
+          id: "E",
+          text: "E) Recorded lectures have no educational value unless students watch every recording more than once.",
+          correct: false,
+          autopsy:
+            "“Hiç değeri yok” ve “her kaydı birden fazla izleme” koşulları metinde yoktur; aşırı genelleme ve uydurma koşuldur.",
+        },
+      ],
+      revealTitle: "Metinsel kanıtı göster",
+      structural:
+        "Esneklik (revisit / schedules) + Nevertheless otomatik iyileşme yok + value may depend on use / integration: fayda ile koşul birlikte.",
+      meaning:
+        "Kayıtlı dersler esneklik sunabilir; ancak öğrenme değeri kullanıma ve diğer etkinliklerle bütünleşmeye bağlı olabilir. Desteklenen çıkarım budur.",
+    },
+    sources: [
+      {
+        cite: "Platas-García, Castro-Manzano & Reyes-Meza (2020)",
+        title: "Reading comprehension as a complex phenomenon",
+        venue: "Ricerche di Pedagogia e Didattica, 15(2), 17-37",
+        summary:
+          "Okuduğunu anlamayı ölçme, çıkarım ve yabancı dil boyutlarıyla inceler. Test özelliklerinin (uzunluk, karmaşıklık, çıkarım) performans üzerinde etkili olabildiğini; çıkarım türlerinin açıkça tanımlanmasının çoktan seçmeli okuma değerlendirmesinde önemli olduğunu vurgular.",
+        productClaim:
+          "Makul ürün kararı: çıkarım sorularında açık kanıt ile desteklenen çıkarımı ayırmak; all / every / eliminate gibi kapsam şişiricilerini çeldirici olarak göstermek. Bu çalışma, outklas.’ın belirli bir okuma rotasının puanı kesin artırdığını kanıtlamaz.",
+        doi: "https://doi.org/10.6092/issn.1970-2221/9401",
+      },
+    ],
+    disclaimer:
+      "Bu sayfadaki sorular outklas. için özgün örneklerdir; çıkmış ÖSYM soruları değildir. ÖSYM’nin yayımladığı sınav sorularını kullanırken telif ve kullanım koşullarına ayrıca dikkat edilmelidir.",
+    ctaLine: "outklas. Reading Lab: Metinsel kanıtı bul, çıkarımı sınırlandır ve çeldiricinin hangi noktada metinden uzaklaştığını gör.",
     ctaPrimary: { href: "/teshis", label: "Ücretsiz alıştırmayla test et →" },
     ctaSecondary: { href: "/bugun", label: "Günlük çalışmaya bak" },
   },
