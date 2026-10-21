@@ -243,7 +243,7 @@ export default function HomePage() {
               Yöntemi incele ↓
             </a>
           </div>
-          <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+          <p className="hero-aside mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
             <span className="h-1.5 w-1.5 rounded-full bg-pine" aria-hidden />
             Ücretsiz ilk deneyim · Kayıt gerektirmez · Yaklaşık 3 dakika
           </p>

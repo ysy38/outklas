@@ -280,16 +280,16 @@ export function HeroAssembly({ copy, report, caption }: { copy: ReactNode; repor
         <canvas ref={back} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" />
         <div className="relative mx-auto grid w-full max-w-6xl items-center gap-4 px-4 pb-8 pt-10 sm:px-5 sm:pt-14 lg:grid-cols-[0.92fr_1.08fr] lg:gap-6 lg:pt-10 pin:h-full pin:grid-cols-1 pin:py-0 lg:pin:grid-cols-[0.92fr_1.08fr]">
           {/* Pinned mobile: compact copy overlays the top so the helix stays in view. */}
-          <div className="rise-in pin:absolute pin:inset-x-4 pin:top-4 pin:z-30 pin:max-w-xl sm:pin:inset-x-5 lg:pin:relative lg:pin:inset-auto lg:pin:top-auto lg:pin:z-auto lg:pin:max-w-none">
+          <div className="rise-in pin:absolute pin:inset-x-4 pin:top-3 pin:z-30 pin:max-w-xl sm:pin:inset-x-5 sm:pin:top-4 lg:pin:relative lg:pin:inset-auto lg:pin:top-auto lg:pin:z-auto lg:pin:max-w-none">
             <div
               ref={copyBox}
-              className="will-change-transform pin:rounded-2xl pin:bg-paper/85 pin:p-3.5 pin:shadow-[0_18px_40px_-28px_rgba(23,36,59,0.45)] pin:backdrop-blur-md pin:[&>p:nth-of-type(2)]:hidden pin:[&>p:nth-of-type(3)]:hidden pin:[&>ul]:hidden pin:[&_h1]:mt-2 pin:[&_h1]:text-[1.55rem] pin:[&_h1]:leading-[1.2] pin:[&>div.mt-7]:mt-3.5 pin:[&_a.rounded-full.border]:hidden sm:pin:p-4 lg:pin:bg-transparent lg:pin:p-0 lg:pin:shadow-none lg:pin:backdrop-blur-none lg:pin:[&>p:nth-of-type(2)]:block lg:pin:[&>p:nth-of-type(3)]:block lg:pin:[&>ul]:flex lg:pin:[&_h1]:mt-4 lg:pin:[&_h1]:text-[clamp(2.35rem,4.5vw,3.85rem)] lg:pin:[&_h1]:leading-[1.12] lg:pin:[&>div.mt-7]:mt-7 lg:pin:[&_a.rounded-full.border]:inline-flex"
+              className="will-change-transform pin:rounded-2xl pin:bg-paper/85 pin:p-3.5 pin:shadow-[0_18px_40px_-28px_rgba(23,36,59,0.45)] pin:backdrop-blur-md pin:[&>p:nth-of-type(2)]:hidden pin:[&>p:nth-of-type(3)]:hidden pin:[&_.hero-aside]:hidden pin:[&>ul]:hidden pin:[&_h1]:mt-2 pin:[&_h1]:text-[1.45rem] pin:[&_h1]:leading-[1.15] pin:[&>div.mt-7]:mt-3 pin:[&_a.rounded-full.border]:hidden sm:pin:p-4 lg:pin:bg-transparent lg:pin:p-0 lg:pin:shadow-none lg:pin:backdrop-blur-none lg:pin:[&>p:nth-of-type(2)]:block lg:pin:[&>p:nth-of-type(3)]:block lg:pin:[&_.hero-aside]:flex lg:pin:[&>ul]:flex lg:pin:[&_h1]:mt-4 lg:pin:[&_h1]:text-[clamp(2.35rem,4.5vw,3.85rem)] lg:pin:[&_h1]:leading-[1.12] lg:pin:[&>div.mt-7]:mt-7 lg:pin:[&_a.rounded-full.border]:inline-flex"
             >
               {copy}
             </div>
           </div>
-          <div className="rise-in rise-in-late pin:flex pin:h-full pin:items-end pin:justify-center pin:pb-[18%] sm:pin:items-center sm:pin:pb-0 lg:pin:items-center">
-            <div ref={slot} aria-hidden className="relative mx-auto h-[25rem] w-full max-w-[34rem] sm:h-[28rem] lg:h-[31rem] pin:h-[min(24rem,48svh)] sm:pin:h-[min(28rem,58svh)] lg:pin:h-[31rem]">
+          <div className="rise-in rise-in-late pin:flex pin:h-full pin:items-end pin:justify-center pin:pb-[14%] pin:pt-[7.5rem] sm:pin:items-center sm:pin:pb-0 sm:pin:pt-0 lg:pin:items-center lg:pin:pt-0">
+            <div ref={slot} aria-hidden className="relative mx-auto h-[25rem] w-full max-w-[34rem] sm:h-[28rem] lg:h-[31rem] pin:h-[min(22rem,42svh)] sm:pin:h-[min(28rem,58svh)] lg:pin:h-[31rem]">
               <div ref={register(3)} className="pointer-events-none absolute left-1/2 top-[47%] h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--pine)_20%,transparent),color-mix(in_srgb,var(--teal)_10%,transparent)_50%,transparent_72%)] blur-2xl" />
 
               <article ref={register(0)} className={`${cardClass} left-0 top-[5%]`}>

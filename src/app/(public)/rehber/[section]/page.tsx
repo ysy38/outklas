@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { brand, siteUrl } from "@/brand";
 import { GuideDeep } from "@/components/guide-deep";
 import { skillName } from "@/content/labels";
+import { articleJsonLd } from "@/content/editorial";
 import { deepGuideFor } from "@/content/guide-labs";
 import { rehberBySection } from "@/content/rehber";
 import { and, answers, eq, getDb, inArray, items, mastery } from "@/db/client";
@@ -25,6 +27,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       openGraph: {
         title: deep.seoTitle,
         description: deep.seoDescription,
+        type: "article",
+        url: `${siteUrl}/rehber/${section}`,
+        siteName: brand.name,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: deep.seoTitle,
+        description: deep.seoDescription,
       },
     };
   }
@@ -41,13 +51,69 @@ export default async function GuideSectionPage({ params }: Props) {
   const note = rehberBySection(section);
   if (!band || !note) notFound();
   const deep = deepGuideFor(section);
+  const path = `/rehber/${section}`;
   const profile = await currentProfile();
   const stats = profile ? await sectionStats(profile.id, band.section) : null;
   const readingSkills = profile && band.section === "reading" ? await readingBreakdown(profile.id) : [];
 
+  const jsonLd = deep
+    ? {
+        "@context": "https://schema.org",
+        "@graph": [
+          articleJsonLd({ path, title: deep.h1, description: deep.seoDescription }),
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Ana sayfa", item: siteUrl },
+              { "@type": "ListItem", position: 2, name: "Rehber", item: `${siteUrl}/rehber` },
+              { "@type": "ListItem", position: 3, name: band.title, item: `${siteUrl}${path}` },
+            ],
+          },
+          {
+            "@type": "HowTo",
+            name: deep.nextTitle,
+            description: deep.approach,
+            step: deep.nextSteps.map((text, index) => ({
+              "@type": "HowToStep",
+              position: index + 1,
+              name: `Adım ${index + 1}`,
+              text,
+            })),
+          },
+          {
+            "@type": "FAQPage",
+            mainEntity: [
+              {
+                "@type": "Question",
+                name: deep.h1,
+                acceptedAnswer: { "@type": "Answer", text: `${deep.lead} ${deep.approach}` },
+              },
+              {
+                "@type": "Question",
+                name: deep.layersTitle,
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: `${deep.layers.map((layer) => `${layer.title}: ${layer.body}`).join(" ")} ${deep.layersNote}`,
+                },
+              },
+              {
+                "@type": "Question",
+                name: "Yanlış seçenekler nasıl analiz edilir?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: "Doğru cevabı ezberlemek yeterli değildir. Her yanlış seçeneğin yapısal veya anlamsal olarak neden elendiğini ayrı ayrı gerekçelendirmek gerekir.",
+                },
+              },
+            ],
+          },
+        ],
+      }
+    : null;
+
   return (
-    <article className="landing mx-auto grid w-full max-w-6xl gap-8 px-4 py-10 sm:px-5 sm:py-16 lg:grid-cols-[1.15fr_0.85fr]">
-      <div>
+    <article className="landing mx-auto grid w-full max-w-6xl gap-8 px-4 py-10 sm:px-5 sm:py-16 lg:grid-cols-[minmax(0,1fr)_min(100%,280px)] lg:gap-10">
+      {jsonLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /> : null}
+      <div className="min-w-0">
         <p className="text-xs uppercase tracking-[0.18em] text-gold">
           <Link href="/rehber" className="hover:text-ink">
             Rehber
@@ -56,7 +122,7 @@ export default async function GuideSectionPage({ params }: Props) {
           {band.to - band.from + 1} soru · {band.title}
         </p>
         {deep ? (
-          <GuideDeep guide={deep} />
+          <GuideDeep guide={deep} path={path} />
         ) : (
           <>
             <h1 className="display mt-3">{band.title}</h1>
@@ -81,11 +147,38 @@ export default async function GuideSectionPage({ params }: Props) {
       </div>
 
       <aside className="space-y-4 lg:sticky lg:top-28 lg:self-start">
-        <div className="rounded-[28px] border border-line bg-card p-6">
+        {deep ? (
+          <nav aria-label="Sayfa içi" className="rounded-[24px] border border-line bg-card p-5 sm:rounded-[28px]">
+            <p className="text-xs uppercase tracking-[0.16em] text-gold">Bu sayfada</p>
+            <ul className="mt-3 space-y-2 text-sm">
+              <li>
+                <a href="#ornek-soru" className="font-medium text-ink hover:text-pine">
+                  Örnek soruyu incele
+                </a>
+              </li>
+              <li>
+                <a href="#lab" className="font-medium text-ink hover:text-pine">
+                  Örnek soru çöz
+                </a>
+              </li>
+              <li>
+                <a href="#yontem" className="text-muted hover:text-pine">
+                  Çözüm adımları
+                </a>
+              </li>
+              <li>
+                <a href="#kaynaklar" className="text-muted hover:text-pine">
+                  Kaynaklar
+                </a>
+              </li>
+            </ul>
+          </nav>
+        ) : null}
+        <div className="rounded-[24px] border border-line bg-card p-5 sm:rounded-[28px] sm:p-6">
           <p className="text-xs uppercase tracking-[0.16em] text-gold">İpucu</p>
-          <p className="mt-3 leading-7">{note.tip}</p>
+          <p className="mt-3 text-sm leading-7 sm:text-base">{note.tip}</p>
         </div>
-        <div className="rounded-[28px] border border-line bg-card p-6">
+        <div className="rounded-[24px] border border-line bg-card p-5 sm:rounded-[28px] sm:p-6">
           <p className="text-xs uppercase tracking-[0.16em] text-gold">Senin sonuçların</p>
           {stats && stats.answered > 0 ? (
             <>
@@ -114,12 +207,12 @@ export default async function GuideSectionPage({ params }: Props) {
               ))}
             </ul>
           ) : null}
-          <Link href={profile ? "/bugun" : "/teshis"} className="mt-5 inline-block rounded-full bg-pine px-4 py-2 text-sm font-semibold text-pine-ink">
+          <Link href={profile ? "/bugun" : "/teshis"} className="mt-5 inline-flex min-h-11 items-center rounded-full bg-pine px-4 py-2 text-sm font-semibold text-pine-ink">
             {profile ? "Bugünün çalışmasına dön" : "Seviye testine başla"}
           </Link>
         </div>
         {deep ? (
-          <div className="rounded-[28px] border border-pine/25 bg-soft p-5">
+          <div className="rounded-[24px] border border-pine/25 bg-soft p-5 sm:rounded-[28px]">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine">outklas. standardı</p>
             <p className="mt-2 text-sm leading-6 text-ink">
               Yapısal kanıt → anlam kontrolü → çeldirici otopsisi. Kuralı ezberlemek değil; soruyu çözmek ve gerekçeyi görmek.

@@ -250,9 +250,11 @@ export function XrayLab() {
           </div>
           {wordInfo ? <p className="mt-3 rounded-xl border border-pine/25 bg-soft px-3.5 py-3 text-xs leading-6 text-ink">{wordInfo}</p> : null}
 
-          <div className="mt-5 flex items-start gap-3 rounded-xl border border-pine/25 bg-soft p-4">
-            <span className="mt-0.5 shrink-0 rounded bg-pine px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em]">{brand.wordmark} teşhisi</span>
-            <p className="text-sm leading-6 text-ink">{data.diagnosis[mode]}</p>
+          <div className="mt-5 flex flex-col gap-2.5 rounded-xl border border-pine/25 bg-soft p-4 sm:flex-row sm:items-start sm:gap-3">
+            <span className="w-fit shrink-0 rounded bg-pine px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-pine-ink">
+              {brand.wordmark} teşhisi
+            </span>
+            <p className="min-w-0 flex-1 text-sm leading-6 text-ink">{data.diagnosis[mode]}</p>
           </div>
         </div>
 
