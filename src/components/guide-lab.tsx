@@ -65,8 +65,8 @@ export function GuideLab({ lab }: { lab: GuideLabItem }) {
       <div className="p-4 sm:p-6">
         {lab.passage ? (
           <div className="rounded-2xl border border-line bg-soft/80 p-3.5 sm:p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-pine">Passage</p>
-            <p className="mt-2 text-sm leading-7 text-ink">{lab.passage}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-pine">{lab.passageLabel ?? "Passage"}</p>
+            <p className="mt-2 whitespace-pre-line text-sm leading-7 text-ink">{lab.passage}</p>
           </div>
         ) : null}
         <p className={`text-base font-medium leading-relaxed text-ink sm:text-xl sm:leading-8 ${lab.passage ? "mt-4" : ""}`}>{lab.stem}</p>

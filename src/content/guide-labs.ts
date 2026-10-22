@@ -9,6 +9,7 @@ export type GuideOption = {
 
 export type GuideWorked = {
   passage?: string;
+  passageLabel?: string;
   stem: string;
   prompt?: string;
   options: GuideOption[];
@@ -21,6 +22,7 @@ export type GuideLabItem = {
   code: string;
   minutes: string;
   passage?: string;
+  passageLabel?: string;
   stem: string;
   prompt: string;
   options: GuideOption[];
@@ -63,6 +65,7 @@ export type DeepGuide = {
   notebook?: { title: string; fields: string[]; tip: string };
   misses?: { title: string; items: string[] };
   errorKinds?: { title: string; items: string[] };
+  faqs?: { question: string; answer: string }[];
   disclaimer?: string;
 };
 
@@ -1003,6 +1006,768 @@ export const deepGuides: Partial<Record<SectionId, DeepGuide>> = {
     disclaimer:
       "Bu sayfadaki sorular outklas. için özgün örneklerdir; çıkmış ÖSYM soruları değildir. ÖSYM’nin yayımladığı sınav sorularını kullanırken telif ve kullanım koşullarına ayrıca dikkat edilmelidir.",
     ctaLine: "outklas. Reading Lab: Metinsel kanıtı bul, çıkarımı sınırlandır ve çeldiricinin hangi noktada metinden uzaklaştığını gör.",
+    ctaPrimary: { href: "/teshis", label: "Ücretsiz alıştırmayla test et →" },
+    ctaSecondary: { href: "/bugun", label: "Günlük çalışmaya bak" },
+  },
+
+  dialogue: {
+    section: "dialogue",
+    seoTitle: "YDS Diyalog Tamamlama Soruları: Açıklamalı Örnekler | outklas.",
+    seoDescription:
+      "YDS ve YÖKDİL diyalog tamamlama sorularını konuşma amacı, söylem ilişkileri ve çeldirici analiziyle çöz. Açıklamalı örneklerle pratik yap.",
+    h1: "YDS Diyalog Tamamlama: Doğru Cevap Nasıl Bulunur?",
+    lead: "YDS ve YÖKDİL diyalog tamamlama sorularında doğru seçeneği bulmak için yalnızca konuşmanın konusunu anlamak yeterli değildir. Eksik ifadeyi, konuşmacının amacına, önceki sözlere verdiği tepkiye ve konuşmanın doğal akışına göre belirlemelisin.",
+    approach:
+      "outklas. yaklaşımı: Konuyu belirle, konuşma işlevini tanı ve cevabını bağlamla doğrula. Konuya uygun olmak, diyaloğa işlevsel olmakla aynı şey değildir.",
+    layersTitle: "Diyalog tamamlama hangi becerileri gerektirir?",
+    layers: [
+      {
+        title: "Edimbilim (pragmatics)",
+        body: "Konuşmacı gerçekte ne yapmaya çalışıyor? Öneride mi bulunuyor, itiraz mı ediyor, bilgi mi istiyor?",
+      },
+      {
+        title: "Söylem ilişkileri",
+        body: "Eksik ifade önceki cümleyle açıklama, karşılık, öneri, kabul veya karşıtlık ilişkisi kuruyor mu?",
+      },
+      { title: "Bağlam ve çıkarım", body: "Konuşmacının durumu, amacı ve beklentisi ne?" },
+      {
+        title: "Dilbilgisi",
+        body: "Zamirler, zamanlar, soru biçimleri ve diğer yapılar konuşmanın geri kalanıyla uyuşuyor mu?",
+      },
+      { title: "Doğallık", body: "Seçenek, konuşmanın akışına uygun ve iletişimsel açıdan işlevsel mi?" },
+    ],
+    layersNote:
+      "Bir seçenek konuya uygun olabilir ama diyalogda işlevsiz kalabilir. Sorun anlatılıyorsa uygun cevap genellikle bu soruna tepki verir; ilgisiz bilgi veya yalnızca tekrar, konuşmanın amacını karşılamaz.",
+    workedTitle: "Açıklamalı örnek soru",
+    workedSteps: {
+      structural: "1. Konuşmacının amacını belirle",
+      meaning: "2. Söylem işlevini belirle",
+      autopsy: "3. Çeldirici otopsisi",
+    },
+    worked: {
+      passageLabel: "Diyalog",
+      passage: "Researcher: The department wants us to submit the revised proposal by Friday, but the data analysis isn't finished.",
+      stem: "Colleague: ----",
+      prompt: "Boşluğa iletişimsel olarak en işlevsel ifadeyi seç.",
+      options: [
+        {
+          id: "A",
+          text: "A) I agree that Friday is the fifth day of the working week.",
+          correct: false,
+          autopsy: "Konu dışı tepki: Cuma gününün haftanın kaçıncı günü olduğu, teslim sorununun çözümüne katkı sağlamaz.",
+        },
+        {
+          id: "B",
+          text: "B) Why don't you contact the department and ask whether a short extension is possible?",
+          correct: true,
+          autopsy:
+            "Why don't you …? ile öneri sunar; içerik doğrudan probleme yöneliktir: teslim tarihinin uzatılmasının mümkün olup olmadığını öğrenmek.",
+        },
+        {
+          id: "C",
+          text: "C) The proposal was approved last year without any revisions.",
+          correct: false,
+          autopsy: "Zaman ve bağlam uyumsuzluğu: Geçen yılki onaydan söz eder; mevcut teslim tarihi sorununu ele almaz.",
+        },
+        {
+          id: "D",
+          text: "D) I have always preferred working in the morning.",
+          correct: false,
+          autopsy: "İlgisiz kişisel bilgi: Sabah çalışmayı tercih etmek, teklifin yetişmemesi sorununa yanıt değildir.",
+        },
+        {
+          id: "E",
+          text: "E) You should submit the final version before you begin analysing the data.",
+          correct: false,
+          autopsy: "Mantıksal uyumsuzluk: Veri analizi tamamlanmadan nihai sürümün teslim edilmesini önerir; verilen sorunu çözmez.",
+        },
+      ],
+      structural: [
+        "Revize edilmiş teklifin teslim tarihi cuma.",
+        "Veri analizi henüz tamamlanmamış.",
+        "But bağlacı, teslim tarihi ile tamamlanmamış iş arasında sorun / karşıtlık kuruyor.",
+        "Doğal devam: soruna çözüm önermek veya durumu netleştiren bir soru sormak.",
+      ],
+      meaning: [
+        "B seçeneği Why don't you …? yapısıyla öneri işlevi taşır.",
+        "Önerinin içeriği belirtilen probleme doğrudan bağlanır.",
+        "Temel ilke: En iyi seçenek yalnızca aynı konudan söz eden değil, konuşmanın gerektirdiği iletişimsel işi yapan seçenektir.",
+      ],
+      rule: {
+        title: "Diyalog sorularında dört adım",
+        body: "1) Konuşmacının sorununu, amacını veya beklentisini belirle. 2) Eksik ifadenin hangi iletişimsel işlevi üstlenmesi gerektiğini tahmin et. 3) Seçenekleri hem anlam hem söylem ilişkisi bakımından karşılaştır. 4) Diyaloğu seçtiğin cevapla birlikte baştan oku; doğal ve tutarlı olup olmadığını kontrol et.",
+      },
+    },
+    nextTitle: "Diyalog sorularında dört adım",
+    nextSteps: [
+      "Konuşmacının sorununu, amacını veya beklentisini belirle.",
+      "Eksik ifadenin hangi iletişimsel işlevi üstlenmesi gerektiğini tahmin et.",
+      "Seçenekleri hem anlam hem de söylem ilişkisi bakımından karşılaştır.",
+      "Diyaloğu seçtiğin cevapla birlikte baştan oku; konuşmanın doğal ve tutarlı olup olmadığını kontrol et.",
+    ],
+    misses: {
+      title: "En sık yapılan hatalar",
+      items: [
+        "Konuya uygun ama iletişimsel olarak işlevsiz seçeneği işaretlemek.",
+        "Öneri gereken yerde yalnızca olgu tekrarı yapmak.",
+        "Zaman veya bağlam uyumsuzluğunu fark etmemek.",
+        "Sorunu çözmeyen “mantıklı görünen” tavsiyeyi kabul etmek.",
+      ],
+    },
+    beyondTitle: "Kendi hatanı sınıflandır",
+    beyondBody:
+      "Yanlış cevabın nedenini kaydet: konuşmacının amacını kaçırma, söylem ilişkisinin yanlış yorumlanması, bağlamdan desteklenmeyen çıkarım, dilbilgisel uyumsuzluk veya konuya uygun ama işlevsiz seçenek. Sonraki alıştırmayı bu hata türüne göre seç.",
+    errorKinds: {
+      title: "Hata kategorileri",
+      items: [
+        "Konuşmacının amacını kaçırma",
+        "Söylem ilişkisinin yanlış yorumlanması",
+        "Bağlamdan desteklenmeyen çıkarım",
+        "Dilbilgisel uyumsuzluk",
+        "Konuya uygun ama iletişimsel olarak işlevsiz seçenek",
+      ],
+    },
+    lab: {
+      code: "Dialogue Lab · 01",
+      minutes: "Söylem ve edimbilim · yaklaşık 40 saniye",
+      passageLabel: "Diyalog",
+      passage: "Maya: I submitted a paper to the journal three months ago, but I still haven't received a decision.",
+      stem: "Leo: ----",
+      prompt: "Boşluğa iletişimsel olarak en işlevsel ifadeyi seç.",
+      options: [
+        {
+          id: "A",
+          text: "A) The journal publishes several issues every year.",
+          correct: false,
+          autopsy: "Konuya yakın bir olgu verir ama Maya’nın “üç aydır karar yok” sorununa işlevsel bir tepki değildir.",
+        },
+        {
+          id: "B",
+          text: "B) You could send the editor a polite inquiry asking about the status of your submission.",
+          correct: true,
+          autopsy:
+            "Öneri işlevi taşır ve doğrudan probleme yöneliktir: editöre kibar bir durum soruşturması göndermek.",
+        },
+        {
+          id: "C",
+          text: "C) I submitted my university application before the deadline last year.",
+          correct: false,
+          autopsy: "Kişisel ve zamansal olarak ilgisiz bir anı; mevcut makale sürecine yanıt vermez.",
+        },
+        {
+          id: "D",
+          text: "D) Academic papers usually contain an introduction and a conclusion.",
+          correct: false,
+          autopsy: "Genel akademik bilgi verir; karar bekleyen gönderi sorununu ele almaz.",
+        },
+        {
+          id: "E",
+          text: "E) You must withdraw the paper immediately because the journal has rejected it.",
+          correct: false,
+          autopsy:
+            "Bağlamda desteklenmeyen çıkarım: Metin ret kararı vermez; zorunlu geri çekme önerisi sorunu çözer gibi görünür ama kanıtsızdır.",
+        },
+      ],
+      revealTitle: "Cevabı ve çeldirici analizini gör",
+      structural: "But ile kurulan sorun (gönderildi ama karar yok) → işlev: çözüm / eylem önerisi.",
+      meaning:
+        "Leo’nun cevabı Maya’nın bekleme sorununa uygulanabilir bir adım önermelidir. Konu ortaklığı yetmez; iletişimsel iş yapılmalıdır.",
+    },
+    sources: [
+      {
+        cite: "Kehler (2022)",
+        title: "Coherence Establishment as a Source of Explanation in Linguistic Theory",
+        venue: "Annual Review of Linguistics, 8, 123-142",
+        summary:
+          "Söylemde bağdaşıklığın yalnızca konu paylaşmasından ibaret olmadığını; dinleyicinin ilişkileri ve çıkarımları kurarak tutarlı bir söylem oluşturduğunu özetler. Diyalogda da bir ifadenin işlevsel olması, önceki söze kurduğu ilişkiyle değerlendirilir.",
+        productClaim:
+          "Makul ürün kararı: diyalog alıştırmasında “konuya değinen” ile “iletişimsel işi yapan” seçenekleri ayırmak. Bu derleme, outklas.’ın belirli bir diyalog taktiğinin puanı kesin artırdığını kanıtlamaz.",
+        doi: "https://doi.org/10.1146/annurev-linguistics-011619-030357",
+      },
+    ],
+    disclaimer:
+      "Bu sayfadaki sorular outklas. için özgün örneklerdir; çıkmış ÖSYM soruları değildir. Sınav formatı için nihai kaynak ÖSYM kılavuzu ve kitapçığıdır.",
+    ctaLine: "outklas. Dialogue Lab: Amacı tanı, işlevi seç ve çeldiricinin neden işlevsiz kaldığını gör.",
+    ctaPrimary: { href: "/teshis", label: "Ücretsiz alıştırmayla test et →" },
+    ctaSecondary: { href: "/bugun", label: "Günlük çalışmaya bak" },
+  },
+
+  restatement: {
+    section: "restatement",
+    seoTitle: "YDS Anlamca Yakın Cümle Soruları: Açıklamalı Örnekler | outklas.",
+    seoDescription:
+      "YDS ve YÖKDİL anlamca yakın cümle sorularını anlam eşdeğerliği, bağlaç, kiplik ve kapsam analiziyle çöz. Açıklamalı örneklerle pratik yap.",
+    h1: "YDS Anlamca Yakın Cümle: Anlam Eşdeğerliği Nasıl Bulunur?",
+    lead: "YDS ve YÖKDİL anlamca yakın cümle sorularında amaç, verilen cümleyle aynı temel anlamı taşıyan seçeneği bulmaktır. Doğru seçenek aynı kelimeleri kullanmak zorunda değildir; ancak cümlenin temel önermesini ve mantıksal ilişkilerini korumalıdır.",
+    approach:
+      "outklas. yaklaşımı: Kelime benzerliğini değil, önermelerin eşdeğerliğini kontrol et. Zaman, neden-sonuç, olasılık veya kapsam değişmişse seçenek doğru olmayabilir.",
+    layersTitle: "Anlamca yakın cümle sorularında nelere dikkat etmelisin?",
+    layers: [
+      { title: "Anlamsal eşdeğerlik", body: "İki cümle aynı temel durumu veya önermeyi mi ifade ediyor?" },
+      {
+        title: "Sözdizimsel dönüşüm",
+        body: "Etken-edilgen dönüşümü veya yan cümle yapısının değişmesi anlamı koruyor mu?",
+      },
+      {
+        title: "Neden-sonuç ilişkisi",
+        body: "Sebep ile sonuç yer değiştirmiş veya farklı bir ilişkiyle sunulmuş mu?",
+      },
+      {
+        title: "Kiplik",
+        body: "May, might, must, should gibi ifadelerin taşıdığı olasılık, zorunluluk veya öneri derecesi korunuyor mu?",
+      },
+      {
+        title: "Nicelik ve kapsam",
+        body: "Some, most, all, only, rarely gibi ifadeler değiştirilerek iddia güçlendirilmiş veya daraltılmış mı?",
+      },
+      { title: "Olumsuzluk", body: "Cümlenin neyi reddettiği aynı mı?" },
+    ],
+    layersNote:
+      "Bir seçenekteki sözcükler kaynak cümleye çok benzeyebilir. Buna rağmen mantıksal ilişki veya iddia kapsamı değişmişse seçenek doğru değildir.",
+    workedTitle: "Açıklamalı örnek soru",
+    workedSteps: {
+      structural: "1. Anlam iskeletini çıkar",
+      meaning: "2. Anlamı karşılaştır",
+      autopsy: "3. Çeldirici otopsisi",
+    },
+    worked: {
+      passageLabel: "Original sentence",
+      passage:
+        "Although the new insulation is relatively expensive to install, it can reduce energy consumption enough to lower household bills over time.",
+      stem: "Bu cümleye anlamca en yakın seçenek hangisidir?",
+      options: [
+        {
+          id: "A",
+          text: "A) Because the insulation is inexpensive to install, it immediately reduces household bills.",
+          correct: false,
+          autopsy:
+            "Bağlaç ve zaman hatası: Although yerine because kullanır; “hemen” ifadesi kaynakta yoktur ve maliyet bilgisi tersine çevrilir.",
+        },
+        {
+          id: "B",
+          text: "B) Despite its relatively high installation cost, the new insulation can lower household bills over time by reducing energy consumption.",
+          correct: true,
+          autopsy:
+            "Despite ile aynı ödünleme ilişkisini kurar; maliyet, enerji azalması ve zaman içinde faturaların düşebilmesi korunur. can olasılığı kesinliğe çevrilmez.",
+        },
+        {
+          id: "C",
+          text: "C) The new insulation reduces energy consumption only if household bills increase over time.",
+          correct: false,
+          autopsy: "Koşul uydurma: Enerji tüketiminin azalmasını faturaların artmasına bağlar; kaynakta böyle bir koşul yoktur.",
+        },
+        {
+          id: "D",
+          text: "D) Household bills have decreased over time, proving that installing insulation is inexpensive.",
+          correct: false,
+          autopsy:
+            "Kanıt ve neden hatası: Faturaların düştüğünü olmuş olay olarak sunar ve bunun kurulumun ucuz olduğunu kanıtladığını iddia eder.",
+        },
+        {
+          id: "E",
+          text: "E) The new insulation is too expensive to install, so it cannot reduce household energy bills.",
+          correct: false,
+          autopsy:
+            "Anlamın tersine çevrilmesi: Kaynak cümle yalıtımın fayda sağlayabileceğini söylerken seçenek bunun mümkün olmadığını ileri sürer.",
+        },
+      ],
+      structural: [
+        "Yalıtımın kurulumu görece pahalıdır.",
+        "Buna rağmen enerji tüketimini azaltabilir.",
+        "Bu azalma, zaman içinde hane halkının faturalarını düşürebilir.",
+        "Although ödünleme ilişkisi kurar: Yüksek maliyete rağmen bir fayda ortaya çıkabilir.",
+      ],
+      meaning: [
+        "B seçeneği despite ile aynı ödünleme ilişkisini kurar.",
+        "can reduce kesin sonuç değil, mümkün bir sonuç bildirir; doğru seçenek bunu “kesinlikle düşürür”e çevirmemelidir.",
+        "Temel ilke: Doğru seçenek farklı kelimeler kullanabilir; fakat aynı temel anlamı ve mantıksal ilişkileri korumalıdır.",
+      ],
+      rule: {
+        title: "Anlamca yakın cümle için beş adım",
+        body: "1) Ana önermeyi bul. 2) Mantıksal ilişkiyi belirle. 3) Kiplik ve kapsamı işaretle. 4) Eş anlamlı dönüşümleri kontrol et (Although ≈ Despite gibi). 5) Seçenek yeni bilgi ekliyor, ayrıntı çıkarıyor veya iddiayı güçlendiriyorsa dikkatli ol.",
+      },
+    },
+    nextTitle: "Anlamca yakın cümle soruları için beş adım",
+    nextSteps: [
+      "Ana önermeyi bul. Kim veya ne hakkında ne söyleniyor?",
+      "Mantıksal ilişkiyi belirle. Neden, sonuç, karşıtlık, koşul, amaç veya zaman ilişkilerinden hangisi var?",
+      "Kiplik ve kapsamı işaretle. Olasılık kesinliğe, bazıları herkese dönüşmüş mü?",
+      "Eş anlamlı dönüşümleri kontrol et. Although ile despite gibi yapılar farklı biçimlerle benzer ilişkiler kurabilir.",
+      "Son seçeneği kaynak cümleyle karşılaştır. Yeni bilgi, eksik ayrıntı veya güçlendirilmiş iddia varsa dikkatli ol.",
+    ],
+    misses: {
+      title: "En sık yapılan hatalar",
+      items: [
+        "Aynı kelimeleri içeren seçeneği otomatik olarak doğru kabul etmek.",
+        "Cümlenin ana fikrini korurken önemli bir koşulu gözden kaçırmak.",
+        "May ile will arasındaki kesinlik farkını önemsememek.",
+        "Neden ile sonucu birbirine karıştırmak.",
+        "Kaynak cümlede bulunmayan bir sonuç veya gerekçe eklemek.",
+      ],
+    },
+    beyondTitle: "Kelime benzerliği yetmez",
+    beyondBody:
+      "Doğru seçenek farklı kelimeler kullanabilir; fakat aynı temel anlamı ve mantıksal ilişkileri korumalıdır. Yanlışını ilişki değişimi, kiplik kayması, kapsam şişirme veya tersine çevirme olarak sınıflandır; sonraki alıştırmayı buna göre seç.",
+    errorKinds: {
+      title: "Hata kategorileri",
+      items: [
+        "Kelime örtüşmesine güvenme",
+        "Mantıksal ilişki değişimi",
+        "Kiplik / kesinlik kayması",
+        "Nicelik ve kapsam hatası",
+        "Anlamın tersine çevrilmesi",
+      ],
+    },
+    lab: {
+      code: "Equivalence Lab · 01",
+      minutes: "Anlam ve kapsam · yaklaşık 45 saniye",
+      passageLabel: "Original sentence",
+      passage:
+        "Because the sample was small, the researchers cautioned that the findings should not be generalized to the wider population.",
+      stem: "Choose the sentence closest in meaning to the original.",
+      prompt: "Anlam eşdeğerliğini koruyan seçeneği seç.",
+      options: [
+        {
+          id: "A",
+          text: "A) The researchers concluded that the findings applied to the entire population because the sample was sufficiently large.",
+          correct: false,
+          autopsy:
+            "Örneklem büyüklüğünü ve genelleme sonucunu tersine çevirir; kaynak cümlenin uyarısını bozar.",
+        },
+        {
+          id: "B",
+          text: "B) Although the sample was small, the researchers confirmed that the findings were valid for every population.",
+          correct: false,
+          autopsy:
+            "Although ödünlemesi kaynakta yoktur; every population kapsamı ve confirmed kesinliği kaynak uyarısıyla çelişir.",
+        },
+        {
+          id: "C",
+          text: "C) The researchers warned against applying the findings to the wider population because only a small sample had been studied.",
+          correct: true,
+          autopsy:
+            "Because nedenini, cautioned / should not be generalized uyarısını ve small sample bilgisini birlikte korur.",
+        },
+        {
+          id: "D",
+          text: "D) The researchers increased the sample size after proving that the findings could not be generalized.",
+          correct: false,
+          autopsy:
+            "Kaynakta olmayan bir eylem (örneklemi büyütme) ve zaman sırası ekler; uyarıyı “kanıt sonrası eylem”e çevirir.",
+        },
+        {
+          id: "E",
+          text: "E) The findings should be generalized to the wider population unless the sample becomes smaller.",
+          correct: false,
+          autopsy:
+            "Genelleme yasağını genelleme zorunluluğuna çevirir; unless ile kurulan koşul kaynakta yoktur.",
+        },
+      ],
+      revealTitle: "Anlam eşdeğerliğini kontrol et",
+      structural: "Because (neden: küçük örneklem) + cautioned / should not be generalized (uyarı): sebep-sonuç ve kapsam birlikte.",
+      meaning:
+        "Küçük örneklem nedeniyle bulguların daha geniş nüfusa genellenmemesi gerektiği uyarısı korunmalıdır. Kelime benzerliği yetmez.",
+    },
+    sources: [
+      {
+        cite: "Clifton & Duffy (2001)",
+        title: "Sentence and Text Comprehension: Roles of Linguistic Structure",
+        venue: "Annual Review of Psychology, 52, 167-196",
+        summary:
+          "Cümle anlamada sözdizimsel, sözcüksel ve anlamsal yapının birlikte kullanıldığını gözden geçirir. Anlam eşdeğerliği, yalnızca kelime örtüşmesine değil; yapı ve anlamsal ilişkilerin korunmasına da bağlıdır.",
+        productClaim:
+          "Makul ürün kararı: anlamca yakın cümlede önce önerme ve bağlaç ilişkisini, sonra kiplik / kapsamı kontrol etmek; aynı kelimeleri içeren çeldiricileri özellikle işaretlemek. Bu derleme, outklas.’ın belirli bir eşdeğerlik taktiğinin puanı kesin artırdığını kanıtlamaz.",
+        doi: "https://doi.org/10.1146/annurev.psych.52.1.167",
+      },
+    ],
+    disclaimer:
+      "Bu sayfadaki sorular outklas. için özgün örneklerdir; çıkmış ÖSYM soruları değildir. Sınav formatı için nihai kaynak ÖSYM kılavuzu ve kitapçığıdır.",
+    ctaLine: "outklas. Equivalence Lab: Önermeyi koru, ilişkiyi doğrula ve kelime benzerliğinin tuzağına düşme.",
+    ctaPrimary: { href: "/teshis", label: "Ücretsiz alıştırmayla test et →" },
+    ctaSecondary: { href: "/bugun", label: "Günlük çalışmaya bak" },
+  },
+
+  paragraph: {
+    section: "paragraph",
+    seoTitle: "YDS Paragraf Tamamlama Soruları: Açıklamalı Örnekler | outklas.",
+    seoDescription:
+      "YDS ve YÖKDİL paragraf tamamlama sorularını bağlaçlar, söylem ilişkileri ve paragrafın mantıksal akışıyla çöz. Açıklamalı sorularla pratik yap.",
+    h1: "YDS Paragraf Tamamlama Soruları",
+    lead: "YDS paragraf tamamlama sorularında amaç, paragrafın sonuna veya ortasına yalnızca konu bakımından uygun görünen bir cümle yerleştirmek değildir. Doğru seçenek, paragrafın anlam akışını, mantıksal ilişkilerini ve söylem yapısını birlikte sürdürmelidir.",
+    approach:
+      "Konu benzerliği, anlam bağlantısının kurulduğu anlamına gelmez. Eksik cümlenin işlevini belirle; önceki ve sonraki cümleyle kurduğu söylem ilişkisini doğrula.",
+    layersTitle: "Eksik cümle hangi işlevi üstlenebilir?",
+    layers: [
+      { title: "Neden / sonuç", body: "Boşluk bir gerekçe mi getiriyor, yoksa önceki bilgiden çıkan sonucu mu kuruyor?" },
+      { title: "Karşıtlık / sınırlama", body: "However, yet, nevertheless gibi yapılar önceki olumlu gelişmeyi sınırlıyor mu?" },
+      { title: "Örnek / açıklama", body: "For example veya in other words ile önceki iddia somutlaşıyor veya yeniden mi ifade ediliyor?" },
+      { title: "Geçiş hazırlığı", body: "Sonraki cümle (for this reason, therefore…) boşluğun kurduğu koşula mı dayanıyor?" },
+    ],
+    layersNote:
+      "Bağlaç tek başına cevabı belirlemez; cümlenin anlamı da ilişkiyle uyumlu olmalıdır. Sonraki cümleyi atlama.",
+    workedTitle: "Açıklamalı örnek soru",
+    workedSteps: {
+      structural: "1. Eksik cümlenin işlevi",
+      meaning: "2. Sonraki cümleyle bağ",
+      autopsy: "3. Çeldirici otopsisi",
+    },
+    worked: {
+      stem: "Many cities are investing in public transport to reduce traffic congestion. Expanding bus and rail networks can encourage people to leave their cars at home, particularly when services are frequent and affordable. ----. For this reason, transport planning often needs to be coordinated with housing and land-use policies.",
+      prompt: "Which of the following best completes the paragraph?",
+      options: [
+        {
+          id: "A",
+          text: "A) However, public transport systems have become less relevant as cities continue to grow.",
+          correct: false,
+          autopsy:
+            "Toplu taşımaya yatırımı anlatan paragrafı “daha az ilgili” iddiasıyla tersine çevirir; sonraki “bu nedenle planlama…” cümlesine de zemin hazırlamaz.",
+        },
+        {
+          id: "B",
+          text: "B) Nevertheless, the number of private cars is the only factor that determines how a city develops.",
+          correct: false,
+          autopsy: "only ile aşırı genelleme yapar; konut / arazi kullanımına geçişi gerekçelendirmez.",
+        },
+        {
+          id: "C",
+          text: "C) Yet these improvements may have limited effects if homes and workplaces remain far from transport routes.",
+          correct: true,
+          autopsy:
+            "Yatırımın sınırını koyar (mesafe); For this reason ile konut ve arazi politikalarının birlikte planlanması sonucuna doğal geçiş kurar.",
+        },
+        {
+          id: "D",
+          text: "D) For example, many commuters prefer travelling by car because they enjoy driving long distances.",
+          correct: false,
+          autopsy:
+            "Örnek gibi görünür ama keyfi uzun yolculuk vurgusu, sonraki cümledeki planlama gerekçesini hazırlamaz; paragrafın geliştirdiği mantığı saptırır.",
+        },
+        {
+          id: "E",
+          text: "E) As a result, cities should stop investing in bus and rail services and focus on building more roads.",
+          correct: false,
+          autopsy:
+            "Paragrafın yatırım tezini tersine çevirir; sonraki cümle daha fazla yol önermez, planlama eşgüdümü ister.",
+        },
+      ],
+      structural: [
+        "Önceki cümleler: toplu taşıma yatırımı ve otomobili bırakmayı teşvik.",
+        "Sonraki cümle: For this reason → konut ve arazi kullanımıyla eşgüdüm gerekir.",
+        "Boşluk, yatırımın tek başına yetmeyebileceğini (rota / mesafe) söyleyerek bu sonuca zemin hazırlamalıdır.",
+      ],
+      meaning: [
+        "C seçeneği Yet ile sınırlama kurar: iyileştirmeler, ev ve iş yerleri güzergâhtan uzaksa sınırlı kalabilir.",
+        "Bu sınırlama, neden planlamanın konut politikasıyla birleştirilmesi gerektiğini açıklar.",
+      ],
+      rule: {
+        title: "Paragraf tamamlama temel ilkesi",
+        body: "Doğru seçenek hem önceki bilgiyle bağlantı kurmalı hem de sonraki cümleye geçişi açıklamalıdır. Konuya uygun olmak, söylem bağlantısı kurmakla aynı şey değildir.",
+      },
+    },
+    nextTitle: "Paragraf tamamlama soruları nasıl çözülür?",
+    nextSteps: [
+      "Eksik cümlenin görevini belirle: neden, sonuç, karşıtlık, örnek, açıklama veya çıkarım mı?",
+      "Önceki ve sonraki cümleleri birlikte oku; özellikle boşluktan sonrasını atlama.",
+      "Söylem ilişkisini kontrol et: bağlaç ve cümle anlamı birlikte uyumlu olmalı.",
+      "Çeldiricileri ele: desteklenmeyen iddia, tekrar veya sonraki cümleyle çelişki.",
+    ],
+    misses: {
+      title: "Sık yapılan hatalar",
+      items: [
+        "Yalnızca konu benzerliğine bakmak.",
+        "Bağlacı tek başına ipucu saymak.",
+        "Sonraki cümleyi görmezden gelmek.",
+        "Metinde olmayan bilgiyi kabul etmek.",
+        "Tekrarı bağlantı sanmak.",
+      ],
+    },
+    beyondTitle: "Buraya hangi düşünce gelmeli?",
+    beyondBody:
+      "Paragraf tamamlama, “hangi cümle aynı konudan söz ediyor?” değil, “hangi düşünce akışı tamamlıyor?” sorusudur. Anlam bütünlüğünü bozan cümle sorusu ise bunun tersidir: hangi cümle akışa katkı sağlamıyor?",
+    errorKinds: {
+      title: "Yanlışını hangi kopukluğa bağla?",
+      items: [
+        "Sonraki cümleyi görmezden gelme",
+        "Bağlaç-anlam uyumsuzluğu",
+        "Konu benzerliği tuzağı",
+        "Desteklenmeyen yeni iddia",
+        "Tekrar / işlevsiz dolgu",
+      ],
+    },
+    faqs: [
+      {
+        question: "YDS paragraf tamamlama sorularında önceki cümle mi, sonraki cümle mi önemlidir?",
+        answer:
+          "İkisi de önemlidir. Eksik cümle, önceki düşünceyi devam ettirirken sonraki cümleye de anlamlı bir geçiş sağlamalıdır.",
+      },
+      {
+        question: "Bağlaçları ezberlemek yeterli mi?",
+        answer:
+          "Hayır. Bağlaçların işlevini bilmek yararlıdır; ancak doğru seçeneği belirlemek için cümlenin tüm anlamını ve paragrafın mantıksal akışını değerlendirmek gerekir.",
+      },
+      {
+        question: "Paragraf tamamlama sorularında en güçlü ipucu nedir?",
+        answer:
+          "Tek bir evrensel ipucu yoktur. Zamirler, bağlaçlar, tekrar eden kavramlar ve neden-sonuç ilişkileri birlikte değerlendirilmelidir.",
+      },
+    ],
+    lab: {
+      code: "Paragraph Lab · 01",
+      minutes: "Söylem ilişkisi · yaklaşık 45 saniye",
+      stem: "Researchers have found that sleep plays an important role in memory consolidation. During sleep, the brain processes and stabilizes information acquired during the day. ----. Therefore, getting adequate sleep may be particularly important for students preparing for examinations.",
+      prompt: "Paragrafı en tutarlı biçimde tamamlayan cümleyi seç.",
+      options: [
+        {
+          id: "A",
+          text: "A) As a result, people who sleep less always achieve higher academic scores.",
+          correct: false,
+          autopsy:
+            "always / higher ile aşırı genelleme yapar ve sleep less sonucunu tersine çevirir; Therefore sınav hazırlığıyla bağ kurmaz.",
+        },
+        {
+          id: "B",
+          text: "B) This process can help people retain what they have learned and retrieve it later.",
+          correct: true,
+          autopsy:
+            "This process önceki bellek pekiştirme sürecine gönderme yapar; Therefore ile öğrencilerin yeterli uykuya ihtiyacı sonucuna zemin hazırlar.",
+        },
+        {
+          id: "C",
+          text: "C) In contrast, most examinations are designed to measure physical endurance rather than knowledge.",
+          correct: false,
+          autopsy: "Fiziksel dayanıklılık vurgusu paragrafın bellek / öğrenme odağından kopar.",
+        },
+        {
+          id: "D",
+          text: "D) For example, some students prefer studying in libraries rather than at home.",
+          correct: false,
+          autopsy: "Konu olarak öğrenciyle ilgili görünür ama uyku-bellek bağlantısını tamamlamaz.",
+        },
+        {
+          id: "E",
+          text: "E) However, sleep duration has no connection with how the brain processes daytime information.",
+          correct: false,
+          autopsy: "Önceki cümlelerle doğrudan çelişir; Therefore sonucunu imkânsız kılar.",
+        },
+      ],
+      revealTitle: "Cevabı ve açıklamayı gör",
+      structural: "Bellek pekiştirme süreci → bu sürecin öğrenmeyi koruması → Therefore sınav için yeterli uyku.",
+      meaning: "Boşluk, sürecin ne işe yaradığını söyleyerek sonraki sonuç cümlesine köprü kurmalıdır.",
+    },
+    sources: [
+      {
+        cite: "Graesser, Millis & Zwaan (1997)",
+        title: "Discourse Comprehension",
+        venue: "Annual Review of Psychology, 48, 163-189",
+        summary:
+          "Bağlantılı metinde yerel ve küresel bağdaşıklığın, cümleler arası ilişkilerin ve çıkarımların birlikte kurulduğunu özetler. Paragraf tamamlamada eksik cümlenin işlevi de bu bağdaşıklık ağı içinde değerlendirilir.",
+        productClaim:
+          "Makul ürün kararı: boşluğu hem önceki hem sonraki cümleyle test etmek; konu benzerliğini tek başına yeterli görmemek. Bu derleme, outklas.’ın puanı kesin artırdığını kanıtlamaz.",
+        doi: "https://doi.org/10.1146/annurev.psych.48.1.163",
+      },
+    ],
+    disclaimer:
+      "Bu sayfadaki sorular outklas. için özgün örneklerdir; çıkmış ÖSYM soruları değildir. Sınav formatı için nihai kaynak ÖSYM kılavuzu ve kitapçığıdır.",
+    ctaLine: "outklas. Paragraph Lab: İşlevi bul, geçişi kur ve çeldiricinin nerede koptuğunu gör.",
+    ctaPrimary: { href: "/teshis", label: "Ücretsiz alıştırmayla test et →" },
+    ctaSecondary: { href: "/bugun", label: "Günlük çalışmaya bak" },
+  },
+
+  irrelevant: {
+    section: "irrelevant",
+    seoTitle: "YDS Anlam Bütünlüğünü Bozan Cümle Soruları | outklas.",
+    seoDescription:
+      "YDS ve YÖKDİL anlam bütünlüğünü bozan cümle sorularını konu sürekliliği, anlamsal bağ ve paragraf yapısı üzerinden çöz. Açıklamalı örneklerle pratik yap.",
+    h1: "YDS Anlam Bütünlüğünü Bozan Cümle Soruları",
+    lead: "Bu soru türünde beş cümleden biri, diğerleriyle aynı genel konudan söz ediyor gibi görünse bile paragrafın ana düşüncesini veya mantıksal akışını sürdürmez.",
+    approach:
+      "Aranan şey konu benzerliği değil, cümleler arasındaki anlam bütünlüğüdür. Bir cümlenin tek başına doğru olması, paragrafın parçası olduğu anlamına gelmez.",
+    layersTitle: "Anlam bütünlüğü nasıl analiz edilir?",
+    layers: [
+      {
+        title: "Ana odak",
+        body: "Cümlelerin ortak olarak hangi olgu, süreç veya problem üzerinde durduğunu belirle; geniş başlıkla yetinme.",
+      },
+      {
+        title: "Cümleler arası bağ",
+        body: "Bir cümle öncekini açıklıyor, destekliyor, örneklendiriyor veya ondan sonuç mu çıkarıyor?",
+      },
+      {
+        title: "Konu değişimi",
+        body: "Farklı alt konu, zaman dilimi veya ayrı problem varsa dikkat et; kopukluk gerçek olmalı.",
+      },
+      {
+        title: "Çıkarma testi",
+        body: "Şüpheli cümleyi çıkarınca kalan paragraf daha tutarlıysa bu güçlü bir ipucudur; yine de anlamsal ilişkilere dayan.",
+      },
+    ],
+    layersNote:
+      "En yaygın tuzak: konu bakımından ilişkili ama işlev bakımından kopuk cümle. Ağaçlardan söz etmek, kent ağaçlarının yararları paragrafına otomatik uymaz.",
+    workedTitle: "Açıklamalı örnek soru",
+    workedSteps: {
+      structural: "1. Paragrafın odağı",
+      meaning: "2. Kopuk cümleyi ayır",
+      autopsy: "3. Çeldirici otopsisi",
+    },
+    worked: {
+      passageLabel: "Paragraph",
+      passage:
+        "(I) Urban trees provide shade and can reduce temperatures in densely built neighbourhoods.\n(II) Their leaves also absorb certain air pollutants, contributing to improved local air quality.\n(III) In addition, tree canopies can slow the movement of rainwater into drainage systems during heavy rainfall.\n(IV) Many tree species shed their leaves in autumn as daylight hours become shorter.\n(V) These benefits have encouraged city planners to incorporate more green spaces into urban development.",
+      stem: "Which of the following sentences disrupts the unity of the paragraph?",
+      prompt: "Anlam bütünlüğünü bozan cümleyi seç.",
+      options: [
+        {
+          id: "A",
+          text: "A) Sentence I",
+          correct: false,
+          autopsy: "Kent ağaçlarının gölge / sıcaklık faydasını kurar; paragrafın açılış odağıdır.",
+        },
+        {
+          id: "B",
+          text: "B) Sentence II",
+          correct: false,
+          autopsy: "also ile hava kalitesi faydasını ekler; aynı yarar zincirini sürdürür.",
+        },
+        {
+          id: "C",
+          text: "C) Sentence III",
+          correct: false,
+          autopsy: "In addition ile yağmur suyu faydasını ekler; kent ağacı yararları odağında kalır.",
+        },
+        {
+          id: "D",
+          text: "D) Sentence IV",
+          correct: true,
+          autopsy:
+            "Sonbahar yaprak dökümü genel bir biyoloji olgusudur; kent ağaçlarının kentsel yararları ve planlama sonucuna katkı sağlamaz. Çıkarılınca I-II-III-V tutarlı bir yarar → planlama zinciri kalır.",
+        },
+        {
+          id: "E",
+          text: "E) Sentence V",
+          correct: false,
+          autopsy: "These benefits ile önceki yararlara gönderme yaparak planlama sonucunu bağlar; bütünlüğü tamamlar.",
+        },
+      ],
+      structural: [
+        "Ortak odak: kent ağaçlarının çevresel yararları ve bunun planlamaya yansıması.",
+        "I-II-III yararları sıralar; V bu yararlara dayanarak planlama sonucunu verir.",
+        "IV yaprak dökümüne geçer; yarar / planlama zincirine işlevsel bağ kurmaz.",
+      ],
+      meaning: [
+        "Aynı genel konu (ağaçlar) yetmez; cümle paragrafın geliştirdiği düşünceye katkı sunmalıdır.",
+        "Yeni bilgi vermek otomatik olarak ilgisiz yapmaz; ilgili yeni bilgi de bütünlüğe katkı sağlayabilir.",
+      ],
+      rule: {
+        title: "Temel ölçüt",
+        body: "Çeldirici cümle aynı genel konuyla ilişkili olabilir; asıl ölçüt, paragrafın odaklandığı düşünceyle anlamlı bir bağ kurup kurmadığıdır.",
+      },
+    },
+    nextTitle: "Anlam bütünlüğü nasıl analiz edilir?",
+    nextSteps: [
+      "Paragrafın ana odağını bul; geniş başlıkla yetinme.",
+      "Cümleler arasındaki bağı kontrol et: açıklama, destek, örnek, sonuç?",
+      "Konu değişimini tespit et; kopukluğun gerçek olduğundan emin ol.",
+      "Şüpheli cümleyi çıkararak yeniden oku; kararı anlamsal ilişkilere dayandır.",
+    ],
+    misses: {
+      title: "Çeldiriciler neden işe yarar?",
+      items: [
+        "Aynı genel konu, farklı odak.",
+        "Ayrıntıyı ana fikir sanmak.",
+        "Bağlaçları yanlış yorumlamak (In addition tek başına yeterli değildir).",
+        "Farklılığı yeterli saymak: yeni bilgi otomatik ilgisiz değildir.",
+      ],
+    },
+    beyondTitle: "Hangi cümle akışa katkı sağlamıyor?",
+    beyondBody:
+      "Bu soru tipi paragraf tamamlamanın tersidir: orada eksik düşünceyi bulursun, burada fazla / kopuk düşünceyi. İkisinde de özgün outklas. örnekleri kullanılır; çıkmış ÖSYM sorusu gibi sunulmaz.",
+    errorKinds: {
+      title: "Yanlışını hangi kopukluğa bağla?",
+      items: [
+        "Genel konu tuzağı",
+        "Alt konu / zaman kayması",
+        "İşlevsiz ayrıntı",
+        "Bağlaç yanılsaması",
+        "Sonuç cümlesini kopuk sanma",
+      ],
+    },
+    faqs: [
+      {
+        question: "Anlam bütünlüğünü bozan cümle, paragrafın ana konusuyla tamamen ilgisiz olmak zorunda mı?",
+        answer:
+          "Hayır. Çeldirici bir cümle aynı genel konuyla ilişkili olabilir; asıl ölçüt, paragrafın odaklandığı düşünceyle anlamlı bir bağ kurup kurmadığıdır.",
+      },
+      {
+        question: "Cümleleri çıkarıp kalan paragrafı okumak yeterli mi?",
+        answer:
+          "Yararlıdır ama tek başına yeterli değildir. Kalan cümlelerin birbirini mantıklı biçimde destekleyip desteklemediğini de değerlendirmek gerekir.",
+      },
+      {
+        question: "En hızlı çözüm yöntemi nedir?",
+        answer:
+          "Her cümleyi tek tek çevirmek yerine önce paragrafın ortak odağını belirle. Ardından her cümlenin bu odağa nasıl katkı sunduğunu kontrol et.",
+      },
+    ],
+    lab: {
+      code: "Cohesion Lab · 01",
+      minutes: "Konu sürekliliği · yaklaşık 45 saniye",
+      passageLabel: "Paragraph",
+      passage:
+        "(I) Bees play a crucial role in the pollination of many flowering plants.\n(II) As they move between flowers to collect nectar, they transfer pollen that enables plants to reproduce.\n(III) The decline of bee populations can therefore threaten both wild plant communities and agricultural production.\n(IV) Some species of butterflies migrate over long distances in response to seasonal changes.\n(V) Protecting habitats and reducing harmful pesticide use are among the measures that may help support bee populations.",
+      stem: "Which sentence disrupts the unity of the paragraph?",
+      prompt: "Anlam bütünlüğünü bozan cümleyi seç.",
+      options: [
+        {
+          id: "A",
+          text: "A) Sentence I",
+          correct: false,
+          autopsy: "Arıların tozlaşmadaki rolünü kurar; paragrafın ana odağını açar.",
+        },
+        {
+          id: "B",
+          text: "B) Sentence II",
+          correct: false,
+          autopsy: "Tozlaşma sürecini açıklar; I ile aynı odak zincirini sürdürür.",
+        },
+        {
+          id: "C",
+          text: "C) Sentence III",
+          correct: false,
+          autopsy: "therefore ile arı azalmasının sonucunu bağlar; tehdit odağında kalır.",
+        },
+        {
+          id: "D",
+          text: "D) Sentence IV",
+          correct: true,
+          autopsy:
+            "Kelebek göçüne geçer; arı-tozlaşma-tehdit-koruma zincirine katkı sağlamaz. Çıkarılınca I-II-III-V tutarlı kalır.",
+        },
+        {
+          id: "E",
+          text: "E) Sentence V",
+          correct: false,
+          autopsy: "Arı popülasyonunu destekleme önlemleriyle tehdide yanıt verir; bütünlüğü kapatır.",
+        },
+      ],
+      revealTitle: "Cevabı kontrol et",
+      structural: "Arılar → tozlaşma → azalma tehdidi → koruma. IV kelebeklere kayar.",
+      meaning: "Genel “böcekler / doğa” ortaklığı yetmez; paragrafın odağı arıların ekolojik ve tarımsal rolüdür.",
+    },
+    sources: [
+      {
+        cite: "Kehler (2022)",
+        title: "Coherence Establishment as a Source of Explanation in Linguistic Theory",
+        venue: "Annual Review of Linguistics, 8, 123-142",
+        summary:
+          "Söylemde bağdaşıklığın, cümlelerin yalnızca aynı konudan söz etmesinden ibaret olmadığını; dinleyicinin ilişkileri kurarak tutarlı bir bütün oluşturduğunu özetler. Anlam bütünlüğünü bozan cümle sorusu da bu bağın kopup kopmadığını ölçer.",
+        productClaim:
+          "Makul ürün kararı: kopuk cümleyi “farklı kelime” ile değil, odak ve işlev kopukluğu ile öğretmek. Bu derleme, outklas.’ın puanı kesin artırdığını kanıtlamaz.",
+        doi: "https://doi.org/10.1146/annurev-linguistics-011619-030357",
+      },
+    ],
+    disclaimer:
+      "Bu sayfadaki sorular outklas. için özgün örneklerdir; çıkmış ÖSYM soruları değildir. Sınav formatı için nihai kaynak ÖSYM kılavuzu ve kitapçığıdır.",
+    ctaLine: "outklas. Cohesion Lab: Odağı bul, kopuk cümleyi ayır ve çeldiricinin neden konu tuzağı olduğunu gör.",
     ctaPrimary: { href: "/teshis", label: "Ücretsiz alıştırmayla test et →" },
     ctaSecondary: { href: "/bugun", label: "Günlük çalışmaya bak" },
   },

@@ -2,14 +2,7 @@ import Link from "next/link";
 import type { DeepGuide } from "@/content/guide-labs";
 import { EditorialNote } from "@/components/editorial-note";
 import { GuideLab } from "@/components/guide-lab";
-
-const jumps = [
-  { href: "#beceriler", label: "Neyi ölçer?" },
-  { href: "#ornek-soru", label: "Örnek soruyu incele" },
-  { href: "#yontem", label: "Çözüm adımları" },
-  { href: "#lab", label: "Örnek soru çöz" },
-  { href: "#kaynaklar", label: "Kaynaklar" },
-] as const;
+import { GuideSectionNav } from "@/components/guide-section-nav";
 
 export function GuideDeep({ guide, path }: { guide: DeepGuide; path: string }) {
   const correct = guide.worked.options.find((item) => item.correct);
@@ -18,9 +11,19 @@ export function GuideDeep({ guide, path }: { guide: DeepGuide; path: string }) {
     meaning: "2. Anlam kontrolü",
     autopsy: "3. Çeldirici otopsisi",
   };
+  const jumps = [
+    { href: "#beceriler", label: "Neyi ölçer?" },
+    { href: "#ornek-soru", label: "Örnek soruyu incele" },
+    { href: "#yontem", label: "Çözüm adımları" },
+    { href: "#lab", label: "Örnek soru çöz" },
+    ...(guide.faqs?.length ? [{ href: "#sss", label: "SSS" }] : []),
+    { href: "#kaynaklar", label: "Kaynaklar" },
+  ];
 
   return (
     <div className="space-y-10 sm:space-y-14">
+      <GuideSectionNav section={guide.section} />
+
       <header className="border-b border-line pb-8 sm:pb-10">
         <h1 className="display mt-3 max-w-3xl text-[1.85rem] leading-tight sm:text-4xl sm:leading-[1.15]">{guide.h1}</h1>
         <EditorialNote path={path} className="mt-4" />
@@ -84,8 +87,8 @@ export function GuideDeep({ guide, path }: { guide: DeepGuide; path: string }) {
         </div>
         {guide.worked.passage ? (
           <div className="mt-5 rounded-2xl border border-line/80 bg-paper/70 p-4 sm:p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine">Passage</p>
-            <p className="mt-2 text-sm leading-7 text-ink sm:text-[15px] sm:leading-8">{guide.worked.passage}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine">{guide.worked.passageLabel ?? "Passage"}</p>
+            <p className="mt-2 whitespace-pre-line text-sm leading-7 text-ink sm:text-[15px] sm:leading-8">{guide.worked.passage}</p>
           </div>
         ) : null}
         {guide.worked.prompt ? <p className="mt-4 text-sm font-medium text-muted">{guide.worked.prompt}</p> : null}
@@ -215,6 +218,20 @@ export function GuideDeep({ guide, path }: { guide: DeepGuide; path: string }) {
         <GuideLab lab={guide.lab} />
       </section>
 
+      {guide.faqs?.length ? (
+        <section id="sss" className="scroll-mt-28">
+          <h2 className="text-2xl sm:text-3xl">Sık sorulan sorular</h2>
+          <dl className="mt-5 space-y-4">
+            {guide.faqs.map((item) => (
+              <div key={item.question} className="rounded-2xl border border-line bg-card px-4 py-4 sm:px-5">
+                <dt className="text-sm font-semibold text-ink sm:text-base">{item.question}</dt>
+                <dd className="mt-2 text-sm leading-7 text-muted">{item.answer}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ) : null}
+
       {guide.sources?.length ? (
         <section id="kaynaklar" className="scroll-mt-28 rounded-[24px] border border-line bg-night p-4 text-[#f4f3eb] sm:rounded-[28px] sm:p-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine">Araştırma kaynağı</p>
@@ -257,6 +274,8 @@ export function GuideDeep({ guide, path }: { guide: DeepGuide; path: string }) {
           </Link>
         </div>
       </section>
+
+      <GuideSectionNav section={guide.section} />
     </div>
   );
 }

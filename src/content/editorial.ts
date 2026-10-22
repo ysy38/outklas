@@ -28,6 +28,10 @@ export const updatedAt: Record<string, string> = {
   "/rehber/sentence": "2026-10-21",
   "/rehber/translation": "2026-10-21",
   "/rehber/reading": "2026-10-21",
+  "/rehber/dialogue": "2026-10-22",
+  "/rehber/restatement": "2026-10-22",
+  "/rehber/paragraph": "2026-10-22",
+  "/rehber/irrelevant": "2026-10-22",
 };
 
 export function formatUpdated(day: string) {

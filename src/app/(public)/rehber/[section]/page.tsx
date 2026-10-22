@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { brand, siteUrl } from "@/brand";
 import { GuideDeep } from "@/components/guide-deep";
+import { GuideSectionNav } from "@/components/guide-section-nav";
 import { skillName } from "@/content/labels";
 import { articleJsonLd } from "@/content/editorial";
 import { deepGuideFor } from "@/content/guide-labs";
@@ -82,29 +83,26 @@ export default async function GuideSectionPage({ params }: Props) {
           },
           {
             "@type": "FAQPage",
-            mainEntity: [
-              {
-                "@type": "Question",
-                name: deep.h1,
-                acceptedAnswer: { "@type": "Answer", text: `${deep.lead} ${deep.approach}` },
-              },
-              {
-                "@type": "Question",
-                name: deep.layersTitle,
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: `${deep.layers.map((layer) => `${layer.title}: ${layer.body}`).join(" ")} ${deep.layersNote}`,
-                },
-              },
-              {
-                "@type": "Question",
-                name: "Yanlış seçenekler nasıl analiz edilir?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Doğru cevabı ezberlemek yeterli değildir. Her yanlış seçeneğin yapısal veya anlamsal olarak neden elendiğini ayrı ayrı gerekçelendirmek gerekir.",
-                },
-              },
-            ],
+            mainEntity: (
+              deep.faqs?.length
+                ? deep.faqs
+                : [
+                    { question: deep.h1, answer: `${deep.lead} ${deep.approach}` },
+                    {
+                      question: deep.layersTitle,
+                      answer: `${deep.layers.map((layer) => `${layer.title}: ${layer.body}`).join(" ")} ${deep.layersNote}`,
+                    },
+                    {
+                      question: "Yanlış seçenekler nasıl analiz edilir?",
+                      answer:
+                        "Doğru cevabı ezberlemek yeterli değildir. Her yanlış seçeneğin yapısal veya anlamsal olarak neden elendiğini ayrı ayrı gerekçelendirmek gerekir.",
+                    },
+                  ]
+            ).map((item) => ({
+              "@type": "Question",
+              name: item.question,
+              acceptedAnswer: { "@type": "Answer", text: item.answer },
+            })),
           },
         ],
       }
@@ -125,7 +123,8 @@ export default async function GuideSectionPage({ params }: Props) {
           <GuideDeep guide={deep} path={path} />
         ) : (
           <>
-            <h1 className="display mt-3">{band.title}</h1>
+            <GuideSectionNav section={section} className="mt-4" />
+            <h1 className="display mt-6">{band.title}</h1>
             <p className="mt-4 max-w-xl leading-8 text-muted">{note.measures}</p>
             <h2 className="mt-10 text-3xl">Nasıl çözülür?</h2>
             <ol className="mt-4 space-y-3">
@@ -142,6 +141,7 @@ export default async function GuideSectionPage({ params }: Props) {
                 <li key={miss}>{miss}</li>
               ))}
             </ul>
+            <GuideSectionNav section={section} className="mt-10" />
           </>
         )}
       </div>

@@ -106,19 +106,19 @@ export const rehber: Rehber[] = [
   {
     section: "dialogue",
     measures:
-      "5 kısa konuşma. Boşluğa gelecek söz, konuşan kişinin niyetine uymalıdır. Rica etmek, reddetmek ve düzeltmek farklı şeylerdir.",
+      "5 kısa konuşma. Konuyu değil; konuşmacının amacını, söylem işlevini ve bağlama uygun tepkiyi ölçer. Konuya uygun ama işlevsiz şık tuzaktır.",
     steps: [
       "Konuşanların kim olduğuna ve ne istediklerine bak.",
       "Önceki cümle bir soruysa, seçtiğin şık o soruyu cevaplamalı.",
       "Şık kibar diye seçme; konuşmanın akışına uymuyorsa ele.",
     ],
     misses: ["Konuyu sürdüren ama konuşanın niyetini kaçıran şıkkı seçmek.", "Soruyu cevaplamayıp yeni bir konu açan şıkkı seçmek."],
-    tip: "Boşluktan sonraki cümle en büyük ipucudur. Karşıdaki kişi teşekkür ediyorsa, önceki söz bir kabuldür, ret değil.",
+    tip: "En iyi seçenek aynı konudan söz eden değil, konuşmanın gerektirdiği iletişimsel işi yapan seçenektir.",
   },
   {
     section: "restatement",
     measures:
-      "4 soru. Verilen cümleye anlamca en yakın cümle istenir. Aynı kelimelerle kurulmuş şıklar çoğu zaman tuzaktır.",
+      "4 soru. Verilen cümleye anlamca en yakın cümle istenir. Kelime benzerliği yetmez; önerme, bağlaç ilişkisi, kiplik ve kapsam korunmalıdır.",
     steps: [
       "Cümlenin anlamını kendi sözlerinle özetle: kim, neyi, hangi koşulda yapıyor?",
       "Şıkta özne, zaman ya da olumsuzluk değişmişse o şıkkı ele.",
@@ -128,24 +128,24 @@ export const rehber: Rehber[] = [
       "Aynı kelimeleri görünce o şıkka güvenmek.",
       "“Az” ile “çok”u, “zorunlu” ile “mümkün”ü karıştırmak.",
     ],
-    tip: "Anlamca yakın cümle, aynı kelimelerin farklı sırayla dizilmesi değildir. Kelimeler değişebilir ama anlam aynı kalmalı.",
+    tip: "Although ≈ despite gibi dönüşümler geçerli olabilir; may’i will’e, some’ı all’a çeviren şıkkı ele.",
   },
   {
     section: "paragraph",
     measures:
-      "4 soru. Paragraftan bir cümle çıkarılmıştır. Boşluğa gelen cümle, önceki ve sonraki cümleyi birbirine bağlamalıdır.",
+      "4 soru. Eksik cümle konu benzerliğiyle değil; söylem işlevi ve önceki/sonraki cümlelerle kurduğu mantıksal geçişle seçilir.",
     steps: [
       "Boşluğun önündeki ve arkasındaki cümleleri art arda oku.",
       "Aralarında nasıl bir ilişki var, belirle: sebep mi, örnek mi, zıtlık mı?",
       "Yeni bir konu açan ya da paragrafı bitiren cümle ortaya gelmez.",
     ],
     misses: ["Tek başına doğru olan bir cümleyi seçmek.", "Paragrafın sonuç cümlesini ortaya yerleştirmek."],
-    tip: "Şıkkı yerine koyduktan sonra paragrafı baştan oku. Akış kopuyorsa o şık yanlıştır.",
+    tip: "Sonraki cümleyi atlama. Doğru seçenek hem öncekine bağlanır hem sonrakine zemin hazırlar.",
   },
   {
     section: "irrelevant",
     measures:
-      "5 soru. Beş cümleden biri paragrafın konusuna uymaz. Bu cümle kendi içinde yanlış değildir; sadece o paragrafa ait değildir.",
+      "5 soru. Beş cümleden biri aynı genel konudan söz etse bile paragrafın odağına ve anlam bütünlüğüne katkı sağlamaz.",
     steps: [
       "Beş cümleyi tek bir paragraf gibi oku.",
       "Hangi cümleyi çıkarınca akışın bozulmadığını bul.",
@@ -155,10 +155,39 @@ export const rehber: Rehber[] = [
       "En alakasız kelimeyi içeren cümleyi seçmek.",
       "Konuyla ilgili ama sırayı bozan cümleyi gözden kaçırmak.",
     ],
-    tip: "Akışı bozan cümle genellikle doğru bir bilgi içerir. Sorun bilginin kendisinde değil, orada durmasındadır.",
+    tip: "Konu benzerliği yetmez. Odağa katkı sunmayan ama “doğru bilgi” içeren cümleyi ayır.",
   },
 ];
 
 export function rehberBySection(section: string): Rehber | undefined {
   return rehber.find((item) => item.section === section);
+}
+
+export type RehberNeighbor = { section: SectionId; title: string };
+
+/** Previous / next rehber section in exam order for in-guide navigation. */
+export function rehberNeighbors(section: string): { prev?: RehberNeighbor; next?: RehberNeighbor } {
+  const order = rehber.map((item) => item.section);
+  const index = order.indexOf(section as SectionId);
+  if (index < 0) return {};
+  const titleFor = (id: SectionId) => {
+    const note = rehberBySection(id);
+    const labels: Partial<Record<SectionId, string>> = {
+      vocabulary: "Kelime bilgisi",
+      grammar: "Dil bilgisi ve yapı",
+      cloze: "Paragrafta boşluk doldurma",
+      sentence: "Cümle tamamlama",
+      translation: "Çeviri",
+      reading: "Okuduğunu anlama",
+      dialogue: "Diyalog tamamlama",
+      restatement: "Anlamca yakın cümle",
+      paragraph: "Paragraf tamamlama",
+      irrelevant: "Anlam bütünlüğünü bozan cümle",
+    };
+    return labels[id] ?? note?.section ?? id;
+  };
+  return {
+    prev: index > 0 ? { section: order[index - 1]!, title: titleFor(order[index - 1]!) } : undefined,
+    next: index < order.length - 1 ? { section: order[index + 1]!, title: titleFor(order[index + 1]!) } : undefined,
+  };
 }
