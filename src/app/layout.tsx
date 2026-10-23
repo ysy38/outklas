@@ -13,6 +13,9 @@ const display = Plus_Jakarta_Sans({
 });
 const logo = Unbounded({ subsets: ["latin"], weight: ["700"], variable: "--font-unbounded" });
 
+/** Google Analytics 4 measurement ID (gtag). */
+const GA_ID = "G-D52NHW86M0";
+
 const description =
   "Türkiye’de YDS, e-YDS, YÖKDİL ve e-YÖKDİL hazırlığı: Cümle Röntgeni, kişisel teşhis ve günlük adaptif plan. Video izlemeden isabetli çalış. ÖSYM formatına kalibre.";
 
@@ -77,6 +80,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="tr" className={`dark ${sans.variable} ${serif.variable} ${display.variable} ${logo.variable}`} suppressHydrationWarning>
       <body className="min-h-screen antialiased">
+        <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_ID}');
+          `}
+        </Script>
         <Script id="theme" strategy="beforeInteractive">
           {themeScript}
         </Script>
