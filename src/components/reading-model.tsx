@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { brand } from "@/brand";
 
-type Mode = "classic" | "starc";
+type Mode = "classic" | "outklas";
 
 const copy = {
   classic: {
@@ -20,7 +20,7 @@ const copy = {
       ["Bellek yükü", "Aşırı yük"],
     ],
   },
-  starc: {
+  outklas: {
     badge: `${brand.wordmark} iskelet kilidi`,
     caption: (
       <>
@@ -41,7 +41,7 @@ const copy = {
 export function ReadingModel() {
   const [mode, setMode] = useState<Mode>("classic");
   const active = copy[mode];
-  const ours = mode === "starc";
+  const ours = mode === "outklas";
 
   return (
     <div className="overflow-hidden rounded-[28px] bg-card p-5 shadow-[0_24px_60px_-36px_rgba(23,36,59,0.28)] ring-1 ring-line sm:p-6">
@@ -75,7 +75,7 @@ export function ReadingModel() {
         </button>
         <button
           type="button"
-          onClick={() => setMode("starc")}
+          onClick={() => setMode("outklas")}
           className={
             ours
               ? "rounded-lg bg-teal px-3 py-2 text-xs font-bold text-white transition"

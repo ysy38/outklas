@@ -33,7 +33,7 @@ export const readingModes = {
       ["Bellek yükü", "Aşırı yük"],
     ],
   },
-  starc: {
+  outklas: {
     label: "outklas. iskelet kilidi",
     caption: "Zihin üç noktaya dokunur: zıtlık bağlacı → ana yüklem → hedef fikir.",
     metrics: [

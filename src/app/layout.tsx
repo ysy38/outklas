@@ -41,17 +41,23 @@ export const metadata: Metadata = {
     "ÖSYM YDS",
     "outklas",
   ],
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/favicon.ico", sizes: "any" }],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   openGraph: {
     type: "website",
     locale: "tr_TR",
     siteName: brand.wordmark,
     title: `${brand.wordmark} · YDS & YÖKDİL’de daha isabetli çalış`,
     description,
+    images: [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: `${brand.wordmark} markası` }],
   },
   twitter: {
     card: "summary_large_image",
     title: `${brand.wordmark} · YDS, e-YDS ve YÖKDİL teşhis temelli hazırlık`,
     description,
+    images: ["/opengraph-image.png"],
   },
   robots: { index: true, follow: true },
   other: {
