@@ -45,9 +45,13 @@ export const metadata: Metadata = {
     "ÖSYM YDS",
     "outklas",
   ],
+  // ?v= busts stale Starc favicon/OG caches (Google + browsers still hold the old blue mark).
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/favicon.ico", sizes: "any" }],
-    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+    icon: [
+      { url: "/icon.svg?v=outklas2", type: "image/svg+xml" },
+      { url: "/favicon.ico?v=outklas2", sizes: "any" },
+    ],
+    apple: [{ url: "/apple-icon.png?v=outklas2", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
     type: "website",
@@ -55,13 +59,13 @@ export const metadata: Metadata = {
     siteName: brand.wordmark,
     title: `${brand.wordmark} · YDS & YÖKDİL’de daha isabetli çalış`,
     description,
-    images: [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: `${brand.wordmark} markası` }],
+    images: [{ url: "/opengraph-image.png?v=outklas2", width: 1200, height: 630, alt: `${brand.wordmark} markası` }],
   },
   twitter: {
     card: "summary_large_image",
     title: `${brand.wordmark} · YDS, e-YDS ve YÖKDİL teşhis temelli hazırlık`,
     description,
-    images: ["/opengraph-image.png"],
+    images: ["/opengraph-image.png?v=outklas2"],
   },
   robots: { index: true, follow: true },
   other: {
