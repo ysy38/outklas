@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { brand } from "@/brand";
+import { authors, contactEmail } from "@/content/editorial";
 import { AccountLink } from "./account-link";
 import { BrandMark } from "./brand-mark";
 import { MobileMenu } from "./mobile-menu";
@@ -152,8 +153,14 @@ export function PublicFooter() {
           </div>
         ))}
       </div>
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-5 text-xs text-muted sm:px-5">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 border-t border-line px-4 py-5 text-xs text-muted sm:px-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <span>© 2026 {brand.wordmark} Tüm hakları saklıdır.</span>
+        <span>
+          Kurucular: {authors.map((author) => author.name).join(" · ")} ·{" "}
+          <a href={`mailto:${contactEmail}`} className="link-underline hover:text-ink">
+            {contactEmail}
+          </a>
+        </span>
         <span>YDS · e-YDS · YÖKDİL · e-YÖKDİL</span>
       </div>
     </footer>

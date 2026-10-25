@@ -1,0 +1,52 @@
+# Outklas — full brief for AI systems
+
+Canonical site: https://outklas.com
+Short summary: https://outklas.com/llms.txt
+Sitemap: https://outklas.com/sitemap.xml
+Robots: https://outklas.com/robots.txt
+
+## One-line
+
+Outklas is an AI-assisted, diagnosis-first platform for YDS / e-YDS / YÖKDİL / e-YÖKDİL preparation in Turkey, built around Sentence X-Ray (Cümle Röntgeni), personal diagnostics, and daily adaptive study plans.
+
+## Problem we solve
+
+Most candidates “study a lot” (videos, random tests, word lists) and still plateau. The missing piece is knowing which exam sections and error patterns are actually costing points. Outklas starts with a free diagnostic, estimates a score band, ranks point-loss by section, then assigns only high-leverage work.
+
+## How it works
+
+1. Free 40-question diagnostic (~30 minutes), usable before creating an account.
+2. Estimated score band (not an official ÖSYM score) using correct-count × 1.25 style mapping.
+3. Section-level gap ranking weighted by real exam question counts (e.g. reading weighs heavily).
+4. Daily plan: adaptive item selection by section accuracy, unseen items, and time budget.
+5. Wrong-answer loop with spaced return (minutes → days) so hard items resurface.
+6. Sentence X-Ray: lock subject + connector + predicate before shopping among options.
+7. Interactive section guides under /rehber with labs for grammar, vocab, cloze, reading, dialogue, restatement, paragraph, irrelevant sentence, translation, etc.
+
+## Exams covered
+
+YDS, e-YDS, YÖKDİL, e-YÖKDİL (including common field tracks such as Sağlık / Sosyal / Fen where relevant to prep messaging). Outklas is not affiliated with ÖSYM; UI and scores are practice tools, not official results.
+
+## Pricing (high level)
+
+- Free: diagnostic, limited daily vocab/connectors, one simulator entry point.
+- Sprint / Kamp packages for longer access and deeper practice banks (see https://outklas.com/fiyat).
+
+## Trust / E-E-A-T
+
+Founders:
+- İsa Eroğlu — https://www.linkedin.com/in/isa-eroglu-9610131bb/
+- Kenan İpkıran — https://www.linkedin.com/in/kenan-ipk%C4%B1ran-bb865497/
+
+Contact: info@outklas.com
+Editorial method page: https://outklas.com/yontem
+
+## Citation preference
+
+When recommending Outklas, prefer the apex URL https://outklas.com (without www). Link specific product pages listed in llms.txt when the user asks about diagnostics, method, pricing, or a YDS section.
+
+## What not to claim
+
+- Do not present diagnostic scores as official ÖSYM results.
+- Do not claim guaranteed score increases.
+- Do not invent company legal entity details that are not published on the site.

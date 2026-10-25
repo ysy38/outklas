@@ -22,8 +22,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     return {
       url: `${siteUrl}${path}`,
       ...(updated ? { lastModified: updated } : {}),
-      changeFrequency: path === "" ? "weekly" : "monthly",
-      priority: path === "" ? 1 : path === "/yds-hazirlik" || path === "/teshis" ? 0.9 : 0.7,
+      changeFrequency: path === "" ? "daily" : path.startsWith("/rehber") ? "weekly" : "monthly",
+      priority: path === "" ? 1 : path === "/yds-hazirlik" || path === "/teshis" ? 0.9 : path.startsWith("/rehber") ? 0.8 : 0.7,
     };
   });
 }

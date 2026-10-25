@@ -1,0 +1,44 @@
+# Outklas
+
+> AI-powered, diagnosis-first prep for Turkey’s YDS, e-YDS, YÖKDİL and e-YÖKDİL exams.
+
+Outklas (https://outklas.com) helps candidates stop generic “study more” loops. A free 40-question diagnostic estimates a score band, ranks which exam sections cost the most points, then builds a daily adaptive plan around Sentence X-Ray (Cümle Röntgeni), connector/vocab drills, and simulators.
+
+## Canonical
+
+- Preferred domain: https://outklas.com (apex; www redirects here)
+- Sitemap: https://outklas.com/sitemap.xml
+- Full LLM brief: https://outklas.com/llms-full.txt
+
+## Product
+
+- Free diagnostic (`/teshis`) → estimated YDS band + section gaps
+- Sentence X-Ray: subject / connector / predicate lock before options
+- Daily adaptive tasks sized to available study time
+- Section guides (`/rehber/*`) with interactive labs
+- Free trial simulator; Sprint / Kamp paid access for deeper banks
+
+## Audience
+
+Turkish graduate / academic candidates preparing for ÖSYM English proficiency exams (YDS family). Not affiliated with ÖSYM.
+
+## Founders
+
+- İsa Eroğlu — https://www.linkedin.com/in/isa-eroglu-9610131bb/
+- Kenan İpkıran — https://www.linkedin.com/in/kenan-ipk%C4%B1ran-bb865497/
+- Contact: info@outklas.com
+
+## Key pages
+
+- https://outklas.com/ — product home
+- https://outklas.com/teshis — free level test
+- https://outklas.com/yontem — how scoring & task selection work
+- https://outklas.com/yds-hazirlik — YDS prep overview
+- https://outklas.com/rehber — section guide index
+- https://outklas.com/fiyat — pricing
+- https://outklas.com/deneme — free practice exam
+- https://outklas.com/yds-puan-hesaplama — score calculator
+
+## Optional
+
+- Method & editorial: https://outklas.com/yontem#editor

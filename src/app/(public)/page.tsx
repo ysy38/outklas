@@ -10,6 +10,7 @@ import {
   ScienceSection,
 } from "@/components/landing-signature";
 import { PendingButton } from "@/components/pending-button";
+import { organizationJsonLd } from "@/content/editorial";
 import { funnelSteps } from "@/content/landing-signature";
 import { faqsFor } from "@/content/seo";
 import { ydsBlueprint } from "@/modules/exam/blueprint";
@@ -158,12 +159,14 @@ export default function HomePage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
+      organizationJsonLd(),
       {
         "@type": "WebSite",
         name: brand.name,
         url: siteUrl,
         inLanguage: "tr-TR",
         description: brand.sub,
+        publisher: { "@id": `${siteUrl}/#organization` },
       },
       {
         "@type": "FAQPage",

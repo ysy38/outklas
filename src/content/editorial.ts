@@ -4,15 +4,41 @@ export type Author = { name: string; profile: string; role?: string };
 
 /** People shown as "Hazırlayanlar" on content pages and as Article authors in JSON-LD. */
 export const authors: Author[] = [
-  { name: "İsa Eroğlu", profile: "https://www.linkedin.com/in/isa-eroglu-9610131bb/" },
-  { name: "Kenan İpkıran", profile: "https://www.linkedin.com/in/kenan-ipk%C4%B1ran-bb865497/" },
+  { name: "İsa Eroğlu", profile: "https://www.linkedin.com/in/isa-eroglu-9610131bb/", role: "Kurucu" },
+  { name: "Kenan İpkıran", profile: "https://www.linkedin.com/in/kenan-ipk%C4%B1ran-bb865497/", role: "Kurucu" },
 ];
+
+export const contactEmail = "info@outklas.com";
 
 export const editor = {
   about:
     "Soru açıklamalarını, bölüm rehberlerini ve yöntem sayfasını yazan ve kontrol eden ekip. Sınav tarihleri ÖSYM’nin sınav takviminden alınır.",
   href: "/yontem#editor",
 };
+
+/** Site-wide Organization + founders for E-E-A-T / GEO. */
+export function organizationJsonLd() {
+  return {
+    "@type": "EducationalOrganization",
+    "@id": `${siteUrl}/#organization`,
+    name: brand.wordmark,
+    alternateName: brand.name,
+    url: siteUrl,
+    logo: `${siteUrl}/brand/outklas-mark-512.png`,
+    description: brand.sub,
+    email: contactEmail,
+    areaServed: { "@type": "Country", name: "Türkiye" },
+    knowsAbout: ["YDS", "e-YDS", "YÖKDİL", "e-YÖKDİL", "Cümle Röntgeni", "İngilizce sınav hazırlığı"],
+    founder: authors.map((author) => ({
+      "@type": "Person",
+      name: author.name,
+      jobTitle: author.role ?? "Kurucu",
+      url: author.profile,
+      sameAs: [author.profile],
+    })),
+    sameAs: authors.map((author) => author.profile),
+  };
+}
 
 /** Last content change per public path. Update the date whenever the page's copy changes; the sitemap reads it too. */
 export const updatedAt: Record<string, string> = {
@@ -59,7 +85,7 @@ export function articleJsonLd(input: { path: string; title: string; description:
     url: `${siteUrl}${input.path}`,
     mainEntityOfPage: `${siteUrl}${input.path}`,
     author: authorsJsonLd(),
-    publisher: { "@type": "Organization", name: brand.name, url: siteUrl },
+    publisher: { "@id": `${siteUrl}/#organization` },
     ...(updated ? { dateModified: updated } : {}),
   };
 }

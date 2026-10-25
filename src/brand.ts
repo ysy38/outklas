@@ -32,5 +32,18 @@ export const brand = {
   sprintSimulators: 4,
 } as const;
 
-/** Canonical origin for metadata, sitemap and JSON-LD. Set NEXT_PUBLIC_SITE_URL to the production domain. */
-export const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || `https://${brand.domain}`).replace(/\/+$/, "");
+/**
+ * Canonical origin for metadata, sitemap and JSON-LD.
+ * Always apex (`https://outklas.com`) — never www. Vercel must 301 www → apex
+ * so Google does not see two competing homes.
+ */
+export const siteUrl = (() => {
+  const raw = (process.env.NEXT_PUBLIC_SITE_URL || `https://${brand.domain}`).replace(/\/+$/, "");
+  try {
+    const url = new URL(raw);
+    if (url.hostname === `www.${brand.domain}`) url.hostname = brand.domain;
+    return url.origin;
+  } catch {
+    return `https://${brand.domain}`;
+  }
+})();
