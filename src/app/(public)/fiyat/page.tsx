@@ -3,7 +3,8 @@ import Link from "next/link";
 import { brand, siteUrl } from "@/brand";
 import { EditorialNote } from "@/components/editorial-note";
 import { OfferCards } from "@/components/offer-cards";
-import { freeOffer, launchActive, offers, tl } from "@/content/offers";
+import { digitalOfferPolicyJsonLd } from "@/content/editorial";
+import { freeOffer, offers, tl } from "@/content/offers";
 import { daysUntilExam } from "@/modules/learning/plan";
 import { countdownText, daysUntil, finishedFamilies, formatDay, upcomingSittings } from "@/content/exam-calendar";
 import { currentProfile } from "@/server/auth";
@@ -31,7 +32,8 @@ export default async function PricingPage() {
   const access = await entitlementFor(profile?.id ?? null);
   const upcoming = upcomingSittings();
   const finished = finishedFamilies();
-  const offer = (name: string, price: number, description: string, extra: Record<string, string> = {}) => ({
+  const policy = digitalOfferPolicyJsonLd();
+  const offer = (name: string, price: number, description: string, extra: Record<string, unknown> = {}) => ({
     "@type": "Offer",
     name,
     description,
@@ -39,20 +41,29 @@ export default async function PricingPage() {
     priceCurrency: "TRY",
     availability: "https://schema.org/InStock",
     url: `${siteUrl}/fiyat`,
+    itemCondition: "https://schema.org/NewCondition",
+    seller: { "@id": `${siteUrl}/#organization` },
+    ...policy,
     ...extra,
   });
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "Product",
+    "@type": ["Product", "SoftwareApplication"],
     name: `${brand.name} YDS ve YÖKDİL hazırlık`,
     description: `YDS, e-YDS, YÖKDİL ve e-YÖKDİL için ${brand.diagnosticQuestions} soruluk seviye testi, günlük çalışma planı ve tam deneme.`,
     brand: { "@type": "Brand", name: brand.name },
     image: `${siteUrl}/brand/outklas-mark-512.png`,
     url: `${siteUrl}/fiyat`,
+    applicationCategory: "EducationalApplication",
+    operatingSystem: "Web",
     offers: [
       offer(freeOffer.name, 0, `${freeOffer.points.join(", ")}.`),
-      offer(offers.gelisim.name, offers.gelisim.price, `${offers.gelisim.days} gün erişim, tek ödeme, KDV dahil.`),
-      offer(offers.kamp.name, offers.kamp.price, `${offers.kamp.days} gün erişim, tek ödeme, KDV dahil.`, launchActive() ? { priceValidUntil: brand.launchUntil } : {}),
+      offer(offers.gelisim.name, offers.gelisim.price, `${offers.gelisim.days} gün erişim, tek ödeme, KDV dahil.`, {
+        priceValidUntil: brand.launchUntil,
+      }),
+      offer(offers.kamp.name, offers.kamp.price, `${offers.kamp.days} gün erişim, tek ödeme, KDV dahil.`, {
+        priceValidUntil: brand.launchUntil,
+      }),
     ],
   };
   return (
@@ -64,7 +75,7 @@ export default async function PricingPage() {
       </h1>
       <EditorialNote path="/fiyat" className="mt-4" />
       <p className="mt-4 max-w-2xl text-base leading-8 text-muted sm:text-lg">
-        Cümle Röntgeni ücretsizdir ve hesap istemez. Sınavına {brand.sprintMaxDays} gün ya da daha az varsa Sprint ({tl(brand.prices.gelisim)} TL / {brand.accessDays.gelisim} gün), daha fazla varsa Kamp ({tl(brand.prices.kamp)} TL / {brand.accessDays.kamp} gün). İki paket de tek ödemedir; abonelik yok, fiyatlar KDV dahil. İstersen 3 taksit görünümüyle karşılaştır (Sprint 3 × {tl(brand.installment.gelisim)} TL, Kamp 3 × {tl(brand.installment.kamp)} TL); checkout tek ödemedir. Sprint’ten Kamp’a geçersen ödediğin tutar düşülür.
+        Cümle Röntgeni ücretsizdir ve hesap istemez. Sınavına {brand.sprintMaxDays} gün ya da daha az varsa Sprint ({tl(brand.prices.gelisim)} TL / {brand.accessDays.gelisim} gün), daha fazla varsa Kamp ({tl(brand.prices.kamp)} TL / {brand.accessDays.kamp} gün). İki paket de tek ödemedir; abonelik yok, fiyatlar KDV dahil. İstersen 3 taksit görünümüyle karşılaştır (Sprint 3 × {tl(brand.installment.gelisim)} TL, Kamp 3 × {tl(brand.installment.kamp)} TL); checkout tek ödemedir. Sprint’ten Kamp’a geçersen ödediğin tutar düşülür. Paketler dijitaldir: kargo yoktur, ödeme sonrası erişim anında açılır.
       </p>
 
       <div className="mt-10 grid items-stretch gap-4 lg:grid-cols-[0.8fr_2fr]">

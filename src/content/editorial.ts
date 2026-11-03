@@ -47,7 +47,7 @@ export const updatedAt: Record<string, string> = {
   "/yds-hazirlik": "2026-10-15",
   "/yds-baglac-testi": "2026-10-15",
   "/yds-okudugunu-anlama": "2026-10-15",
-  "/fiyat": "2026-10-15",
+  "/fiyat": "2026-10-30",
   "/rehber/grammar": "2026-10-21",
   "/rehber/vocabulary": "2026-10-21",
   "/rehber/cloze": "2026-10-21",
@@ -73,6 +73,28 @@ export function authorsJsonLd() {
     ...(author.role ? { jobTitle: author.role } : {}),
     worksFor: { "@type": "Organization", name: brand.name, url: siteUrl },
   }));
+}
+
+/** Instant digital access in Turkey: no cargo, no physical return. Matches the paid packs on /fiyat. */
+export function digitalOfferPolicyJsonLd() {
+  return {
+    validFrom: updatedAt["/fiyat"] ?? "2026-10-15",
+    shippingDetails: {
+      "@type": "OfferShippingDetails",
+      shippingRate: { "@type": "MonetaryAmount", value: "0", currency: "TRY" },
+      shippingDestination: { "@type": "DefinedRegion", addressCountry: "TR" },
+      deliveryTime: {
+        "@type": "ShippingDeliveryTime",
+        handlingTime: { "@type": "QuantitativeValue", minValue: 0, maxValue: 0, unitCode: "DAY" },
+        transitTime: { "@type": "QuantitativeValue", minValue: 0, maxValue: 0, unitCode: "DAY" },
+      },
+    },
+    hasMerchantReturnPolicy: {
+      "@type": "MerchantReturnPolicy",
+      applicableCountry: "TR",
+      returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+    },
+  };
 }
 
 export function articleJsonLd(input: { path: string; title: string; description: string }) {

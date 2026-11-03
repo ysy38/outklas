@@ -9,3 +9,7 @@ dist
 next-env.d.ts
 /sources/
 supabase/.temp
+.vercel
+secrets/
+*.pem
+*-sa.json
