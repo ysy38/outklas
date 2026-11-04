@@ -79,7 +79,7 @@ export function XrayLab() {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-night px-4 py-3.5 text-white sm:px-6">
         <div className="flex flex-wrap items-center gap-2.5">
           <span className="rounded-md bg-pine px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]">{brand.wordmark} motoru</span>
-          <span className="text-xs text-white/65">Canlı Cümle Röntgeni · Kelime Neşteri · Çeldirici Otopsisi</span>
+          <span className="text-xs text-white/65">Canlı Cümle Röntgeni · Kelime odağı · Çeldirici ayıklaması</span>
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/70">Örnek</span>
         </div>
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
@@ -236,7 +236,7 @@ export function XrayLab() {
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-line pt-4">
-            <span className="mr-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Kelime neşteri · tıkla</span>
+            <span className="mr-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Kelime odağı · tıkla</span>
             {data.words.map((item) => (
               <button
                 key={item.word}
@@ -261,7 +261,7 @@ export function XrayLab() {
         <div className="border-t border-line pt-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-base font-semibold text-ink sm:text-lg">
-              Canlı çeldirici otopsisi{" "}
+              Canlı çeldirici ayıklaması{" "}
               <span className="font-normal text-muted">· Yukarıdaki cümleye göre hangi şıkkı işaretlerdin?</span>
             </h3>
             <span className="text-xs font-semibold text-pine">Şıkka tıkla, tuzağı gör ↓</span>
@@ -277,7 +277,7 @@ export function XrayLab() {
                 }`}
               >
                 <span className="text-sm font-medium leading-snug text-ink">{item.text}</span>
-                <span className="mt-3 block text-[11px] text-muted">Bu şıkkın otopsisini gör →</span>
+                <span className="mt-3 block text-[11px] text-muted">Bu şık neden elenir, gör →</span>
               </button>
             ))}
           </div>

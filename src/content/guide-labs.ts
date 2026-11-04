@@ -195,7 +195,7 @@ export const deepGuides: Partial<Record<SectionId, DeepGuide>> = {
     workedSteps: {
       structural: "1. Bağlamı oku",
       meaning: "2. Sözcük birlikteliğini incele",
-      autopsy: "3. Çeldirici otopsisi",
+      autopsy: "3. Çeldirici ayıklaması",
     },
     worked: {
       stem: "The results were largely _____ with earlier findings, although the size of the effect differed across studies.",
@@ -226,7 +226,7 @@ export const deepGuides: Partial<Record<SectionId, DeepGuide>> = {
       "Kendini kelimeyi hatırlamaya zorlayan kısa alıştırmalar ve öğrenilen kelimelere zaman aralıklarıyla yeniden dönmek daha işlevsel bir düzen kurabilir.",
       "Araştırmalar aralıklı tekrarın ve hatırlama pratiğinin kalıcılığı destekleyebildiğini gösterir; her kelime ve her öğrenen için tek bir ideal aralık yoktur.",
     ],
-    beyondTitle: "Kelime Neşteri",
+    beyondTitle: "Kelime odağı",
     beyondBody:
       "Kelimeyi bağlamında gör, doğru seçeneği gerekçelendir ve çeldiricinin neden cazip geldiğini öğren. Yanlışını yalnızca listeye ekleme; nedenini ayır.",
     lab: {
@@ -301,7 +301,7 @@ export const deepGuides: Partial<Record<SectionId, DeepGuide>> = {
         doi: "https://doi.org/10.1111/lang.12479",
       },
     ],
-    ctaLine: "outklas. Kelime Neşteri: Kelimeyi bağlamında gör, doğru seçeneği gerekçelendir ve çeldiricinin neden cazip geldiğini öğren.",
+    ctaLine: "outklas. Kelime odağı: Kelimeyi bağlamında gör, doğru seçeneği gerekçelendir ve çeldiricinin neden cazip geldiğini öğren.",
     ctaPrimary: { href: "/kelime", label: "Ücretsiz kelime alıştırmasıyla başla →" },
     ctaSecondary: { href: "/teshis", label: "Seviye testini dene" },
   },
@@ -334,7 +334,7 @@ export const deepGuides: Partial<Record<SectionId, DeepGuide>> = {
     workedSteps: {
       structural: "1. Cümlenin mantığını belirle",
       meaning: "2. Dilbilimsel kanıt",
-      autopsy: "3. Çeldirici otopsisi",
+      autopsy: "3. Çeldirici ayıklaması",
     },
     worked: {
       stem: "Many cities are investing in public transport to reduce traffic congestion. Expanding bus and rail networks can make commuting more convenient. However, these investments are unlikely to produce lasting benefits _____ they are accompanied by measures that discourage excessive car use.",
@@ -505,7 +505,7 @@ export const deepGuides: Partial<Record<SectionId, DeepGuide>> = {
     workedSteps: {
       structural: "1. İlk bölümün oluşturduğu beklentiyi bul",
       meaning: "2. Dilbilgisel yapıyı kontrol et",
-      autopsy: "3. Çeldirici otopsisi",
+      autopsy: "3. Çeldirici ayıklaması",
     },
     worked: {
       stem: "Although the new treatment has shown promising results in early trials, _____.",
@@ -676,7 +676,7 @@ export const deepGuides: Partial<Record<SectionId, DeepGuide>> = {
     workedSteps: {
       structural: "1. Cümle röntgeni",
       meaning: "2. Korunan ilişkiler",
-      autopsy: "3. Çeldirici otopsisi",
+      autopsy: "3. Çeldirici ayıklaması",
     },
     worked: {
       stem: "Although the policy was introduced to reduce waste, its effectiveness depends largely on whether local authorities enforce it consistently.",
@@ -854,7 +854,7 @@ export const deepGuides: Partial<Record<SectionId, DeepGuide>> = {
     workedSteps: {
       structural: "1. Metindeki kanıtı bul",
       meaning: "2. Kapsam kontrolü",
-      autopsy: "3. Çeldirici otopsisi",
+      autopsy: "3. Çeldirici ayıklaması",
     },
     worked: {
       passage:
@@ -1042,7 +1042,7 @@ export const deepGuides: Partial<Record<SectionId, DeepGuide>> = {
     workedSteps: {
       structural: "1. Konuşmacının amacını belirle",
       meaning: "2. Söylem işlevini belirle",
-      autopsy: "3. Çeldirici otopsisi",
+      autopsy: "3. Çeldirici ayıklaması",
     },
     worked: {
       passageLabel: "Diyalog",
@@ -1228,7 +1228,7 @@ export const deepGuides: Partial<Record<SectionId, DeepGuide>> = {
     workedSteps: {
       structural: "1. Anlam iskeletini çıkar",
       meaning: "2. Anlamı karşılaştır",
-      autopsy: "3. Çeldirici otopsisi",
+      autopsy: "3. Çeldirici ayıklaması",
     },
     worked: {
       passageLabel: "Original sentence",
@@ -1409,7 +1409,7 @@ export const deepGuides: Partial<Record<SectionId, DeepGuide>> = {
     workedSteps: {
       structural: "1. Eksik cümlenin işlevi",
       meaning: "2. Sonraki cümleyle bağ",
-      autopsy: "3. Çeldirici otopsisi",
+      autopsy: "3. Çeldirici ayıklaması",
     },
     worked: {
       stem: "Many cities are investing in public transport to reduce traffic congestion. Expanding bus and rail networks can encourage people to leave their cars at home, particularly when services are frequent and affordable. ----. For this reason, transport planning often needs to be coordinated with housing and land-use policies.",
@@ -1607,7 +1607,7 @@ export const deepGuides: Partial<Record<SectionId, DeepGuide>> = {
     workedSteps: {
       structural: "1. Paragrafın odağı",
       meaning: "2. Kopuk cümleyi ayır",
-      autopsy: "3. Çeldirici otopsisi",
+      autopsy: "3. Çeldirici ayıklaması",
     },
     worked: {
       passageLabel: "Paragraph",

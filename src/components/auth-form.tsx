@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { PendingButton } from "@/components/pending-button";
 import { signInAction, signUpAction } from "@/server/actions";
 
@@ -78,6 +79,19 @@ export function AuthForm({ initialMode = "login", next }: { initialMode?: "login
         <PendingButton pendingLabel={login ? "Giriş yapılıyor…" : "Hesabın açılıyor…"} className="w-full rounded-full bg-pine px-4 py-3 text-cream">
           {login ? "Giriş yap" : "Hesap aç"}
         </PendingButton>
+        {login ? null : (
+          <p className="text-xs leading-5 text-muted">
+            Hesap açarak{" "}
+            <Link href="/kullanim-kosullari" className="link-underline text-pine">
+              kullanım koşullarını
+            </Link>{" "}
+            ve{" "}
+            <Link href="/gizlilik" className="link-underline text-pine">
+              gizlilik bildirimini
+            </Link>{" "}
+            kabul edersin.
+          </p>
+        )}
       </form>
     </div>
   );

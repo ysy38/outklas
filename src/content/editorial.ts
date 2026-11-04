@@ -42,7 +42,11 @@ export function organizationJsonLd() {
 
 /** Last content change per public path. Update the date whenever the page's copy changes; the sitemap reads it too. */
 export const updatedAt: Record<string, string> = {
-  "/": "2026-10-15",
+  "/": "2026-11-04",
+  "/kullanim-kosullari": "2026-11-04",
+  "/gizlilik": "2026-11-04",
+  "/iade": "2026-11-04",
+  "/mesafeli-satis": "2026-11-04",
   "/yontem": "2026-10-15",
   "/yds-hazirlik": "2026-11-04",
   "/yds-taktikleri": "2026-11-04",

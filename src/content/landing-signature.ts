@@ -12,7 +12,7 @@ export const motorPillars = [
     body: "Özne + bağlaç + yüklem kilidi. Cümlenin iskeleti görünür hâle gelir.",
   },
   {
-    code: "03 · OTOPSİ",
+    code: "03 · AYIKLAMA",
     title: "Çeldirici filtresi",
     body: "İki şık arasında kalmaya son. Yanlış seçeneğin neden cazip göründüğünü açıklar.",
   },
@@ -122,7 +122,7 @@ export const roiProfiles = [
 ] as const;
 
 export const architecturePoints = [
-  "11 soru tipinin tamamında hata takibi",
+  "10 soru tipinin tamamında hata takibi",
   "Kişiselleştirilmiş günlük çalışma planı",
   "Çeldirici filtresiyle şık analizi",
   "Hedefe göre öncelik sırası",

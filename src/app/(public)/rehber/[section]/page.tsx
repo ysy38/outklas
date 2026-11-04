@@ -217,7 +217,7 @@ export default async function GuideSectionPage({ params }: Props) {
           <div className="rounded-[24px] border border-pine/25 bg-soft p-5 sm:rounded-[28px]">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pine">outklas. standardı</p>
             <p className="mt-2 text-sm leading-6 text-ink">
-              Yapısal kanıt → anlam kontrolü → çeldirici otopsisi. Kuralı ezberlemek değil; soruyu çözmek ve gerekçeyi görmek.
+              Yapısal kanıt → anlam kontrolü → çeldirici ayıklaması. Kuralı ezberlemek değil; soruyu çözmek ve gerekçeyi görmek.
             </p>
           </div>
         ) : null}

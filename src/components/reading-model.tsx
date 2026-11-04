@@ -24,7 +24,7 @@ const copy = {
     badge: `${brand.wordmark} iskelet kilidi`,
     caption: (
       <>
-        <strong className="text-teal">Neşter kilit:</strong> Zihin yalnızca 3 noktaya dokunur:{" "}
+        <strong className="text-teal">Odak kilidi:</strong> Zihin yalnızca 3 noktaya dokunur:{" "}
         <span className="font-semibold text-amber-700 dark:text-amber-300">[1. Zıtlık: Notwithstanding]</span> →{" "}
         <span className="font-semibold text-pine">[2. Yüklem: studies confirmed]</span> →{" "}
         <span className="font-semibold text-teal">[3. Hedef: accelerate replication]</span>.
@@ -82,7 +82,7 @@ export function ReadingModel() {
               : "rounded-lg px-3 py-2 text-xs font-bold text-muted transition hover:bg-soft hover:text-ink"
           }
         >
-          ✓ {brand.wordmark} zihni (neşter)
+          ✓ {brand.wordmark} zihni (odak)
         </button>
       </div>
 

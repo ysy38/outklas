@@ -26,7 +26,7 @@ const publicLinks: [string, string][] = [
   ["SSS", "/#sss"],
 ];
 
-const footerColumns: { title: string; links: [string, string][] }[] = [
+const footerColumns: { title: string; links: [string, string][]; columns?: number }[] = [
   {
     title: "Çalış",
     links: [
@@ -37,7 +37,24 @@ const footerColumns: { title: string; links: [string, string][] }[] = [
     ],
   },
   {
+    title: "Hesap",
+    links: [
+      ["Fiyat", "/fiyat"],
+      ["Giriş yap", "/giris"],
+    ],
+  },
+  {
+    title: "Yasal",
+    links: [
+      ["Kullanım koşulları", "/kullanim-kosullari"],
+      ["Gizlilik", "/gizlilik"],
+      ["İptal ve iade", "/iade"],
+      ["Mesafeli satış", "/mesafeli-satis"],
+    ],
+  },
+  {
     title: "Konular",
+    columns: 2,
     links: [
       ["YDS hazırlık", "/yds-hazirlik"],
       ["YDS taktikleri", "/yds-taktikleri"],
@@ -47,14 +64,7 @@ const footerColumns: { title: string; links: [string, string][] }[] = [
       ["Bağlaçlar", "/yds-baglac-testi"],
       ["Okuduğunu anlama", "/yds-okudugunu-anlama"],
       ["Çeviri", "/rehber/translation"],
-      ["Paragrafta boşluk doldurma", "/rehber/cloze"],
-    ],
-  },
-  {
-    title: "Hesap",
-    links: [
-      ["Fiyat", "/fiyat"],
-      ["Giriş yap", "/giris"],
+      ["Paragrafta boşluk", "/rehber/cloze"],
     ],
   },
 ];
@@ -144,15 +154,17 @@ export function PublicFooter() {
           <SocialMark d="M23.5 6.2a3.5 3.5 0 0 0-2.5-2.5C19.2 3.2 12 3.2 12 3.2s-7.2 0-9 .5A3.5 3.5 0 0 0 .5 6.2 36 36 0 0 0 0 12a36 36 0 0 0 .5 5.8 3.5 3.5 0 0 0 2.5 2.5c1.8.5 9 .5 9 .5s7.2 0 9-.5a3.5 3.5 0 0 0 2.5-2.5A36 36 0 0 0 24 12a36 36 0 0 0-.5-5.8ZM9.8 15.5v-7l6 3.5-6 3.5Z" />
         </div>
       </div>
-      <div className="mx-auto grid w-full max-w-6xl gap-8 border-t border-line px-4 py-8 sm:px-5 sm:grid-cols-3">
+      <div className="mx-auto grid w-full max-w-6xl gap-8 border-t border-line px-4 py-8 sm:grid-cols-2 sm:px-5 lg:grid-cols-4">
         {footerColumns.map((column) => (
-          <div key={column.title} className="text-sm leading-8">
+          <div key={column.title} className="text-sm leading-7">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-pine">{column.title}</p>
-            {column.links.map(([label, href]) => (
-              <Link key={href} href={href} className="link-underline block w-fit text-muted hover:text-ink">
-                {label}
-              </Link>
-            ))}
+            <div className={column.columns === 2 ? "mt-2 grid grid-cols-2 gap-x-4" : "mt-2"}>
+              {column.links.map(([label, href]) => (
+                <Link key={href} href={href} className="link-underline block w-fit py-0.5 text-muted hover:text-ink">
+                  {label}
+                </Link>
+              ))}
+            </div>
           </div>
         ))}
       </div>

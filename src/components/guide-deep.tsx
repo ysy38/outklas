@@ -9,7 +9,7 @@ export function GuideDeep({ guide, path }: { guide: DeepGuide; path: string }) {
   const steps = guide.workedSteps ?? {
     structural: "1. Yapısal kanıt",
     meaning: "2. Anlam kontrolü",
-    autopsy: "3. Çeldirici otopsisi",
+    autopsy: "3. Çeldirici ayıklaması",
   };
   const jumps = [
     { href: "#beceriler", label: "Neyi ölçer?" },

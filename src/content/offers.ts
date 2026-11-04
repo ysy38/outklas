@@ -34,7 +34,7 @@ export const offers: Record<CheckoutPlan, Offer> = {
     points: [
       "Teşhis raporunun tamamı; öncelikli gelişim alanların",
       "Her gün kısa, hedefe odaklı kişisel çalışma planı",
-      "Cümle Röntgeni ve çeldirici otopsisi ile çözümleme pratiği",
+      "Cümle Röntgeni ve çeldirici ayıklaması ile çözümleme pratiği",
       `${brand.sprintSimulators} tam deneme (80 soru, 180 dakika)`,
       "Günlük sınır olmadan kelime ve bağlaç alıştırması",
       "Yanlışların aralıklı tekrarla yeniden karşına çıkar",

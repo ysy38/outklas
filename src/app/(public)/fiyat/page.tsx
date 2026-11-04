@@ -131,6 +131,17 @@ export default async function PricingPage() {
           </a>
         </p>
       </div>
+      <p className="mt-6 max-w-2xl text-sm leading-6 text-muted">
+        Ücretli planlar tek ödemedir, abonelik yoktur. İptal ve iade koşulları{" "}
+        <Link href="/iade" className="link-underline text-pine">
+          iade sayfasında
+        </Link>
+        , sözleşme özeti{" "}
+        <Link href="/mesafeli-satis" className="link-underline text-pine">
+          mesafeli satış sayfasında
+        </Link>
+        .
+      </p>
 
     </section>
   );

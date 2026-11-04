@@ -15,7 +15,7 @@ export function MotorSection() {
         <div data-rise className="max-w-3xl">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pine">{brand.wordmark} motoru</p>
           <h2 className="mt-3 text-4xl sm:text-5xl">
-            YÖKDİL Sağlık cümle analizi: <span className="text-pine">Röntgen</span>, Neşter, Otopsi.
+            YÖKDİL Sağlık cümle analizi: <span className="text-pine">Röntgen</span>, Odak, Ayıklama.
           </h2>
           <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">
             Doğru şıkkı bulmakla, neden o şık olduğunu anlamak aynı şey değil. Branş seç, katmanı değiştir, kelimeye ve şıkka tıkla. Örnek lab canlıdır.
@@ -193,7 +193,7 @@ export function PricingTeaserSection() {
               ₺0 <span className="font-sans text-sm font-medium text-muted">/ ilk teşhis</span>
             </p>
             <ul className="mt-5 flex-1 space-y-2 text-sm leading-6 text-muted">
-              <li>✓ Yapısal çözümleme ve çeldirici otopsisi</li>
+              <li>✓ Yapısal çözümleme ve çeldirici ayıklaması</li>
               <li>✓ Raporun ilk 3 bulgusu</li>
               <li>✓ Günlük kelime & bağlaç · 1 deneme</li>
             </ul>
@@ -215,7 +215,7 @@ export function PricingTeaserSection() {
             <p className="mt-1 text-xs text-[#a7aa9e]">veya 3 × ₺{tl(brand.installment.gelisim)} görünümü · checkout tek ödeme</p>
             <ul className="mt-5 flex-1 space-y-2 text-sm leading-6 text-[#cfd2c6]">
               <li>✓ Tam teşhis + günlük anti-plato planı</li>
-              <li>✓ Cümle Röntgeni & çeldirici otopsisi</li>
+              <li>✓ Cümle Röntgeni ve çeldirici ayıklaması</li>
               <li>✓ {brand.sprintSimulators} tam deneme · sınırsız kelime/bağlaç</li>
             </ul>
             <Link href="/fiyat" className="shine mt-6 rounded-full bg-pine px-5 py-3 text-center text-sm font-semibold text-pine-ink transition hover:-translate-y-0.5">

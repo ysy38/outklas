@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { siteUrl } from "@/brand";
 import { updatedAt } from "@/content/editorial";
 import { guides } from "@/content/guides";
+import { legalDocs } from "@/content/legal";
 import { ydsBlueprint } from "@/modules/exam/blueprint";
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -19,6 +20,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/fiyat",
     "/yds-puan-hesaplama",
     ...guides.map((guide) => `/${guide.slug}`),
+    ...legalDocs.map((doc) => doc.path),
   ];
   return paths.map((path) => {
     const updated = updatedAt[path || "/"];
