@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TopicLinks } from "@/components/topic-links";
 import { rehberBySection } from "@/content/rehber";
 import { ydsBlueprint } from "@/modules/exam/blueprint";
 
@@ -40,6 +41,7 @@ export default function GuideIndexPage() {
           );
         })}
       </ol>
+      <TopicLinks className="mt-16 max-w-4xl" />
     </section>
   );
 }

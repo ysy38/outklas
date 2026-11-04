@@ -8,6 +8,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const paths = [
     "",
     "/yds-hazirlik",
+    "/yds-taktikleri",
+    "/yds-sifirdan-hazirlik",
+    "/yds-70-80-90-nasil-alinir",
     "/teshis",
     "/yontem",
     "/rehber",

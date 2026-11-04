@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { brand } from "@/brand";
 import { EditorialNote } from "@/components/editorial-note";
+import { TopicLinks } from "@/components/topic-links";
 import { articleJsonLd, authors, editor } from "@/content/editorial";
 
 export const dynamic = "force-static";
@@ -114,6 +115,8 @@ export default function MethodPage() {
         <p className="mt-4 leading-7 text-muted">{editor.about}</p>
         <p className="mt-3 leading-7 text-muted">Bir bilgi değiştiğinde sayfayı düzeltir ve güncelleme tarihini yenileriz.</p>
       </section>
+
+      <TopicLinks title="Bu yöntemin uygulamaları" className="mt-12" />
 
       <div className="mt-10 flex flex-col gap-3 sm:flex-row">
         <Link href="/teshis" className="rounded-full bg-pine px-6 py-3.5 text-center text-sm font-semibold text-white transition hover:-translate-y-0.5">

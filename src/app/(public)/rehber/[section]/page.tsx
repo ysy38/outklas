@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { brand, siteUrl } from "@/brand";
 import { GuideDeep } from "@/components/guide-deep";
 import { GuideSectionNav } from "@/components/guide-section-nav";
+import { TopicLinks } from "@/components/topic-links";
 import { skillName } from "@/content/labels";
 import { articleJsonLd } from "@/content/editorial";
 import { deepGuideFor } from "@/content/guide-labs";
@@ -144,6 +145,7 @@ export default async function GuideSectionPage({ params }: Props) {
             <GuideSectionNav section={section} className="mt-10" />
           </>
         )}
+        <TopicLinks className="mt-14" />
       </div>
 
       <aside className="space-y-4 lg:sticky lg:top-28 lg:self-start">

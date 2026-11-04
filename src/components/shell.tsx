@@ -40,6 +40,9 @@ const footerColumns: { title: string; links: [string, string][] }[] = [
     title: "Konular",
     links: [
       ["YDS hazırlık", "/yds-hazirlik"],
+      ["YDS taktikleri", "/yds-taktikleri"],
+      ["Sıfırdan YDS", "/yds-sifirdan-hazirlik"],
+      ["70, 80, 90 için", "/yds-70-80-90-nasil-alinir"],
       ["Yöntemimiz", "/yontem"],
       ["Bağlaçlar", "/yds-baglac-testi"],
       ["Okuduğunu anlama", "/yds-okudugunu-anlama"],

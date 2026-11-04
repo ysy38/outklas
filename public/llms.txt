@@ -1,6 +1,6 @@
 # Outklas
 
-> AI-powered, diagnosis-first prep for Turkey’s YDS, e-YDS, YÖKDİL and e-YÖKDİL exams.
+> Diagnosis-first prep for Turkey’s YDS, e-YDS, YÖKDİL and e-YÖKDİL exams. Next questions are picked by explicit rules, not by AI.
 
 Outklas (https://outklas.com) helps candidates stop generic “study more” loops. A free 40-question diagnostic estimates a score band, ranks which exam sections cost the most points, then builds a daily adaptive plan around Sentence X-Ray (Cümle Röntgeni), connector/vocab drills, and simulators.
 
@@ -33,7 +33,10 @@ Turkish graduate / academic candidates preparing for ÖSYM English proficiency e
 - https://outklas.com/ — product home
 - https://outklas.com/teshis — free level test
 - https://outklas.com/yontem — how scoring & task selection work
-- https://outklas.com/yds-hazirlik — YDS prep overview
+- https://outklas.com/yds-hazirlik — how to prepare for YDS and YÖKDİL (measure, fix one gap a day, spaced review)
+- https://outklas.com/yds-taktikleri — tactics: skeleton / relation / scope checks, where common tactics fail, 180-minute plan
+- https://outklas.com/yds-sifirdan-hazirlik — starting from zero: order of study, rough timelines, first 4 weeks
+- https://outklas.com/yds-70-80-90-nasil-alinir — corrects and error allowance for 70 / 80 / 90, example split by section
 - https://outklas.com/rehber — section guide index
 - https://outklas.com/fiyat — pricing
 - https://outklas.com/deneme — free practice exam

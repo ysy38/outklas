@@ -103,6 +103,15 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
         </p>
       ) : null}
       {slow ? <p className="text-sm">En çok vakit harcadığın bölüm: {title(slow.section)}.</p> : null}
+      {exam === "ydt" || emptyDiagnostic ? null : (
+        <p className="mt-2 text-sm text-muted">
+          Hedefine kaç doğru uzak olduğunu ve hata hakkını hangi bölümde harcayabileceğini{" "}
+          <Link href="/yds-70-80-90-nasil-alinir" className="text-pine">
+            70, 80, 90 sayfasında
+          </Link>{" "}
+          gösteriyoruz.
+        </p>
+      )}
       <div className="mt-8 flex gap-3">
         {profile ? (
             <Link href="/bugun" className="rounded-full bg-pine px-4 py-2 text-cream">

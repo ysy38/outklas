@@ -7,7 +7,7 @@ Robots: https://outklas.com/robots.txt
 
 ## One-line
 
-Outklas is an AI-assisted, diagnosis-first platform for YDS / e-YDS / YÖKDİL / e-YÖKDİL preparation in Turkey, built around Sentence X-Ray (Cümle Röntgeni), personal diagnostics, and daily adaptive study plans.
+Outklas is a diagnosis-first platform for YDS / e-YDS / YÖKDİL / e-YÖKDİL preparation in Turkey, built around Sentence X-Ray (Cümle Röntgeni), personal diagnostics, and daily adaptive study plans.
 
 ## Problem we solve
 

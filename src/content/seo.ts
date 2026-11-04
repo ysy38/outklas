@@ -81,6 +81,24 @@ export const siteFaqs: readonly Faq[] = [
     place: ["home", "score"],
   },
   {
+    question: "İptal edilen soru puanı nasıl değiştirir?",
+    answer:
+      "İptal edilen soru değerlendirmeye katılmaz. Kalan sorular 100 puanı paylaşır. 80 soru duruyorsa her doğru 1,25 puandır. 1 soru iptal edilirse 79 soru kalır ve her doğru 100 ÷ 79, yani yaklaşık 1,27 puan eder. Hesaplayıcıya iptal sayısını yazınca puan buna göre değişir. Aşağıdaki tablo, iptal olmadığı durumu gösterir.",
+    place: ["score"],
+  },
+  {
+    question: "Boş bırakmak puan kazandırır mı?",
+    answer:
+      "Hayır. Boş da yanlış da puana sıfır yazar; ikisi de doğru sayını düşürmez. Emin olmadığın soruyu işaretlemek puanını düşürmez, boş bırakmak da yükseltmez. İşaretlediğin soru doğru çıkarsa puanın artar.",
+    place: ["score"],
+  },
+  {
+    question: "YDS ile YDT puanı aynı şekilde mi hesaplanır?",
+    answer:
+      "Hayır. YDS, e-YDS, YÖKDİL ve e-YÖKDİL’de yalnız doğrular sayılır. YDT, YKS’nin yabancı dil oturumudur: dört yanlış bir doğruyu götürür, sonra o yılın ortalamasına göre standart puana çevrilir. Bu sayfadaki tablo YDT için kullanılmaz.",
+    place: ["score"],
+  },
+  {
     question: "Seviye testinin sonucu resmi puan mı?",
     answer:
       "Hayır. 40 soruluk seviye testi, 80 soruluk sınavda alabileceğin puanı tahmin eder; ÖSYM sonucunun yerini tutmaz. Sorular gerçek sınavdaki bölüm ağırlıklarına göre seçildiği için okuma sorusu burada da çoktur.",

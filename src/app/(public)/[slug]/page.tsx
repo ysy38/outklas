@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EditorialNote } from "@/components/editorial-note";
+import { TopicLinks } from "@/components/topic-links";
 import { articleJsonLd } from "@/content/editorial";
 import { guideBySlug, guides } from "@/content/guides";
+import { ydsBlueprint } from "@/modules/exam/blueprint";
 
 export function generateStaticParams() {
   return guides.map((guide) => ({ slug: guide.slug }));
@@ -34,11 +36,22 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
       <Link href="/teshis" className="mt-8 inline-block rounded-full bg-pine px-5 py-3 text-cream">
         Bu konuda nerede olduğunu gör
       </Link>
-      <p className="mt-6 text-sm text-muted">
-        <Link href="/yds-hazirlik" className="link-underline text-pine">
-          YDS hazırlık rehberine dön
-        </Link>
-      </p>
+      <section className="mt-12">
+        <h2 className="text-2xl">Bu soruların çözüm rehberi</h2>
+        <ul className="mt-4 flex flex-wrap gap-2">
+          {guide.sections.map((section) => {
+            const band = ydsBlueprint.bands.find((item) => item.section === section);
+            return band ? (
+              <li key={section}>
+                <Link href={`/rehber/${section}`} className="inline-block rounded-full border border-line bg-card px-3 py-1.5 text-sm font-medium text-ink transition hover:border-pine hover:text-pine">
+                  {band.title} →
+                </Link>
+              </li>
+            ) : null;
+          })}
+        </ul>
+      </section>
+      <TopicLinks className="mt-12" />
     </article>
   );
 }

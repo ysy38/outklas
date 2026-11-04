@@ -3,6 +3,8 @@ export type Guide = {
   title: string;
   lead: string;
   paragraphs: string[];
+  /** Rehber sections this guide's questions come from. */
+  sections: string[];
 };
 
 export const guides: Guide[] = [
@@ -14,6 +16,7 @@ export const guides: Guide[] = [
       "Dil bilgisi bölümünde 10, cümle tamamlama bölümünde 10 soru var. Zaman, edat ve bağlaç soruları bu iki bölümün içine dağılmıştır. outklas. bunları ayrı ayrı takip eder, böylece yanlışlarının asıl nedenini görürsün.",
       "“However’ı biliyorum” demek yetmez. Seçtiğin şık cümlenin anlamını tersine çeviriyorsa, sorun kelime bilgisinde değil bağlacı yanlış kullanmandadır. Seviye testi bu farkı ortaya çıkarır ve ertesi günkü çalışman buna göre hazırlanır.",
     ],
+    sections: ["grammar", "sentence", "cloze"],
   },
   {
     slug: "yds-okudugunu-anlama",
@@ -23,6 +26,7 @@ export const guides: Guide[] = [
       "Okuma soruları her zaman bir metinle gelir. Seviye testinde de böyle: bir uzun metin 4 soruyla, bir kısa metin 2 soruyla gelir. Böylece okuma becerin birkaç soruyla geçiştirilmeden ölçülür.",
       "Ayrıntı, çıkarım, zamirin neyi gösterdiği, ana fikir, yazarın amacı ve “hangisi söylenemez” soruları aynı bölümdedir. outklas. sana “okuman zayıf” demek yerine, bu soru tiplerinden hangisinde puan kaybettiğini gösterir.",
     ],
+    sections: ["reading", "paragraph", "irrelevant"],
   },
 ];
 

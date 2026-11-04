@@ -10,6 +10,7 @@ import {
   ScienceSection,
 } from "@/components/landing-signature";
 import { PendingButton } from "@/components/pending-button";
+import { TopicLinks } from "@/components/topic-links";
 import { organizationJsonLd } from "@/content/editorial";
 import { funnelSteps } from "@/content/landing-signature";
 import { faqsFor } from "@/content/seo";
@@ -510,6 +511,7 @@ export default function HomePage() {
               Rehbere git →
             </Link>
           </div>
+          <TopicLinks title="Hazırlığa nereden başlamalı?" className="mt-12" />
         </div>
       </section>
 

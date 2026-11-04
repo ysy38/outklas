@@ -37,6 +37,19 @@ export default async function SimulatorPage() {
             ? "YDT’de süre 120 dakikadır ve dört yanlış bir doğruyu götürür. YDT denemesi çok yakında burada olacak. O zamana kadar seviye testini çözebilir, günlük çalışmana devam edebilirsin."
             : "Sorular, sınav kitapçığındaki sırayla gelir. Süre geri sayar; dönmek istediğin soruyu işaretleyebilir, emin olmadığın şıkları eleyebilirsin. Bitince puanını görürsün: her doğru 1,25 puan, yanlışlar doğruları götürmez. Bu ekran ÖSYM’nin birebir kopyası değildir."}
         </p>
+        {ydt ? null : (
+          <p className="mt-3 max-w-xl text-sm leading-7 text-muted">
+            Başlamadan önce 180 dakikayı nasıl böleceğine{" "}
+            <Link href="/yds-taktikleri#sure" className="link-underline text-pine">
+              taktikler sayfasında
+            </Link>{" "}
+            bakabilirsin. Hedefin için kaç doğru gerektiği{" "}
+            <Link href="/yds-70-80-90-nasil-alinir" className="link-underline text-pine">
+              70, 80, 90 sayfasında
+            </Link>
+            .
+          </p>
+        )}
         <dl className="mt-8 grid max-w-md grid-cols-3 gap-3 text-sm">
           {[
             ["80", "soru"],
