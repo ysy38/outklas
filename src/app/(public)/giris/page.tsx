@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Giriş yap",
   description: "outklas hesabına giriş yap veya ücretsiz hesap aç. Seviye testin ve çalışma planın hesabında saklanır.",
   alternates: { canonical: "/giris" },
+  robots: { index: false, follow: true },
 };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ kayit?: string; sonra?: string }> }) {
