@@ -84,11 +84,19 @@ With `OPENROUTER_API_KEY` present, two sync probes (`response_format` json_schem
 
 No cache tokens on these tiny prompts (expected under provider minima). Spend was a few hundred tokens total. No Anthropic direct key used.
 
-## Suggested next step (not run)
+## Judge calibration (2026-11-05) — ran
 
-1. Human criteria for “good enough” judge agreement on the 54 gold items.
-2. Tiny schema probes (already optional) then a **capped** calibration: sync or batch, `FACTORY_PRICES=pipeline/ai/prices.openrouter.json`, hard `$` / call / token caps.
-3. Compare distractor-judge + final-judge agreement vs the stored Claude / Gemini baselines — then decide env overrides. Do **not** change `modelDefaults` without that evidence.
+Sync distractor-judge bakeoff on the 54 gold items: see [`openrouter-judge-calibration-2026-11-05.md`](./openrouter-judge-calibration-2026-11-05.md).
+
+```
+OPENROUTER_DATA_COLLECTION=deny FACTORY_PRICES=pipeline/ai/prices.openrouter.json FACTORY_MAX_COST_USD=1.25 \
+npx tsx pipeline/cli.ts factory-judge-calibrate \
+  --dir .data/analysis/_factory/blind-review/2026-10-13-calibration \
+  --out .data/analysis/_factory/judge-calibration/openrouter-2026-11-05 \
+  --models openrouter:deepseek/deepseek-v4.1-flash,openrouter:qwen/qwen3.8-flash,openrouter:xiaomi/mimo-v2.6-pro,openrouter:google/gemini-3.8-flash
+```
+
+**No production default switch.** DeepSeek led complete-run agreement (~60%) but missed flaws; Xiaomi was schema-reliable; Gemini hit 429 mid-run. Env-only research stack documented in the calibration note.
 
 ## Implementation map
 

@@ -32,6 +32,7 @@ import { distractorJudgeSystemFor } from "./ai/prompts/distractor-judge.v4";
 import { distractorJudgeRevisionSystem, distractorJudgeRevisionUser } from "./ai/prompts/distractor-judge.v6";
 import { requestHash } from "./ai/cache";
 import { factoryBlindScore, factoryBlindSheet } from "./stages/benchmark";
+import { goldForOption } from "./stages/calibrate";
 import { judgeSystem } from "./ai/prompts/judge.v2";
 import type { AIResult, AIService } from "./ai/types";
 import { assertTextFree } from "./lib/text-free";
@@ -42,6 +43,19 @@ import { SpendBudget } from "./ai/budget";
 import { calibratedBand } from "@/modules/factory/audit";
 import { contextIssues, hasPastPerfect, mainClauseFrame, type MainClauseFrame } from "@/modules/factory/context";
 import { judgeDecision } from "@/modules/factory/judge";
+
+describe("goldForOption (judge calibration)", () => {
+  const map = { A: "A", B: "B", C: "C", D: "D", E: "E" } as const;
+  it("marks APPROVE wrong options good unless flagged", () => {
+    expect(goldForOption({ factoryOption: "A", key: "B", overall: "APPROVE", blindToFactory: map })).toBe("good");
+    expect(goldForOption({ factoryOption: "C", key: "B", overall: "APPROVE", second_defensible: "C", blindToFactory: map })).toBe("bad");
+    expect(goldForOption({ factoryOption: "B", key: "B", overall: "APPROVE", blindToFactory: map })).toBeNull();
+  });
+  it("marks EDIT/REJECT wrong options as bad/suspect", () => {
+    expect(goldForOption({ factoryOption: "A", key: "E", overall: "REJECT", blindToFactory: map })).toBe("bad");
+    expect(goldForOption({ factoryOption: "A", key: "E", overall: "EDIT", blindToFactory: map })).toBe("bad");
+  });
+});
 
 let dir = "";
 beforeEach(() => {

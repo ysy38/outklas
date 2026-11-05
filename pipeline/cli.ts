@@ -9,6 +9,7 @@ import { dna } from "./stages/dna";
 import { dnaSkeleton } from "./stages/dna-skeleton";
 import { examSlice } from "./stages/exam-slice";
 import { factoryAudit, factoryBlindScore, factoryBlindSheet, factoryCompare, type VariantInput } from "./stages/benchmark";
+import { factoryJudgeCalibrate, mergeCalibration } from "./stages/calibrate";
 import { factoryProfile, factoryReview, factorySlice, historicalIndex } from "./stages/factory";
 import { factoryRescore } from "./stages/rescore";
 import { loadPrices } from "./ai/prices";
@@ -117,12 +118,41 @@ async function main() {
     console.log(JSON.stringify(factoryBlindScore({ dir: option("dir", "") }), null, 2));
     return;
   }
+  if (name === "factory-judge-calibrate") {
+    const models = option("models", "")
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    if (!models.length) throw new Error("factory-judge-calibrate needs --models openrouter:…,openrouter:…");
+    const limitRaw = option("limit", "");
+    const out = option("out", ".data/analysis/_factory/judge-calibration/openrouter-2026-11-05");
+    const result = await factoryJudgeCalibrate({
+      blindDir: option("dir", ".data/analysis/_factory/blind-review/2026-10-13-calibration"),
+      out,
+      models,
+      ...(limitRaw ? { limit: Number.parseInt(limitRaw, 10) } : {}),
+      concurrency: Number.parseInt(option("concurrency", "6"), 10) || 6,
+      log: (message) => console.log(`  ${message}`),
+    });
+    console.log(JSON.stringify({ out, ratedItems: result.ratedItems, ranSlots: result.ranSlots, models: result.models }, null, 2));
+    return;
+  }
+  if (name === "factory-judge-calibrate-merge") {
+    const models = option("models", "")
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    if (!models.length) throw new Error("factory-judge-calibrate-merge needs --models …");
+    const out = option("out", ".data/analysis/_factory/judge-calibration/openrouter-2026-11-05");
+    console.log(JSON.stringify(mergeCalibration({ out, models, blindDir: option("dir", ".data/analysis/_factory/blind-review/2026-10-13-calibration") }), null, 2));
+    return;
+  }
   const document = documentBySlug(option("doc", "yds-2024-11"));
   const context: StageContext = { document, force: process.argv.includes("--force"), log: (message) => console.log(`  ${message}`) };
   const order = aliases[name] ?? [name];
   for (const stageName of order) {
     const stage = stages[stageName];
-    if (!stage) throw new Error(`Unknown stage "${stageName}". Stages: ${[...Object.keys(stages), ...Object.keys(aliases), "smoke", "corpus", "profile", "factory", "factory-review", "factory-audit", "factory-compare", "factory-blind", "factory-blind-score", "factory-rescore"].join(", ")}`);
+    if (!stage) throw new Error(`Unknown stage "${stageName}". Stages: ${[...Object.keys(stages), ...Object.keys(aliases), "smoke", "corpus", "profile", "factory", "factory-review", "factory-audit", "factory-compare", "factory-blind", "factory-blind-score", "factory-rescore", "factory-judge-calibrate"].join(", ")}`);
     console.log(`▸ ${stageName} (${document.slug})`);
     const result = await stage(context);
     if (result) console.log(`  ${result.cached ? "cached" : "done"} · input ${result.manifest.inputHash.slice(0, 12)} · output ${result.manifest.outputHash.slice(0, 12)}`, JSON.stringify(result.manifest.stats));
