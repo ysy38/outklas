@@ -1,5 +1,6 @@
 import type { OptionLabel } from "@/modules/analysis/contract";
 import type { DistractorDecisionKind } from "./distractor";
+import type { MainClauseFrame } from "./context";
 import type { DistractorSpec } from "./distractor-spec";
 import type { QuestionSkeleton } from "./skeleton";
 import { factoryVersions } from "./versions";
@@ -67,6 +68,32 @@ export type StageAttempt = {
   rejectionReason: string | null;
 };
 
+export const costStages = ["skeleton", "skeletonGate", "distractor", "distractorJudge", "explanation", "finalJudge"] as const;
+export type CostStage = (typeof costStages)[number];
+/** Tokens count fresh provider calls only; a local cache hit costs nothing. Cache tokens are the provider's prompt cache. */
+export type StageCost = { calls: number; cachedCalls: number; freshLatencyMs: number; inputTokens: number; outputTokens: number; cacheWriteTokens?: number; cacheReadTokens?: number };
+
+/** One model call of an item; `attempt` above 1 is a regeneration of that stage (and option). */
+export type CallRecord = {
+  stage: CostStage;
+  option: OptionLabel | null;
+  attempt: number;
+  model: string;
+  promptVersion: string;
+  requestHash: string | null;
+  /** Local response cache: a hit replays a stored response and is never sent to the provider. */
+  localCache: "hit" | "miss";
+  /** Provider prompt cache, from the usage the provider reported: read, written, or neither. */
+  promptCache: "read" | "write" | "none";
+  latencyMs: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheWriteTokens: number;
+  cacheReadTokens: number;
+  error: string | null;
+};
+export type ItemCost = StageCost & { byStage: Partial<Record<CostStage, StageCost>>; log?: CallRecord[] };
+
 export type AcceptedDistractor = { option: OptionLabel; text: string; decision: Exclude<DistractorDecisionKind, "REGENERATE">; attempts: number };
 
 export type GenerationTrace = {
@@ -80,6 +107,10 @@ export type GenerationTrace = {
   skeleton: QuestionSkeleton | null;
   distractors: AcceptedDistractor[];
   failure: string | null;
+  /** Under the compatibility experiment: the stem's computed main-clause time frame. */
+  context?: { frame: MainClauseFrame };
+  /** Calls per stage; latency and tokens count fresh provider work only (a cached call costs nothing and takes no time). */
+  cost?: ItemCost;
 };
 
 export class IllegalTransition extends Error {

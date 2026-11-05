@@ -1,4 +1,5 @@
 import type { GeneratedQuestionCandidate } from "./candidate";
+import type { DistractorDiagnosis } from "./diagnosis";
 import { advance, type GenerationTrace } from "./generation";
 import type { JudgeDecision } from "./judge";
 import type { Provenance } from "./provenance";
@@ -41,7 +42,11 @@ export type CandidateRecord = {
   status: CandidateStatus;
   /** How the atomic pipeline built the item; absent on records from the single-call generator. */
   generation?: GenerationTrace;
+  /** Each wrong option's misconception label, assigned by construction from its DistractorSpec; absent on older records. */
+  diagnoses?: OptionDiagnosis[];
 };
+
+export type OptionDiagnosis = { option: GeneratedQuestionCandidate["correctOption"]; role: string; diagnosis: DistractorDiagnosis };
 
 export function initialStatus(validation: CandidateValidation, judge: JudgeDecision | null): CandidateStatus {
   if (validation.status !== "pass") return "validator_rejected";

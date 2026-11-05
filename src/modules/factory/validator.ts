@@ -4,6 +4,7 @@ import { shingles } from "@/modules/analysis/validate";
 import { ref, type NodeRef } from "@/modules/knowledge/graph";
 import { discourseForConnector, knowledgeNodes } from "@/modules/knowledge/seed";
 import type { GeneratedQuestionCandidate } from "./candidate";
+import type { ExperimentSet } from "./experiments";
 import { connectorSurface } from "./spec-engine";
 import type { QuestionSpec } from "./spec";
 import { defaultFactoryThresholds, type FactoryThresholds } from "./thresholds";
@@ -116,6 +117,50 @@ export function stemEcho(stem: string, option: string): string[] {
   return [...contentWords(optionBody(option))].filter((word) => reference.has(word));
 }
 
+export type OverlapLevel = "none" | "topic" | "copied";
+export type StemOverlap = { shared: string[]; share: number; longestPhrase: string; level: OverlapLevel };
+
+/**
+ * How an option overlaps the stem. Sharing the subject and a few topic words is normal and often necessary ("topic");
+ * it reads as copied only when it repeats a phrase of the stem verbatim or takes most of its own content words from
+ * the stem. Diagnostics, not semantics: whether the option negates or restates the stem is the judge's question.
+ */
+export function stemOverlap(stem: string, option: string, thresholds: FactoryThresholds = defaultFactoryThresholds): StemOverlap {
+  const shared = stemEcho(stem, option);
+  const own = contentWords(optionBody(option)).size;
+  const share = own ? Math.round((shared.length / own) * 100) / 100 : 0;
+  const longestPhrase = longestSharedPhrase(stem, option);
+  const phraseWords = longestPhrase ? longestPhrase.split(" ").length : 0;
+  const copied = phraseWords >= thresholds.copiedPhraseWords || (shared.length >= thresholds.stemSharedContentWords && share >= thresholds.stemCopiedShare);
+  return { shared, share, longestPhrase, level: copied ? "copied" : shared.length >= thresholds.stemSharedContentWords || phraseWords >= thresholds.copiedPhraseWords - 1 ? "topic" : "none" };
+}
+
+/**
+ * Words a wrong option shares with the key, split into topic words the stem also uses and words only the key has.
+ * Only the key's own words let a candidate match the answer by wording, so only they can make the overlap a copy.
+ */
+export function keyOverlap(stem: string, answer: string, option: string, thresholds: FactoryThresholds = defaultFactoryThresholds): { shared: string[]; keyOwn: string[]; level: OverlapLevel } {
+  const shared = sharedWording(answer, option);
+  const topic = contentWords(stem.replaceAll("----", " "));
+  const keyOwn = shared.filter((word) => !topic.has(word));
+  return { shared, keyOwn, level: keyOwn.length >= thresholds.answerSharedContentWords ? "copied" : shared.length >= thresholds.answerSharedContentWords ? "topic" : "none" };
+}
+
+/** Longest run of consecutive words an option body repeats from `reference` (normalised), or "" below two words. */
+export function longestSharedPhrase(reference: string, option: string): string {
+  const a = normalized(reference.replaceAll("----", " ")).split(" ").filter(Boolean);
+  const b = normalized(optionBody(option)).split(" ").filter(Boolean);
+  let best: string[] = [];
+  for (let i = 0; i < b.length; i++) {
+    for (let j = 0; j < a.length; j++) {
+      let n = 0;
+      while (i + n < b.length && j + n < a.length && b[i + n] === a[j + n]) n++;
+      if (n > best.length) best = b.slice(i, i + n);
+    }
+  }
+  return best.length >= 2 ? best.join(" ") : "";
+}
+
 export const integrityProblems = (text: string): string[] =>
   [
     /[\u0000-\u001f]/.test(text) ? "control_character" : null,
@@ -133,8 +178,11 @@ export function validateCandidate(input: {
   originality?: OriginalityIndex;
   siblings?: Sibling[];
   thresholds?: FactoryThresholds;
+  /** Only `overlap` changes this validator: overlap then rejects copying, not shared topic words. */
+  experiments?: ExperimentSet;
 }): CandidateValidation {
   const { spec, candidate } = input;
+  const scoped = input.experiments?.includes("overlap") ?? false;
   const { stem, options } = candidate.question;
   const issues: ValidationIssue[] = [];
   const add = (code: string, severity: IssueSeverity, extra: Omit<ValidationIssue, "code" | "severity"> = {}) => issues.push({ code, severity, ...extra });
@@ -217,6 +265,15 @@ export function validateCandidate(input: {
     const reuse = clauseReuse(options[correct], options[label], input.thresholds);
     if (reuse.level === "copy") add("connector_swap", "critical", { option: label, detail: `${reuse.tokenOverlap}/${reuse.trigramOverlap}` });
     const thresholds = input.thresholds ?? defaultFactoryThresholds;
+    if (scoped) {
+      const key = keyOverlap(stem, options[correct], options[label], thresholds);
+      if (key.level === "copied") add("answer_shared_wording", "critical", { option: label, detail: key.keyOwn.join(" ") });
+      else if (key.level === "topic") add("answer_topic_overlap", "warn", { option: label, detail: key.shared.join(" ") });
+      const echo = stemOverlap(stem, options[label], thresholds);
+      if (echo.level === "copied") add("stem_echo", "critical", { option: label, detail: echo.longestPhrase || echo.shared.join(" ") });
+      else if (echo.level === "topic") add("stem_overlap", "warn", { option: label, detail: echo.shared.join(" ") });
+      continue;
+    }
     const shared = sharedWording(options[correct], options[label]);
     if (shared.length >= thresholds.answerSharedContentWords) add("answer_shared_wording", "critical", { option: label, detail: shared.join(" ") });
     const echo = stemEcho(stem, options[label]);

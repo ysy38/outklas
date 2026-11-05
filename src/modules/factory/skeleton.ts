@@ -5,6 +5,7 @@ import { knowledgeEdges } from "@/modules/knowledge/seed";
 import { relationConnectors } from "./families";
 import { connectorSurface } from "./spec-engine";
 import type { QuestionSpec } from "./spec";
+import { factoryVersions } from "./versions";
 import { blankPosition, clauseReuse, hasPhrase, integrityProblems, leadingConnector, normalized, stageValidation, type IssueSeverity, type OriginalityIndex, type StageValidation, type ValidationIssue } from "./validator";
 
 /** Stage 1 output: the item without wrong options. No explanation, no taxonomy. */
@@ -82,4 +83,44 @@ export function validateSkeleton(input: { spec: QuestionSpec; skeleton: Question
   }
   if ((input.siblingStems ?? []).some((other) => normalized(other) === normalized(stem))) add("duplicate_of_sibling", "critical");
   return stageValidation(issues);
+}
+
+const unit = z.number().min(0).max(1);
+
+/**
+ * Stage 2b: an independent reviewer's semantic check of the skeleton, before any wrong option exists. It answers only
+ * what the deterministic checks cannot: whether the key, combined with the stem, is grammatical, true and natural,
+ * whether it establishes the target relation, and whether the key is ambiguous on its own.
+ */
+export const skeletonCheckReport = z.object({
+  reasons: z.array(z.string().max(200)).max(4),
+  grammatical: z.boolean(),
+  natural: unit,
+  /** The completed sentence is a true, sensible statement. */
+  keyTrue: z.boolean(),
+  /** How clearly the key establishes the target relation with the main clause. */
+  targetRelation: unit,
+  /** Chance that the key reads as another relation, or the sentence has an unresolved second reading. */
+  keyAmbiguous: unit,
+  confidence: unit,
+});
+export type SkeletonCheckReport = z.infer<typeof skeletonCheckReport>;
+
+export type SkeletonGateDecision = { version: typeof factoryVersions.skeletonGate; decision: "ACCEPT" | "REGENERATE"; failures: string[]; concerns: string[] };
+
+/**
+ * A failing skeleton is written again (within the skeleton attempt limit) or the item is dropped; distractors are never
+ * generated to make up for it. An unsure reviewer's yes/no findings become concerns instead of rejections.
+ */
+export function skeletonGateDecision(report: SkeletonCheckReport, threshold: number): SkeletonGateDecision {
+  const failures: string[] = [];
+  const concerns: string[] = [];
+  const sure = report.confidence >= threshold;
+  if (!report.grammatical) (sure ? failures : concerns).push("skeleton_ungrammatical");
+  if (!report.keyTrue) (sure ? failures : concerns).push("key_not_true");
+  if (report.natural < threshold) failures.push("skeleton_unnatural");
+  if (report.targetRelation < threshold) failures.push("key_relation_weak");
+  if (report.keyAmbiguous >= threshold) failures.push("key_ambiguous");
+  if (!sure) concerns.push("low_confidence");
+  return { version: factoryVersions.skeletonGate, decision: failures.length ? "REGENERATE" : "ACCEPT", failures, concerns };
 }

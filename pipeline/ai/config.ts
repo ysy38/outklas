@@ -1,4 +1,10 @@
+import { parseExperiments, type FactoryExperiment } from "@/modules/factory/experiments";
 import { defaultFactoryThresholds, type FactoryThresholds } from "@/modules/factory/thresholds";
+import { promptCacheModes, type PromptCacheMode } from "./anthropic";
+import { loadSpendLimits, type SpendLimits } from "./budget";
+import { openrouterDataPolicies, type OpenRouterDataPolicy } from "./openrouter";
+import { loadPrices, type Prices } from "./prices";
+import { thinkingLevels, type ThinkingLevel } from "./types";
 
 export type ModelRole = "analyzer" | "verifier" | "generator" | "distractor" | "distractorJudge" | "judge" | "explanation";
 
@@ -47,14 +53,18 @@ const thresholdEnv: Record<keyof FactoryThresholds, string> = {
   answerReuseTokenWarn: "ANSWER_REUSE_TOKEN_WARN",
   answerSharedContentWords: "ANSWER_SHARED_CONTENT_WORDS",
   stemSharedContentWords: "STEM_SHARED_CONTENT_WORDS",
+  stemCopiedShare: "STEM_COPIED_SHARE",
+  copiedPhraseWords: "COPIED_PHRASE_WORDS",
 };
 
-export const providers = ["gemini", "nvidia", "anthropic"] as const;
+export const providers = ["gemini", "nvidia", "anthropic", "openrouter"] as const;
 export type ProviderName = (typeof providers)[number];
 
 /**
- * A model setting is `provider:model` (`nvidia:nvidia/nemotron-3-super-120b-a12b`, `anthropic:claude-haiku-5-5`)
- * or a bare name for the default provider, so existing Gemini settings, provenance and caches keep their meaning.
+ * A model setting is `provider:model` (`nvidia:nvidia/nemotron-3-super-120b-a12b`, `anthropic:claude-haiku-5-5`,
+ * `openrouter:google/gemini-3.8-flash:batch`) or a bare name for the default provider, so existing Gemini settings,
+ * provenance and caches keep their meaning. The first `:` separates provider from model; `/` and a trailing `:batch`
+ * stay inside the model id.
  */
 export function parseModel(setting: string, fallback: ProviderName = "gemini"): { provider: ProviderName; model: string } {
   const prefix = setting.slice(0, setting.indexOf(":"));
@@ -74,13 +84,35 @@ export type AIConfig = {
   apiKey: string | null;
   keys: Record<ProviderName, string | null>;
   nvidiaBaseUrl: string;
+  openrouterBaseUrl: string;
+  /** OPENROUTER_DATA_COLLECTION: allow (default) or deny (prefer no-train / no-log endpoints). */
+  openrouterDataCollection?: OpenRouterDataPolicy;
   models: Record<ModelRole, string>;
   thresholds: FactoryThresholds;
+  /** Distractor revisions switched on (FACTORY_EXPERIMENTS); empty is the baseline. */
+  experiments: FactoryExperiment[];
+  /**
+   * FACTORY_SEED: benchmark repetition. Seed 1 sends and caches requests exactly as before; a higher seed salts every
+   * request hash so the same prompts are sampled afresh. Providers get no seed (Claude has none); only the cache key changes.
+   */
+  seed: number;
+  /** FACTORY_SKELETON_GATE: semantic skeleton check before distractors (on unless set to off, 0 or false). */
+  skeletonGate: boolean;
+  /** ANTHROPIC_PROMPT_CACHE: 5m (default), 1h or off; the cache lifetime of the system prompt. */
+  promptCache?: PromptCacheMode;
+  /** FACTORY_MAX_CALLS, FACTORY_MAX_REGENERATIONS, FACTORY_MAX_TOKENS, FACTORY_MAX_COST_USD. */
+  limits?: SpendLimits;
+  /** FACTORY_PRICES; null means every cost is unknown. */
+  prices?: Prices | null;
+  /** <ROLE>_THINKING (GENERATOR_THINKING, FINAL_JUDGE_THINKING, …): Gemini 3+ thinking level per role; unset leaves the model default. */
+  thinking?: Partial<Record<ModelRole, ThinkingLevel>>;
   maxRetries: number;
+  /** AI_MAX_WAIT_MS: longest retry wait a provider accepts; a longer rate-limit hint fails the call at once. */
+  maxWaitMs?: number;
   warnings: string[];
 };
 
-const countThresholds = new Set<keyof FactoryThresholds>(["answerSharedContentWords", "stemSharedContentWords"]);
+const countThresholds = new Set<keyof FactoryThresholds>(["answerSharedContentWords", "stemSharedContentWords", "copiedPhraseWords"]);
 
 function loadThresholds(env: Record<string, string | undefined>): FactoryThresholds {
   return Object.fromEntries(
@@ -108,11 +140,28 @@ export function loadAIConfig(env: Record<string, string | undefined> = process.e
   if (same(models.distractor, models.judge)) warnings.push("DISTRACTOR_MODEL and FINAL_JUDGE_MODEL are the same model; the judge refuses to run.");
   if (same(models.distractor, models.distractorJudge)) warnings.push("DISTRACTOR_MODEL and DISTRACTOR_JUDGE_MODEL are the same model; the distractor judge refuses to run.");
   const maxRetries = Number.parseInt(env.AI_MAX_RETRIES ?? "", 10);
+  const seed = env.FACTORY_SEED?.trim() ? Number(env.FACTORY_SEED.trim()) : 1;
+  if (!Number.isInteger(seed) || seed < 1) throw new Error("FACTORY_SEED must be a whole number of at least 1");
+  const promptCache = (env.ANTHROPIC_PROMPT_CACHE?.trim() || "5m") as PromptCacheMode;
+  if (!promptCacheModes.includes(promptCache)) throw new Error(`ANTHROPIC_PROMPT_CACHE must be one of ${promptCacheModes.join(", ")}`);
+  const thinking: Partial<Record<ModelRole, ThinkingLevel>> = {};
+  for (const role of Object.keys(modelEnv) as ModelRole[]) {
+    const names = modelEnv[role].map((name) => name.replace(/_MODEL$/, "_THINKING"));
+    const raw = names.map((name) => env[name]?.trim().toLowerCase()).find(Boolean);
+    if (!raw) continue;
+    if (!(thinkingLevels as readonly string[]).includes(raw)) throw new Error(`${names[0]} must be one of ${thinkingLevels.join(", ")}`);
+    thinking[role] = raw as ThinkingLevel;
+  }
   const keys: Record<ProviderName, string | null> = {
     gemini: env.GEMINI_API_KEY?.trim() || null,
     nvidia: env.NVIDIA_API_KEY?.trim() || null,
     anthropic: env.CLAUDE_API_KEY?.trim() || env.ANTHROPIC_API_KEY?.trim() || null,
+    openrouter: env.OPENROUTER_API_KEY?.trim() || null,
   };
+  const openrouterDataCollection = (env.OPENROUTER_DATA_COLLECTION?.trim() || "allow") as OpenRouterDataPolicy;
+  if (!openrouterDataPolicies.includes(openrouterDataCollection)) {
+    throw new Error(`OPENROUTER_DATA_COLLECTION must be one of ${openrouterDataPolicies.join(", ")}`);
+  }
   for (const role of Object.keys(models) as ModelRole[]) {
     const { provider: owner } = parseModel(models[role], provider);
     if (!keys[owner]) warnings.push(`${role} uses ${owner}, but its API key is not set.`);
@@ -122,9 +171,19 @@ export function loadAIConfig(env: Record<string, string | undefined> = process.e
     apiKey: keys.gemini,
     keys,
     nvidiaBaseUrl: env.NVIDIA_API_URL?.trim() || "https://integrate.api.nvidia.com/v1",
+    openrouterBaseUrl: env.OPENROUTER_API_URL?.trim() || "https://openrouter.ai/api/v1",
+    openrouterDataCollection,
     models,
     thresholds: loadThresholds(env),
+    experiments: parseExperiments(env.FACTORY_EXPERIMENTS),
+    seed,
+    skeletonGate: !/^(off|0|false|no)$/i.test(env.FACTORY_SKELETON_GATE?.trim() ?? ""),
+    promptCache,
+    limits: loadSpendLimits(env),
+    prices: loadPrices(env),
+    thinking,
     maxRetries: Number.isFinite(maxRetries) && maxRetries >= 0 ? maxRetries : 6,
+    ...(env.AI_MAX_WAIT_MS?.trim() ? { maxWaitMs: Math.max(0, Number.parseInt(env.AI_MAX_WAIT_MS, 10) || 0) } : {}),
     warnings,
   };
 }

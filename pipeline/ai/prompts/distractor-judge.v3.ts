@@ -23,7 +23,7 @@ Work in this order:
 4. confidence: how sure you are of your judgement overall.
 Grammatical and coherent is NOT enough for a good wrong option: it must also clearly fail as a completed sentence. A good wrong option fails on careful reading yet still tempts a weak candidate.
 Which connector the option opens with and which relation it sets up are checked elsewhere; do not judge them.
-reasons: at most four short points in English.`;
+reasons: at most four short points in English (≤20 words each); no filler.`;
 
 export function distractorJudgeUser(input: { dspec: DistractorSpec; skeleton: QuestionSkeleton; text: string }): string {
   const { skeleton, text } = input;

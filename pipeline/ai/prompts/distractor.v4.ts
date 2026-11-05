@@ -26,7 +26,9 @@ Before answering, write the completed sentence in your head and ask: "Would a ca
 Return JSON only: {"text": "<the option>", "rationale": "<one short English sentence: why the completed sentence fails>"}.`;
 
 /** Relation-level instructions per failure mode. */
-const failureInstructions: Record<FailureMode, string> = {
+export const failureInstructions: Record<FailureMode, string> = {
+  no_broken_expectation:
+    "Use the concession connector with a realistic, on-topic clause that supports the main clause's outcome or is neutral to it, so no expectation is broken and the concession makes the sentence illogical.",
   no_real_opposition:
     "Use the contrast connector, but keep the same subject as the main clause and say something that points the SAME way as the main clause or is fully compatible with it, so there is nothing to contrast. Never bring in another group, place, period or species that genuinely differs: that makes a good contrast sentence.",
   similarity_does_not_hold:
@@ -47,7 +49,8 @@ const failureInstructions: Record<FailureMode, string> = {
   grammatical_form_breaks: "Make the option grammatically impossible in the blank while it stays on topic.",
 };
 
-export function distractorUser(input: { dspec: DistractorSpec; skeleton: QuestionSkeleton; usedConnectors: NodeRef[]; feedback: string[] }): string {
+/** `failureText` replaces the failure-mode instruction for later prompt versions; without it the output is distractor.v4. */
+export function distractorUser(input: { dspec: DistractorSpec; skeleton: QuestionSkeleton; usedConnectors: NodeRef[]; feedback: string[] }, failureText?: string): string {
   const { dspec, skeleton } = input;
   const allowed = dspec.relationConstraint.connectors.filter((connector) => !input.usedConnectors.includes(connector));
   const lines = [
@@ -57,7 +60,7 @@ export function distractorUser(input: { dspec: DistractorSpec; skeleton: Questio
     "DISTRACTOR SPEC",
     `- Role: a wrong option expressing ${name(dspec.relationConstraint.targetRelation)} where the item needs ${name(dspec.relationConstraint.correctRelation)}.`,
     `- Open with one of: ${quoted((allowed.length ? allowed : dspec.relationConstraint.connectors).map(connectorSurface))}.`,
-    `- How it must fail: ${failureInstructions[dspec.semanticConstraint.failureMode]}`,
+    `- How it must fail: ${failureText ?? failureInstructions[dspec.semanticConstraint.failureMode]}`,
     ...(dspec.targetMisconception ? [`- It should tempt a learner who has this misconception: ${name(dspec.targetMisconception)}.`] : []),
     `- ${dspec.lexicalConstraint.words.min}–${dspec.lexicalConstraint.words.max} words; ${dspec.grammarConstraint.capitalised ? "starts with a capital letter" : "starts with a lowercase letter"}; no final punctuation.`,
     `- Never use: ${quoted(dspec.lexicalConstraint.forbiddenWords)}.`,

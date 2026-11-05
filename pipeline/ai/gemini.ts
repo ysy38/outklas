@@ -18,7 +18,7 @@ export type GeminiOptions = {
 type GeminiPart = { text?: string; thought?: boolean };
 type GeminiBody = {
   candidates?: { content?: { parts?: GeminiPart[] }; finishReason?: string }[];
-  usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number; totalTokenCount?: number };
+  usageMetadata?: { promptTokenCount?: number; cachedContentTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number; totalTokenCount?: number };
   modelVersion?: string;
   error?: { code?: number; message?: string; status?: string; details?: { "@type"?: string; retryDelay?: string }[] };
 };
@@ -49,6 +49,7 @@ export function geminiBody(request: ModelRequest) {
     generationConfig: {
       temperature: request.temperature ?? 0,
       ...(request.maxOutputTokens ? { maxOutputTokens: request.maxOutputTokens } : {}),
+      ...(request.thinking ? { thinkingConfig: { thinkingLevel: request.thinking.toUpperCase() } } : {}),
       ...(request.jsonSchema ? { responseMimeType: "application/json", responseJsonSchema: request.jsonSchema } : {}),
     },
   };
@@ -128,11 +129,14 @@ export class GeminiProvider implements AIProvider {
       .join("");
     const usage = body.usageMetadata ?? {};
     const output = (usage.candidatesTokenCount ?? 0) + (usage.thoughtsTokenCount ?? 0);
+    const prompt = usage.promptTokenCount ?? 0;
+    // promptTokenCount includes the implicitly cached prefix; it is billed at the cache rate, so it is split out.
+    const cached = Math.min(usage.cachedContentTokenCount ?? 0, prompt);
     return {
       text,
       model: body.modelVersion ?? request.model,
       finishReason: candidate.finishReason,
-      usage: { inputTokens: usage.promptTokenCount ?? 0, outputTokens: output, totalTokens: usage.totalTokenCount ?? (usage.promptTokenCount ?? 0) + output },
+      usage: { inputTokens: prompt - cached, outputTokens: output, totalTokens: usage.totalTokenCount ?? prompt + output, ...(cached ? { cacheReadTokens: cached } : {}) },
     };
   }
 }

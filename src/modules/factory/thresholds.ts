@@ -15,6 +15,10 @@ export type FactoryThresholds = {
   answerSharedContentWords: number;
   /** Content words a wrong option may repeat from the stem before it reads as a restatement of it. */
   stemSharedContentWords: number;
+  /** overlap experiment: share of an option's own content words taken from the stem at which it reads as copied. */
+  stemCopiedShare: number;
+  /** overlap experiment: a phrase of this many consecutive words repeated from the stem reads as copied. */
+  copiedPhraseWords: number;
 };
 
 export const defaultFactoryThresholds: FactoryThresholds = {
@@ -24,6 +28,8 @@ export const defaultFactoryThresholds: FactoryThresholds = {
   answerReuseTokenWarn: 0.6,
   answerSharedContentWords: 4,
   stemSharedContentWords: 4,
+  stemCopiedShare: 0.6,
+  copiedPhraseWords: 4,
 };
 
 /** Attempt ceilings per stage: a failing stage retries only itself. */

@@ -8,7 +8,10 @@ import { corpus } from "./stages/corpus";
 import { dna } from "./stages/dna";
 import { dnaSkeleton } from "./stages/dna-skeleton";
 import { examSlice } from "./stages/exam-slice";
-import { factoryProfile, factoryReview, factorySlice } from "./stages/factory";
+import { factoryAudit, factoryBlindScore, factoryBlindSheet, factoryCompare, type VariantInput } from "./stages/benchmark";
+import { factoryProfile, factoryReview, factorySlice, historicalIndex } from "./stages/factory";
+import { factoryRescore } from "./stages/rescore";
+import { loadPrices } from "./ai/prices";
 import { cleanup, reconstructStage, segmentStage, validateStage } from "./stages/extraction";
 import { importStage } from "./stages/import";
 import { metrics } from "./stages/metrics";
@@ -75,7 +78,7 @@ async function main() {
   }
   if (name === "factory") {
     const band = option("band", "") || undefined;
-    const result = await factorySlice({ family: option("family", ""), count: Number.parseInt(option("count", "0"), 10), band: band as "easy" | "medium" | "hard" | undefined, tag: option("tag", "") || undefined, log: (message) => console.log(`  ${message}`) });
+    const result = await factorySlice({ family: option("family", ""), count: Number.parseInt(option("count", "0"), 10), first: Number.parseInt(option("first", "1"), 10), band: band as "easy" | "medium" | "hard" | undefined, tag: option("tag", "") || undefined, log: (message) => console.log(`  ${message}`) });
     console.log(JSON.stringify(result, null, 2));
     return;
   }
@@ -84,12 +87,42 @@ async function main() {
     console.log(JSON.stringify(factoryReview({ runDir: option("run", ""), candidateId: option("candidate", ""), decision: option("decision", ""), reviewer: option("reviewer", ""), notes: option("notes", ""), editFile: edit || undefined }), null, 2));
     return;
   }
+  if (name === "factory-audit") {
+    const result = await factoryAudit({ runDir: option("run", ""), log: (message) => console.log(`  ${message}`) });
+    console.log(JSON.stringify({ run: result.run, audited: result.audits.length, errors: result.errors }, null, 2));
+    return;
+  }
+  if (name === "factory-compare" || name === "factory-blind") {
+    // --variants "A=<runDir>[+<runDir>…],B=<runDir>+<runDir>,…": one run per seed, pooled per variant.
+    const variants: VariantInput[] = option("variants", "")
+      .split(",")
+      .filter(Boolean)
+      .map((entry) => {
+        const [label, dirs] = entry.split("=");
+        return { label, runDirs: dirs.split("+").filter(Boolean) };
+      });
+    if (name === "factory-compare") {
+      const blind = option("blind", "");
+      console.log(JSON.stringify(factoryCompare({ variants, out: option("out", ""), prices: loadPrices(), ...(blind ? { blindDir: blind } : {}) }), null, 2));
+    } else console.log(JSON.stringify(factoryBlindSheet({ variants, out: option("out", "") }), null, 2));
+    return;
+  }
+  if (name === "factory-rescore") {
+    // Offline: stored outputs and stored judge reports re-scored with the current rules; no model is called.
+    const as = option("as", "");
+    console.log(JSON.stringify(factoryRescore({ runDirs: option("runs", "").split(",").filter(Boolean), out: option("out", ""), originality: historicalIndex().index, ...(as ? { as } : {}) }), null, 2));
+    return;
+  }
+  if (name === "factory-blind-score") {
+    console.log(JSON.stringify(factoryBlindScore({ dir: option("dir", "") }), null, 2));
+    return;
+  }
   const document = documentBySlug(option("doc", "yds-2024-11"));
   const context: StageContext = { document, force: process.argv.includes("--force"), log: (message) => console.log(`  ${message}`) };
   const order = aliases[name] ?? [name];
   for (const stageName of order) {
     const stage = stages[stageName];
-    if (!stage) throw new Error(`Unknown stage "${stageName}". Stages: ${[...Object.keys(stages), ...Object.keys(aliases), "smoke", "corpus", "profile", "factory", "factory-review"].join(", ")}`);
+    if (!stage) throw new Error(`Unknown stage "${stageName}". Stages: ${[...Object.keys(stages), ...Object.keys(aliases), "smoke", "corpus", "profile", "factory", "factory-review", "factory-audit", "factory-compare", "factory-blind", "factory-blind-score", "factory-rescore"].join(", ")}`);
     console.log(`▸ ${stageName} (${document.slug})`);
     const result = await stage(context);
     if (result) console.log(`  ${result.cached ? "cached" : "done"} · input ${result.manifest.inputHash.slice(0, 12)} · output ${result.manifest.outputHash.slice(0, 12)}`, JSON.stringify(result.manifest.stats));

@@ -1,0 +1,9 @@
+{
+  "source": "https://platform.claude.com/docs/en/about-claude/pricing (local copy read 2026-10-14)",
+  "unit": "USD per million tokens; global (default) inference, no Batch API, no data residency multiplier",
+  "models": {
+    "anthropic:claude-haiku-5-5": { "in": 0.1, "out": 0.5, "cacheWrite": 0.125, "cacheWrite1h": 0.2, "cacheRead": 0.01, "note": "prompts up to 100,000 tokens; longer prompts cost in 0.50, out 2.50" },
+    "anthropic:claude-sonnet-5-5": { "in": 2, "out": 10, "cacheWrite": 2.5, "cacheWrite1h": 4, "cacheRead": 0.1, "note": "cache reads are 0.05x the base input price" },
+    "anthropic:claude-opus-5-5": { "in": 4, "out": 20, "cacheWrite": 5, "cacheWrite1h": 8, "cacheRead": 0.2 }
+  }
+}

@@ -13,7 +13,8 @@ export async function cachedGenerate(provider: AIProvider, promptVersion: string
   const key = requestHash(provider.name, promptVersion, request);
   const hit = cached<Entry>("ai", key);
   if (hit) return { response: hit.response, requestHash: key, cached: true };
-  const response = await provider.generate(request);
+  const { cacheSalt: _salt, ...sent } = request;
+  const response = await provider.generate(sent);
   storeCached("ai", key, { requestHash: key, provider: provider.name, promptVersion, response, createdAt: new Date().toISOString() } satisfies Entry);
   return { response, requestHash: key, cached: false };
 }

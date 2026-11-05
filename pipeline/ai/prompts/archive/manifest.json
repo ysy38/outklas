@@ -1,0 +1,148 @@
+{
+  "note": "Byte-exact copies of retired prompt versions, restored with `git show <commit>:<path>`. Not compiled (excluded in tsconfig): they import contracts that have since changed. To rerun a variant exactly, check out its commit.",
+  "prompts": [
+    {
+      "version": "distractor.v1",
+      "file": "distractor.v1.ts",
+      "commit": "a5d4223",
+      "path": "pipeline/ai/prompts/distractor.v1.ts"
+    },
+    {
+      "version": "distractor-judge.v1",
+      "file": "distractor-judge.v1.ts",
+      "commit": "a5d4223",
+      "path": "pipeline/ai/prompts/distractor-judge.v1.ts"
+    },
+    {
+      "version": "explanation.v1",
+      "file": "explanation.v1.ts",
+      "commit": "a5d4223",
+      "path": "pipeline/ai/prompts/explanation.v1.ts"
+    },
+    {
+      "version": "distractor.v2",
+      "file": "distractor.v2.ts",
+      "commit": "707485a",
+      "path": "pipeline/ai/prompts/distractor.v2.ts"
+    },
+    {
+      "version": "distractor-judge.v2",
+      "file": "distractor-judge.v2.ts",
+      "commit": "707485a",
+      "path": "pipeline/ai/prompts/distractor-judge.v2.ts"
+    },
+    {
+      "version": "distractor.v3",
+      "file": "distractor.v3.ts",
+      "commit": "04efcc3",
+      "path": "pipeline/ai/prompts/distractor.v3.ts"
+    },
+    {
+      "version": "item-audit.v1",
+      "file": "item-audit.v1.ts",
+      "commit": null,
+      "path": "pipeline/ai/prompts/item-audit.v1.ts",
+      "note": "Never committed; copied byte-exact from the working tree on 2026-10-13 when item-audit.v2 added the per-option natural field. Audits of the rev-a \u2026 rev-e runs used it."
+    },
+    {
+      "version": "distractor-judge.v5",
+      "file": "distractor-judge.v5.ts",
+      "commit": null,
+      "path": "pipeline/ai/prompts/distractor-judge.v5.ts",
+      "note": "Never committed; copied byte-exact from the working tree on 2026-10-13. Used by the bench-bcplus-s1/s2 and bench-l-s1/s2 runs. Retired because its contextCompatible question asked whether a wrong option's relation holds and rejected options that failed as intended; distractor-judge.v6 drops it."
+    }
+  ],
+  "runs": [
+    {
+      "tag": "lite",
+      "commit": "ba75430",
+      "prompts": [
+        "skeleton.v1",
+        "distractor.v1",
+        "distractor-judge.v1",
+        "explanation.v1",
+        "judge.v2"
+      ],
+      "distractorSpec": "distractor-spec.v1",
+      "models": "all gemini-flash-lite"
+    },
+    {
+      "tag": "lite-nemotron",
+      "commit": "a5d4223",
+      "prompts": [
+        "skeleton.v1",
+        "distractor.v1",
+        "distractor-judge.v1",
+        "explanation.v1",
+        "judge.v2"
+      ],
+      "distractorSpec": "distractor-spec.v1",
+      "models": "writer gemini-flash-lite, distractor judge nemotron-3-super, final judge nemotron-3-ultra"
+    },
+    {
+      "tag": "v2-lite-nemotron",
+      "commit": "707485a",
+      "prompts": [
+        "skeleton.v1",
+        "distractor.v2",
+        "distractor-judge.v2",
+        "explanation.v2",
+        "judge.v2"
+      ],
+      "distractorSpec": "distractor-spec.v2",
+      "models": "writer gemini-flash-lite, distractor judge nemotron-3-super, final judge nemotron-3-ultra"
+    },
+    {
+      "tag": "v2-haiku-nemotron",
+      "commit": "707485a",
+      "prompts": [
+        "skeleton.v1",
+        "distractor.v2",
+        "distractor-judge.v2",
+        "explanation.v2",
+        "judge.v2"
+      ],
+      "distractorSpec": "distractor-spec.v2",
+      "models": "writer claude-haiku-5-5, distractor judge nemotron-3-super, final judge claude-sonnet-5-5"
+    },
+    {
+      "tag": "v2-claude",
+      "commit": "707485a",
+      "prompts": [
+        "skeleton.v1",
+        "distractor.v2",
+        "distractor-judge.v2",
+        "explanation.v2",
+        "judge.v2"
+      ],
+      "distractorSpec": "distractor-spec.v2",
+      "models": "writer claude-haiku-5-5, judges claude-sonnet-5-5"
+    },
+    {
+      "tag": "v3-claude",
+      "commit": "04efcc3",
+      "prompts": [
+        "skeleton.v1",
+        "distractor.v3",
+        "distractor-judge.v3",
+        "explanation.v2",
+        "judge.v2"
+      ],
+      "distractorSpec": "distractor-spec.v3",
+      "models": "writer claude-haiku-5-5, judges claude-sonnet-5-5"
+    },
+    {
+      "tag": "v4-claude",
+      "commit": "74ba322",
+      "prompts": [
+        "skeleton.v1",
+        "distractor.v4",
+        "distractor-judge.v3",
+        "explanation.v2",
+        "judge.v2"
+      ],
+      "distractorSpec": "distractor-spec.v3",
+      "models": "writer claude-haiku-5-5, judges claude-sonnet-5-5"
+    }
+  ]
+}

@@ -8,6 +8,8 @@ import { AnthropicProvider } from "./anthropic";
 import { loadAIConfig, modelDefaults, parseModel, sameModel } from "./config";
 import { AIRequestError, GeminiProvider, geminiBody, type Transport } from "./gemini";
 import { OpenAICompatibleProvider } from "./openai-compatible";
+import { isBatchModel, OpenRouterBatchClient, OpenRouterProvider, openrouterUsage, stripBatchSuffix } from "./openrouter";
+import { loadPrices, priceFor } from "./prices";
 import { analyzerResponseSchema } from "./prompts/analyzer.v2";
 import { withRefEnums } from "./prompts/schema";
 import { AIOutputError, assertIndependent, createAIService, JudgeNotIndependent, NotImplementedRole, structuredCall } from "./service";
@@ -54,13 +56,21 @@ describe("config", () => {
     expect(parseModel("gemini-3.1-flash-lite")).toEqual({ provider: "gemini", model: "gemini-3.1-flash-lite" });
     expect(parseModel("nvidia:nvidia/nemotron-3-super-120b-a12b")).toEqual({ provider: "nvidia", model: "nvidia/nemotron-3-super-120b-a12b" });
     expect(parseModel("anthropic:claude-haiku-5-5")).toEqual({ provider: "anthropic", model: "claude-haiku-5-5" });
+    expect(parseModel("openrouter:google/gemini-3.8-flash")).toEqual({ provider: "openrouter", model: "google/gemini-3.8-flash" });
+    expect(parseModel("openrouter:google/gemini-3.8-flash:batch")).toEqual({ provider: "openrouter", model: "google/gemini-3.8-flash:batch" });
+    expect(parseModel("openrouter:anthropic/claude-haiku-5.5:batch")).toEqual({ provider: "openrouter", model: "anthropic/claude-haiku-5.5:batch" });
     expect(sameModel("gemini:gemini-x", "gemini-x")).toBe(true);
     expect(sameModel("nvidia:m", "anthropic:m")).toBe(false);
+    expect(sameModel("openrouter:google/m:batch", "openrouter:google/m")).toBe(false);
     const config = loadAIConfig({ GEMINI_API_KEY: "g", NVIDIA_API_KEY: "n", GENERATOR_MODEL: "g1", DISTRACTOR_MODEL: "g2", EXPLANATION_MODEL: "g3", DISTRACTOR_JUDGE_MODEL: "nvidia:j", FINAL_JUDGE_MODEL: "anthropic:claude-haiku-5-5" });
-    expect(config.keys).toEqual({ gemini: "g", nvidia: "n", anthropic: null });
+    expect(config.keys).toEqual({ gemini: "g", nvidia: "n", anthropic: null, openrouter: null });
     expect(config.warnings).toEqual(["judge uses anthropic, but its API key is not set."]);
     expect(loadAIConfig({ ANTHROPIC_API_KEY: "a" }).keys.anthropic).toBe("a");
     expect(loadAIConfig({}).nvidiaBaseUrl).toBe("https://integrate.api.nvidia.com/v1");
+    expect(loadAIConfig({ OPENROUTER_API_KEY: "or" }).keys.openrouter).toBe("or");
+    expect(loadAIConfig({}).openrouterBaseUrl).toBe("https://openrouter.ai/api/v1");
+    expect(loadAIConfig({ OPENROUTER_DATA_COLLECTION: "deny" }).openrouterDataCollection).toBe("deny");
+    expect(() => loadAIConfig({ OPENROUTER_DATA_COLLECTION: "maybe" })).toThrow(/OPENROUTER_DATA_COLLECTION/);
   });
 
   it("runs the factory roles on Claude by default: Haiku writes, Sonnet judges", () => {
@@ -78,6 +88,86 @@ describe("config", () => {
 });
 
 const reply = (status: number, body: unknown, headers: Record<string, string> = {}) => ({ status, text: async () => JSON.stringify(body), headers: { get: (name: string) => headers[name] ?? null } });
+
+describe("OpenRouterProvider", () => {
+  it("sends JSON schema, cache_control on the system prefix, data_collection deny, and peels cache tokens", async () => {
+    const seen: { url: string; headers: Record<string, string>; body: string }[] = [];
+    const provider = new OpenRouterProvider({
+      apiKey: "or-key",
+      dataCollection: "deny",
+      title: "tomo-factory",
+      transport: async (url, init) => {
+        seen.push({ url, headers: init.headers, body: init.body });
+        return reply(200, {
+          choices: [{ message: { content: '<think>x</think>\n{"ok":true}' }, finish_reason: "stop" }],
+          usage: { prompt_tokens: 1000, completion_tokens: 20, total_tokens: 1020, prompt_tokens_details: { cached_tokens: 800, cache_write_tokens: 50 } },
+          model: "google/gemini-3.8-flash",
+        });
+      },
+    });
+    const response = await provider.generate({
+      model: "google/gemini-3.8-flash",
+      system: "stable rules",
+      parts: [{ text: "item" }],
+      jsonSchema: { type: "object", properties: { ok: { type: "boolean" } } },
+      maxOutputTokens: 512,
+    });
+    expect(response.text).toBe('{"ok":true}');
+    expect(response.usage).toEqual({ inputTokens: 200, outputTokens: 20, totalTokens: 1020, cacheWriteTokens: 50, cacheReadTokens: 800 });
+    expect(seen[0].url).toBe("https://openrouter.ai/api/v1/chat/completions");
+    expect(seen[0].headers.authorization).toBe("Bearer or-key");
+    expect(seen[0].headers["X-OpenRouter-Title"]).toBe("tomo-factory");
+    const body = JSON.parse(seen[0].body);
+    expect(body.model).toBe("google/gemini-3.8-flash");
+    expect(body.messages[0]).toEqual({ role: "system", content: [{ type: "text", text: expect.stringContaining("stable rules"), cache_control: { type: "ephemeral" } }] });
+    expect(body.messages[0].content[0].text).toContain("≤20 words");
+    expect(body.response_format).toEqual({ type: "json_schema", json_schema: { name: "output", strict: true, schema: { type: "object", properties: { ok: { type: "boolean" } } } } });
+    expect(body.provider).toEqual({ data_collection: "deny", require_parameters: true });
+    expect(body.max_tokens).toBe(4096);
+  });
+
+  it("rejects :batch models on sync and supports batch submit/poll hooks", async () => {
+    const provider = new OpenRouterProvider({ apiKey: "k", transport: async () => reply(200, {}) });
+    await expect(provider.generate({ model: "google/gemini-3.8-flash:batch", parts: [{ text: "x" }] })).rejects.toThrow(/batch model/);
+    expect(isBatchModel("google/m:batch")).toBe(true);
+    expect(stripBatchSuffix("google/m:batch")).toBe("google/m");
+    expect(openrouterUsage({ prompt_tokens: 10, completion_tokens: 2, prompt_tokens_details: { cached_tokens: 4 } })).toEqual({
+      inputTokens: 6,
+      outputTokens: 2,
+      totalTokens: 12,
+      cacheReadTokens: 4,
+    });
+
+    const calls: { method: string; url: string; body?: string }[] = [];
+    const jobs = [
+      { id: "b1", status: "validating" },
+      { id: "b1", status: "completed", results: [{ custom_id: "1", response: { ok: 1 } }] },
+    ];
+    const client = new OpenRouterBatchClient({
+      apiKey: "k",
+      http: async (url, init) => {
+        calls.push({ method: init.method, url, body: init.body });
+        if (init.method === "POST") return reply(202, { id: "b1", status: "validating" });
+        return reply(200, jobs.shift());
+      },
+    });
+    const submitted = await client.submit({
+      model: "anthropic/claude-haiku-5.5:batch",
+      requests: [{ custom_id: "1", body: { messages: [{ role: "user", content: "hi" }], response_format: { type: "json_schema", json_schema: { name: "o", schema: { type: "object" } } } } }],
+    });
+    expect(submitted.id).toBe("b1");
+    expect(JSON.parse(calls[0].body!).model).toBe("anthropic/claude-haiku-5.5");
+    const done = await client.poll("b1", { intervalMs: 1, sleep: async () => {} });
+    expect(done.status).toBe("completed");
+    expect(done.results?.[0].custom_id).toBe("1");
+  });
+
+  it("looks up openrouter prices including :batch keys", () => {
+    const prices = loadPrices({ FACTORY_PRICES: path.join(__dirname, "prices.openrouter.json") })!;
+    expect(priceFor(prices.table, "openrouter:google/gemini-3.8-flash:batch")).toMatchObject({ in: 0.375, out: 1.875 });
+    expect(priceFor(prices.table, "openrouter:deepseek/deepseek-v4.1-flash")).toMatchObject({ in: 0.045, out: 0.5 });
+  });
+});
 
 describe("OpenAI-compatible provider (NVIDIA)", () => {
   it("sends a bearer key, a system message and a JSON schema, keeps a reasoning budget and drops thinking", async () => {
@@ -134,7 +224,7 @@ describe("AnthropicProvider", () => {
     expect(seen[0].url).toBe("https://api.anthropic.com/v1/messages");
     expect(seen[0].headers).toMatchObject({ "x-api-key": "cl-key", "anthropic-version": "2023-06-01" });
     const body = JSON.parse(seen[0].body);
-    expect(body).toMatchObject({ model: "claude-haiku-5-5", system: "sys", max_tokens: 4096 });
+    expect(body).toMatchObject({ model: "claude-haiku-5-5", system: [{ type: "text", text: "sys", cache_control: { type: "ephemeral" } }], max_tokens: 4096 });
     expect(body).not.toHaveProperty("temperature");
     expect(body).not.toHaveProperty("tool_choice");
     expect(body.output_config.format).toEqual({
@@ -142,6 +232,46 @@ describe("AnthropicProvider", () => {
       schema: { type: "object", additionalProperties: false, properties: { x: { type: "number" }, list: { type: "array", items: { type: "object", additionalProperties: false, properties: { y: { type: "string" } } } } } },
     });
     expect(body.messages[0].content).toEqual([{ type: "text", text: "hi" }]);
+  });
+
+  it("caches the system prompt only, and reports cache writes and reads apart from fresh input", async () => {
+    const bodies: Record<string, unknown>[] = [];
+    const usages = [
+      { input_tokens: 40, output_tokens: 10, cache_creation_input_tokens: 1200, cache_read_input_tokens: 0 },
+      { input_tokens: 45, output_tokens: 12, cache_creation_input_tokens: 0, cache_read_input_tokens: 1200 },
+    ];
+    const provider = new AnthropicProvider({
+      apiKey: "k",
+      transport: async (_url, init) => {
+        bodies.push(JSON.parse(init.body));
+        return reply(200, { content: [{ type: "text", text: "{}" }], usage: usages.shift(), model: "claude-sonnet-5-5" });
+      },
+    });
+    const request = { model: "claude-sonnet-5-5", system: "long stable rules", parts: [{ text: "item 1" }] };
+    const first = await provider.generate(request);
+    const second = await provider.generate({ ...request, parts: [{ text: "item 2" }] });
+    expect(first.usage).toEqual({ inputTokens: 40, outputTokens: 10, totalTokens: 1250, cacheWriteTokens: 1200 });
+    expect(second.usage).toEqual({ inputTokens: 45, outputTokens: 12, totalTokens: 1257, cacheReadTokens: 1200 });
+    for (const body of bodies) {
+      expect(body.system).toEqual([{ type: "text", text: "long stable rules", cache_control: { type: "ephemeral" } }]);
+      expect(body).not.toHaveProperty("cache_control");
+      expect(JSON.stringify(body.messages)).not.toMatch(/cache_control/);
+    }
+  });
+
+  it("sends a one-hour breakpoint or none, as configured", async () => {
+    const bodies: Record<string, unknown>[] = [];
+    const transport = async (_url: string, init: { body: string }) => {
+      bodies.push(JSON.parse(init.body));
+      return reply(200, { content: [{ type: "text", text: "{}" }], usage: { input_tokens: 1, output_tokens: 1, cache_creation_input_tokens: 900, cache_creation: { ephemeral_1h_input_tokens: 900 } } });
+    };
+    const hour = await new AnthropicProvider({ apiKey: "k", transport, promptCache: "1h" }).generate({ model: "m", system: "s", parts: [{ text: "x" }] });
+    await new AnthropicProvider({ apiKey: "k", transport, promptCache: "off" }).generate({ model: "m", system: "s", parts: [{ text: "x" }] });
+    expect(bodies[0].system).toEqual([{ type: "text", text: "s", cache_control: { type: "ephemeral", ttl: "1h" } }]);
+    expect(hour.usage).toMatchObject({ cacheWriteTokens: 900, cacheWrite1hTokens: 900 });
+    expect(bodies[1].system).toBe("s");
+    expect(() => loadAIConfig({ ANTHROPIC_PROMPT_CACHE: "forever" })).toThrow(/ANTHROPIC_PROMPT_CACHE/);
+    expect(loadAIConfig({}).promptCache).toBe("5m");
   });
 
   it("retries overload, but not an empty credit balance", async () => {
@@ -240,6 +370,17 @@ describe("GeminiProvider", () => {
   it("omits optional generation settings", () => {
     expect(geminiBody({ model: "m", parts: [{ text: "x" }] }).generationConfig).toEqual({ temperature: 0 });
   });
+
+  it("sends a thinking level only when one is set", () => {
+    expect(geminiBody({ model: "m", parts: [{ text: "x" }], thinking: "minimal" }).generationConfig).toEqual({ temperature: 0, thinkingConfig: { thinkingLevel: "MINIMAL" } });
+  });
+
+  it("splits the implicitly cached prefix out of the prompt tokens", async () => {
+    const usageMetadata = { promptTokenCount: 5000, cachedContentTokenCount: 4096, candidatesTokenCount: 10, thoughtsTokenCount: 5, totalTokenCount: 5015 };
+    const transport: Transport = async () => ({ status: 200, text: async () => JSON.stringify({ candidates: [{ content: { parts: [{ text: "{}" }] } }], usageMetadata }) });
+    const response = await new GeminiProvider({ apiKey: "k", transport }).generate({ model: "m", system: "rubric", parts: [{ text: "item" }] });
+    expect(response.usage).toEqual({ inputTokens: 904, outputTokens: 15, totalTokens: 5015, cacheReadTokens: 4096 });
+  });
 });
 
 describe("structuredCall", () => {
@@ -297,5 +438,18 @@ describe("AIService roles", () => {
     await expect(service.tutor.respond("s", "hi")).rejects.toBeInstanceOf(NotImplementedRole);
     expect(typeof service.analyzer.analyze).toBe("function");
     expect(typeof service.verifier.solve).toBe("function");
+  });
+
+  it("adds a per-role thinking level to that role's requests only", async () => {
+    expect(loadAIConfig({ FINAL_JUDGE_THINKING: "Low", DISTRACTOR_JUDGE_THINKING: "minimal" }).thinking).toEqual({ judge: "low", distractorJudge: "minimal" });
+    expect(loadAIConfig({ JUDGE_THINKING: "high" }).thinking).toEqual({ judge: "high" });
+    expect(() => loadAIConfig({ GENERATOR_THINKING: "none" })).toThrow(/GENERATOR_THINKING must be one of/);
+    const provider = fakeProvider(['{"answer":"B","confidence":0.9,"rationale":"x"}']);
+    const config = loadAIConfig({ VERIFIER_THINKING: "minimal" });
+    const question = { number: 1, section: "sentence", layout: "blank", stimulusKey: null, stimulus: null, stem: "x ----.", options: { A: "a", B: "b", C: "c", D: "d", E: "e" }, translationDirection: null } as const;
+    await createAIService(config, provider).verifier.solve(question);
+    await createAIService(loadAIConfig({}), provider).verifier.solve({ ...question, stem: "y ----." });
+    expect(provider.calls[0].thinking).toBe("minimal");
+    expect("thinking" in provider.calls[1]).toBe(false);
   });
 });

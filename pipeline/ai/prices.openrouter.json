@@ -1,0 +1,26 @@
+{
+  "source": "https://openrouter.ai/api/v1/models (read 2026-11-05); USD = listed per-token price × 1e6",
+  "unit": "USD per million tokens; OpenRouter list prices. Batch rows are the catalog :batch endpoints (typically ~½ sync). Cache rates as published; omit cacheWrite when the catalog has none (implicit free write).",
+  "caching": "OpenRouter maps provider caches into usage.prompt_tokens_details.{cached_tokens,cache_write_tokens}. System prefix is stable; item text last. Anthropic/Qwen need explicit cache_control (OpenRouterProvider sends it when OPENROUTER/ANTHROPIC_PROMPT_CACHE ≠ off). OpenAI/Gemini/DeepSeek often cache implicitly above provider minima (e.g. OpenAI ≥1024, Gemini Flash often ≥4096).",
+  "batch": "Async Batch API POST /api/v1/batches; typically ~50% of sync token price. Use for offline eval only. Batch retains data ≤30 days and cannot use ZDR. Sync generate rejects :batch model ids.",
+  "models": {
+    "openrouter:xiaomi/mimo-v2.6-pro": { "in": 0.435, "out": 0.87, "cacheRead": 0.0036, "note": "sync; structured_outputs; Xiaomi retains ~30d, does not train" },
+    "openrouter:deepseek/deepseek-v4.1-flash": { "in": 0.045, "out": 0.5, "cacheRead": 0.018, "note": "sync; very cheap; DeepSeek may train — prefer OPENROUTER_DATA_COLLECTION=deny or avoid for exam stems" },
+    "openrouter:deepseek/deepseek-v4.1-flash:batch": { "in": 0.112, "out": 0.336, "cacheRead": 0.00336, "note": "batch catalog price; input is NOT cheaper than this model's sync on 2026-11-05 — verify before assuming −50%" },
+    "openrouter:google/gemini-3.8-flash": { "in": 0.825, "out": 4.125, "cacheRead": 0.0825, "cacheWrite": 0.041667, "note": "sync; structured_outputs" },
+    "openrouter:google/gemini-3.8-flash:batch": { "in": 0.375, "out": 1.875, "cacheRead": 0.0375, "cacheWrite": 0.041667, "note": "batch ~½ sync" },
+    "openrouter:qwen/qwen3.8-flash": { "in": 0.15, "out": 0.47, "cacheRead": 0.016, "note": "sync; structured_outputs; Alibaba may need explicit cache_control" },
+    "openrouter:openai/gpt-6.1-terra-pro": { "in": 1.0, "out": 5.0, "cacheRead": 0.05, "cacheWrite": 1.25, "note": "sync; moderated; long-context override above ~272k tokens" },
+    "openrouter:openai/gpt-6.1-terra-pro:batch": { "in": 0.5, "out": 2.5, "cacheRead": 0.025, "cacheWrite": 0.625, "note": "batch ~½ sync" },
+    "openrouter:deepseek/deepseek-v4.1-flash-1017": { "in": 0.3, "out": 1.2, "cacheRead": 0.006, "note": "sync snapshot 2026-10-17; off-peak discounts in catalog overrides" },
+    "openrouter:google/gemini-4-argon": { "in": 2.0, "out": 10.0, "cacheRead": 0.1, "cacheWrite": 0.1875, "note": "sync flagship; expensive for volume judging" },
+    "openrouter:google/gemini-4-argon:batch": { "in": 1.0, "out": 5.0, "cacheRead": 0.05, "cacheWrite": 0.1875, "note": "batch ~½ sync" },
+    "openrouter:stepfun/step-5-preview": { "in": 1.0, "out": 2.7, "cacheRead": 0.1, "note": "sync preview; retention unknown period" },
+    "openrouter:anthropic/claude-haiku-5.5": { "in": 0.1, "out": 0.5, "cacheRead": 0.01, "cacheWrite": 0.125, "cacheWrite1h": 0.2, "note": "sync via OpenRouter (dot id); OpenRouter key only — do not use CLAUDE_API_KEY" },
+    "openrouter:anthropic/claude-haiku-5.5:batch": { "in": 0.05, "out": 0.25, "cacheRead": 0.005, "cacheWrite": 0.0625, "cacheWrite1h": 0.1, "note": "batch ~½ sync; long-context override above 100k" },
+    "openrouter:openai/gpt-6.1-sol": { "in": 2.0, "out": 10.0, "cacheRead": 0.1, "cacheWrite": 2.5, "note": "sync; moderated" },
+    "openrouter:openai/gpt-6.1-sol:batch": { "in": 1.0, "out": 5.0, "cacheRead": 0.05, "cacheWrite": 1.25, "note": "batch ~½ sync" },
+    "openrouter:google/gemini-3.1-flash-lite": { "in": 0.25, "out": 1.5, "cacheRead": 0.025, "cacheWrite": 0.083333, "note": "prior Balanced writer candidate (sync)" },
+    "openrouter:openai/gpt-5-mini": { "in": 0.25, "out": 2.0, "cacheRead": 0.025, "note": "prior Balanced distractor-judge candidate (sync)" }
+  }
+}

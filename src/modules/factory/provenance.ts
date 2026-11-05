@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { optionLabels } from "@/modules/analysis/contract";
+import { distractorDiagnosisVersion } from "./diagnosis";
 import { distractorDecisions } from "./distractor";
+import { factoryExperiments } from "./experiments";
 import { factoryVersions } from "./versions";
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
@@ -48,7 +50,16 @@ export const provenance = z.object({
   candidateVersion: z.literal(factoryVersions.candidate),
   validatorVersion: z.literal(factoryVersions.validator),
   judgeVersion: z.literal(factoryVersions.judge),
-  distractorJudgeVersion: z.literal(factoryVersions.distractorJudge),
+  distractorJudgeVersion: z.enum([factoryVersions.distractorJudge, factoryVersions.distractorJudgeExperimental, factoryVersions.distractorJudgeRevision]),
+  /** Prompt of the skeleton gate's semantic check; absent when the gate was off or on records built before it existed. */
+  skeletonGatePromptVersion: version.optional(),
+  skeletonGateVersion: z.literal(factoryVersions.skeletonGate).optional(),
+  /** FACTORY_SEED: 1 reuses cached requests; another seed makes fresh calls for identical requests. */
+  seed: z.number().int().min(1).optional(),
+  /** FACTORY_EXPERIMENTS in force; empty for the baseline. */
+  experiments: z.array(z.enum(factoryExperiments)).default([]),
+  /** Catalog the wrong options' diagnosis labels come from; absent on records built before labels existed. */
+  distractorDiagnosisVersion: z.literal(distractorDiagnosisVersion).optional(),
   originalityVersion: z.literal(factoryVersions.originality),
   generatedAt: z.iso.datetime(),
   attempts: z.array(stageAttempt).min(1),

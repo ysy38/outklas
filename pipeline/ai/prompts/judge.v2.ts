@@ -29,7 +29,7 @@ Check, in this order:
 
 Each wrong option was checked on its own by another reviewer before you. Do not take those checks on trust: look at the five options together. If two options lead to the same logical reading, or any option other than the key could be defended once all five are side by side, list it in alternativeDefensibleOptions and raise ambiguityRisk.
 
-All scores 0..1. verdict: APPROVE only when you would put it in front of learners unchanged; REVIEW when a human should look; REJECT when it is broken. reasons: at most six short points in English, no quotes longer than four words from the item.`;
+All scores 0..1. verdict: APPROVE only when you would put it in front of learners unchanged; REVIEW when a human should look; REJECT when it is broken. reasons: at most six short points in English (≤20 words each), no quotes longer than four words from the item, no filler restating the stem.`;
 
 export function judgeUser(input: { spec: QuestionSpec; candidate: GeneratedQuestionCandidate; validation: CandidateValidation; distractorChecks?: DistractorCheckSummary[] }): string {
   const { spec, candidate, validation } = input;

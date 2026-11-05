@@ -1,10 +1,12 @@
 import type { AnalysisDraft, BlindSolution, TranscriptionDraft } from "@/modules/analysis/contract";
 import type { ReconstructedQuestion } from "@/modules/analysis/surface";
+import type { OptionLabel } from "@/modules/analysis/contract";
+import type { ItemAuditReport } from "@/modules/factory/audit";
 import type { GeneratedQuestionCandidate } from "@/modules/factory/candidate";
-import type { DistractorJudgeReport, GeneratedDistractor } from "@/modules/factory/distractor";
+import type { ExperimentalJudgeReport, GeneratedDistractor, LexicalDiagnostics } from "@/modules/factory/distractor";
 import type { DistractorSpec } from "@/modules/factory/distractor-spec";
 import type { ItemCore, ItemExplanation } from "@/modules/factory/explanation";
-import type { QuestionSkeleton } from "@/modules/factory/skeleton";
+import type { QuestionSkeleton, SkeletonCheckReport } from "@/modules/factory/skeleton";
 import type { NodeRef } from "@/modules/knowledge/graph";
 import type { DistractorCheckSummary } from "./prompts/judge.v2";
 import type { JudgeReport, OptionAcceptability } from "@/modules/factory/judge";
@@ -16,6 +18,9 @@ export type AIRole = (typeof aiRoles)[number];
 
 export type Part = { text: string } | { image: { mimeType: "image/png" | "image/jpeg"; data: Uint8Array } };
 
+export const thinkingLevels = ["minimal", "low", "medium", "high"] as const;
+export type ThinkingLevel = (typeof thinkingLevels)[number];
+
 export type ModelRequest = {
   model: string;
   system?: string;
@@ -24,9 +29,17 @@ export type ModelRequest = {
   jsonSchema?: Record<string, unknown>;
   temperature?: number;
   maxOutputTokens?: number;
+  /** Gemini 3+ thinking depth (thinkingConfig.thinkingLevel); other providers ignore it. Unset sends nothing. */
+  thinking?: ThinkingLevel;
+  /** Part of the cache key only, never sent: lets a second benchmark seed make fresh calls for an identical request. */
+  cacheSalt?: string;
 };
 
-export type Usage = { inputTokens: number; outputTokens: number; totalTokens: number };
+/**
+ * `inputTokens` is the uncached input. Providers with prompt caching report the cached prefix separately: tokens
+ * written to the cache (`cacheWrite1hTokens` is the part written with a one-hour lifetime) and tokens read from it.
+ */
+export type Usage = { inputTokens: number; outputTokens: number; totalTokens: number; cacheWriteTokens?: number; cacheWrite1hTokens?: number; cacheReadTokens?: number };
 
 export type ModelResponse = { text: string; model: string; usage: Usage; finishReason?: string };
 
@@ -79,11 +92,18 @@ export interface Judge {
  */
 export interface ItemFactory {
   skeleton(spec: QuestionSpec, feedback: string[]): Promise<AIResult<QuestionSkeleton>>;
+  /** Independent semantic check of the stem and key before any distractor is written (skeleton gate). */
+  checkSkeleton?(input: { spec: QuestionSpec; skeleton: QuestionSkeleton }): Promise<AIResult<SkeletonCheckReport>>;
   distractor(input: { dspec: DistractorSpec; skeleton: QuestionSkeleton; usedConnectors: NodeRef[]; feedback: string[] }): Promise<AIResult<GeneratedDistractor>>;
-  judgeDistractor(input: { dspec: DistractorSpec; skeleton: QuestionSkeleton; text: string }): Promise<AIResult<DistractorJudgeReport>>;
+  judgeDistractor(input: { dspec: DistractorSpec; skeleton: QuestionSkeleton; text: string; lexical?: LexicalDiagnostics }): Promise<AIResult<ExperimentalJudgeReport>>;
   explain(input: { spec: QuestionSpec; core: ItemCore; dspecs: DistractorSpec[]; feedback: string[] }): Promise<AIResult<ItemExplanation>>;
 }
 export type Evaluator = Judge;
+
+/** Post-hoc benchmark audit of a finished item; blind to key, labels and variant. Never changes a verdict. */
+export interface ItemAuditor {
+  item(input: { stem: string; options: Record<OptionLabel, string>; targetRelation: NodeRef | null }): Promise<AIResult<ItemAuditReport>>;
+}
 
 export interface Explainer {
   explain(questionId: string, learnerAnswer: string): Promise<AIResult<never>>;
@@ -99,6 +119,7 @@ export type AIService = {
   generator: Generator;
   judge: Judge;
   factory: ItemFactory;
+  audit?: ItemAuditor;
   explainer: Explainer;
   tutor: Tutor;
 };

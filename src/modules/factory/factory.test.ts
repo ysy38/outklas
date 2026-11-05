@@ -7,6 +7,7 @@ import type { NodeRef } from "@/modules/knowledge/graph";
 import { completedSentences, generatedQuestionCandidate, type GeneratedQuestionCandidate } from "./candidate";
 import { connectorsFor, familyBlueprints } from "./families";
 import { judgeDecision, judgeReport, type JudgeReport, type OptionAcceptability } from "./judge";
+import { buildDistractorSpecs } from "./distractor-spec";
 import { buildExamProfile, consistentMisconception, evidenceLevel, familyConcept } from "./profile";
 import { generatorJudgeIndependent, provenance } from "./provenance";
 import { applyReview, initialStatus, type CandidateRecord } from "./review";
@@ -345,6 +346,7 @@ const prov = {
   validatorVersion: factoryVersions.validator,
   judgeVersion: factoryVersions.judge,
   distractorJudgeVersion: factoryVersions.distractorJudge,
+  experiments: [],
   originalityVersion: factoryVersions.originality,
   generatedAt: "2026-10-08T12:00:00.000Z",
   attempts: [
@@ -368,6 +370,25 @@ const prov = {
   requestHashes: { blindSolve: "b".repeat(64), acceptability: "d".repeat(64), judge: "c".repeat(64) },
   sourceContextIds: ["yds-2018", "yds-2023-10"],
 };
+
+describe("distractor diagnosis by construction", () => {
+  it("labels every wrong option of the family deterministically, one distinct primary label per option", () => {
+    for (let ordinal = 1; ordinal <= 6; ordinal++) {
+      const built = buildQuestionSpec({ profile, family, ordinal });
+      const dspecs = buildDistractorSpecs(built);
+      expect(dspecs.every((dspec) => dspec.diagnosis !== null)).toBe(true);
+      expect(buildDistractorSpecs(built).map((dspec) => dspec.diagnosis)).toEqual(dspecs.map((dspec) => dspec.diagnosis));
+      expect(new Set(dspecs.map((dspec) => dspec.diagnosis!.primary)).size).toBe(dspecs.length);
+    }
+    const byRole = Object.fromEntries(buildDistractorSpecs(spec).map((dspec) => [dspec.role, dspec.diagnosis!.primary]));
+    expect(byRole).toMatchObject({
+      "wrong_discourse_relation:contrast": "relation.concession_vs_contrast",
+      "wrong_discourse_relation:cause": "relation.polarity_reversed",
+      "wrong_discourse_relation:condition": "relation.condition_misapplied",
+      "logical_incompatibility:sequence": "relation.time_for_logic",
+    });
+  });
+});
 
 describe("provenance", () => {
   it("requires every version and model field and keeps every stage attempt", () => {

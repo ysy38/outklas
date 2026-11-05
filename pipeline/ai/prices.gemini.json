@@ -1,0 +1,12 @@
+{
+  "source": "https://ai.google.dev/gemini-api/docs/pricing (read 2026-10-14, page last updated 2026-10-13)",
+  "unit": "USD per million tokens; Paid Tier, Standard (interactive) inference, text input; no Batch/Flex/Priority. On the Free Tier the same calls are billed at $0, so these figures are list-price estimates, not charges.",
+  "caching": "Implicit caching is on by default for Gemini 2.5 and newer (https://ai.google.dev/gemini-api/docs/caching); cached prompt tokens are billed at cacheRead. The explicit cache storage price ($/1M tokens per hour) is not modelled because the factory uses no explicit cachedContents.",
+  "models": {
+    "gemini:gemini-3.1-flash-lite": { "in": 0.25, "out": 1.5, "cacheRead": 0.025, "note": "text/image/video input; audio input 0.50; explicit cache storage $1.00 per 1M tokens per hour" },
+    "gemini:gemini-3.5-flash-lite": { "in": 0.3, "out": 2.5, "cacheRead": 0.03, "note": "explicit cache storage $1.00 per 1M tokens per hour" },
+    "gemini:gemini-3.6-flash": { "in": 0.75, "out": 3.75, "cacheRead": 0.075, "note": "through 2026-12-31; from 2027-01-01 in 1.50, out 7.50, cacheRead 0.15. Implicit cache minimum 4,096 input tokens" },
+    "gemini:gemini-3.5-flash": { "in": 0.75, "out": 3.75, "cacheRead": 0.075, "note": "not on the pricing page; on 2026-10-14 the API served this id with gemini-3.6-flash (modelVersion), so it is priced as 3.6 Flash" },
+    "gemini:gemini-3.8-flash": { "in": 0.75, "out": 3.75, "cacheRead": 0.075, "note": "through 2026-12-31; from 2027-01-01 in 1.50, out 7.50, cacheRead 0.15. Implicit cache minimum 4,096 input tokens" }
+  }
+}
