@@ -63,14 +63,54 @@ const addUsage = (a: Usage, b: Usage): Usage => {
   return sum;
 };
 
+/** Strip markdown fences and pull the first balanced `{...}` so truncated prose / reasoning wrappers still parse. */
+export function extractJsonText(text: string): string {
+  let cleaned = text.trim().replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+  cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  if (cleaned.startsWith("{") || cleaned.startsWith("[")) return cleaned;
+  const start = cleaned.indexOf("{");
+  if (start < 0) return cleaned;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < cleaned.length; i++) {
+    const char = cleaned[i];
+    if (inString) {
+      if (escape) escape = false;
+      else if (char === "\\") escape = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') inString = true;
+    else if (char === "{") depth += 1;
+    else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return cleaned.slice(start, i + 1);
+    }
+  }
+  return cleaned.slice(start);
+}
+
+/** Some OpenRouter models emit 0–5 Likert scores for 0–1 unit fields; rescale before Zod. */
+function normalizeUnitScale(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(normalizeUnitScale);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, entry]) => {
+      if (typeof entry === "number" && entry > 1 && entry <= 5) return [key, Math.round((entry / 5) * 1000) / 1000];
+      return [key, normalizeUnitScale(entry)];
+    }),
+  );
+}
+
 function parse<T>(text: string, schema: z.ZodType<T>): { ok: true; value: T } | { ok: false; error: string } {
   let json: unknown;
   try {
-    json = JSON.parse(text.trim().replace(/^```(?:json)?\s*|\s*```$/g, ""));
+    json = JSON.parse(extractJsonText(text));
   } catch {
     return { ok: false, error: "output is not valid JSON" };
   }
-  const result = schema.safeParse(coerceAnalysisJson(json));
+  const result = schema.safeParse(coerceAnalysisJson(normalizeUnitScale(json)));
   return result.success
     ? { ok: true, value: result.data }
     : { ok: false, error: result.error.issues.slice(0, 8).map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ") };

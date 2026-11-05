@@ -10,8 +10,15 @@ export const openrouterBrevity = "Output discipline: JSON only; each free-text r
 export const openrouterDataPolicies = ["allow", "deny"] as const;
 export type OpenRouterDataPolicy = (typeof openrouterDataPolicies)[number];
 
+type ChatMessage = {
+  content?: string | null;
+  reasoning?: string | null;
+  reasoning_content?: string | null;
+  refusal?: string | null;
+};
+
 type ChatBody = {
-  choices?: { message?: { content?: string | null }; finish_reason?: string }[];
+  choices?: { message?: ChatMessage; finish_reason?: string }[];
   usage?: {
     prompt_tokens?: number;
     completion_tokens?: number;
@@ -21,6 +28,17 @@ type ChatBody = {
   model?: string;
   error?: { message?: string } | string;
 };
+
+/**
+ * Prefer message.content; if empty (reasoning models often spend the whole budget on reasoning),
+ * fall back to reasoning text so downstream JSON extraction can still recover an object.
+ */
+export function openrouterMessageText(message: ChatMessage | undefined | null): string {
+  const content = (message?.content ?? "").replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+  if (content) return content;
+  const reasoning = (message?.reasoning ?? message?.reasoning_content ?? "").trim();
+  return reasoning;
+}
 
 export type OpenRouterHttp = (url: string, init: { method: string; headers: Record<string, string>; body?: string; signal: AbortSignal }) => Promise<HttpResponse>;
 
@@ -110,7 +128,9 @@ export class OpenRouterProvider implements AIProvider {
         model: request.model,
         messages: [...(request.system ? [systemMessage(request.system, this.options.promptCache ?? "5m")] : []), { role: "user", content: text.join("\n\n") }],
         temperature: request.temperature ?? 0,
+        // Reasoning models otherwise spend the whole budget on hidden chain-of-thought and return empty content.
         max_tokens: Math.max(request.maxOutputTokens ?? 0, this.options.minOutputTokens ?? 4096),
+        reasoning: { exclude: true },
         ...(request.jsonSchema
           ? { response_format: { type: "json_schema", json_schema: { name: "output", strict: true, schema: request.jsonSchema } } }
           : {}),
@@ -128,9 +148,8 @@ export class OpenRouterProvider implements AIProvider {
       options: this.options,
     })) as ChatBody;
     const choice = body.choices?.[0];
-    const content = (choice?.message?.content ?? "").replace(/<think>[\s\S]*?<\/think>/g, "").trim();
     return {
-      text: content,
+      text: openrouterMessageText(choice?.message),
       model: body.model ?? request.model,
       finishReason: choice?.finish_reason?.toUpperCase(),
       usage: openrouterUsage(body.usage),

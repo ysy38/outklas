@@ -8,7 +8,8 @@ import { AnthropicProvider } from "./anthropic";
 import { loadAIConfig, modelDefaults, parseModel, sameModel } from "./config";
 import { AIRequestError, GeminiProvider, geminiBody, type Transport } from "./gemini";
 import { OpenAICompatibleProvider } from "./openai-compatible";
-import { isBatchModel, OpenRouterBatchClient, OpenRouterProvider, openrouterUsage, stripBatchSuffix } from "./openrouter";
+import { isBatchModel, OpenRouterBatchClient, OpenRouterProvider, openrouterMessageText, openrouterUsage, stripBatchSuffix } from "./openrouter";
+import { extractJsonText } from "./service";
 import { loadPrices, priceFor } from "./prices";
 import { analyzerResponseSchema } from "./prompts/analyzer.v2";
 import { withRefEnums } from "./prompts/schema";
@@ -123,7 +124,27 @@ describe("OpenRouterProvider", () => {
     expect(body.messages[0].content[0].text).toContain("≤20 words");
     expect(body.response_format).toEqual({ type: "json_schema", json_schema: { name: "output", strict: true, schema: { type: "object", properties: { ok: { type: "boolean" } } } } });
     expect(body.provider).toEqual({ data_collection: "deny", require_parameters: true });
+    expect(body.reasoning).toEqual({ exclude: true });
     expect(body.max_tokens).toBe(4096);
+  });
+
+  it("falls back to reasoning text when content is empty and extracts fenced JSON", async () => {
+    expect(openrouterMessageText({ content: "", reasoning: '```json\n{"ok":true}\n```' })).toContain('"ok":true');
+    expect(extractJsonText('Here you go:\n```json\n{"a":1,"b":{"c":2}}\n```\nthanks')).toBe('{"a":1,"b":{"c":2}}');
+    expect(extractJsonText('prefix {"x":1} trailing')).toBe('{"x":1}');
+
+    const provider = new OpenRouterProvider({
+      apiKey: "or-key",
+      transport: async () =>
+        reply(200, {
+          choices: [{ message: { content: "", reasoning: '{"ok":true}' }, finish_reason: "length" }],
+          usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+          model: "deepseek/deepseek-v4.1-flash",
+        }),
+    });
+    const response = await provider.generate({ model: "deepseek/deepseek-v4.1-flash", parts: [{ text: "item" }], maxOutputTokens: 512 });
+    expect(response.text).toBe('{"ok":true}');
+    expect(response.finishReason).toBe("LENGTH");
   });
 
   it("rejects :batch models on sync and supports batch submit/poll hooks", async () => {
