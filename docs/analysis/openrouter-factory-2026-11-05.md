@@ -84,19 +84,13 @@ With `OPENROUTER_API_KEY` present, two sync probes (`response_format` json_schem
 
 No cache tokens on these tiny prompts (expected under provider minima). Spend was a few hundred tokens total. No Anthropic direct key used.
 
-## Judge calibration (2026-11-05) — ran
+## Judge calibration (2026-11-05) — done
 
-Sync distractor-judge bakeoff on the 54 gold items: see [`openrouter-judge-calibration-2026-11-05.md`](./openrouter-judge-calibration-2026-11-05.md).
+Sync distractor-judge bakeoff on the 54 gold items (216 slots × 4 models): see [`openrouter-judge-calibration-2026-11-05.md`](./openrouter-judge-calibration-2026-11-05.md). Artifacts under `.data/analysis/_factory/judge-calibration/openrouter-2026-11-05-v2/`.
 
-```
-OPENROUTER_DATA_COLLECTION=deny FACTORY_PRICES=pipeline/ai/prices.openrouter.json FACTORY_MAX_COST_USD=1.25 \
-npx tsx pipeline/cli.ts factory-judge-calibrate \
-  --dir .data/analysis/_factory/blind-review/2026-10-13-calibration \
-  --out .data/analysis/_factory/judge-calibration/openrouter-2026-11-05 \
-  --models openrouter:deepseek/deepseek-v4.1-flash,openrouter:qwen/qwen3.8-flash,openrouter:xiaomi/mimo-v2.6-pro,openrouter:google/gemini-3.8-flash
-```
+Root cause of DeepSeek JSON failures: empty `content` (tokens spent on `reasoning`). Fixed with `reasoning: { exclude: true }` + tolerant JSON extract. Parallel resumable workers: `scripts/run-judge-calibrate-parallel.sh`.
 
-**No production default switch.** DeepSeek led complete-run agreement (~60%) but missed flaws; Xiaomi was schema-reliable; Gemini hit 429 mid-run. Env-only research stack documented in the calibration note.
+**No production default switch.** Provisional OpenRouter serial stack: DeepSeek writer + Gemini distractor/final judge (env-only). DeepSeek dropped as judge (14% JSON errors).
 
 ## Implementation map
 

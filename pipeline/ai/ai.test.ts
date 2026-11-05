@@ -9,7 +9,8 @@ import { loadAIConfig, modelDefaults, parseModel, sameModel } from "./config";
 import { AIRequestError, GeminiProvider, geminiBody, type Transport } from "./gemini";
 import { OpenAICompatibleProvider } from "./openai-compatible";
 import { isBatchModel, OpenRouterBatchClient, OpenRouterProvider, openrouterMessageText, openrouterUsage, stripBatchSuffix } from "./openrouter";
-import { extractJsonText } from "./service";
+import { GatewayProvider } from "./gateway";
+import { extractJsonText, normalizeUnitScale } from "./service";
 import { loadPrices, priceFor } from "./prices";
 import { analyzerResponseSchema } from "./prompts/analyzer.v2";
 import { withRefEnums } from "./prompts/schema";
@@ -64,7 +65,7 @@ describe("config", () => {
     expect(sameModel("nvidia:m", "anthropic:m")).toBe(false);
     expect(sameModel("openrouter:google/m:batch", "openrouter:google/m")).toBe(false);
     const config = loadAIConfig({ GEMINI_API_KEY: "g", NVIDIA_API_KEY: "n", GENERATOR_MODEL: "g1", DISTRACTOR_MODEL: "g2", EXPLANATION_MODEL: "g3", DISTRACTOR_JUDGE_MODEL: "nvidia:j", FINAL_JUDGE_MODEL: "anthropic:claude-haiku-5-5" });
-    expect(config.keys).toEqual({ gemini: "g", nvidia: "n", anthropic: null, openrouter: null });
+    expect(config.keys).toEqual({ gemini: "g", nvidia: "n", anthropic: null, openrouter: null, gateway: null });
     expect(config.warnings).toEqual(["judge uses anthropic, but its API key is not set."]);
     expect(loadAIConfig({ ANTHROPIC_API_KEY: "a" }).keys.anthropic).toBe("a");
     expect(loadAIConfig({}).nvidiaBaseUrl).toBe("https://integrate.api.nvidia.com/v1");
@@ -187,6 +188,66 @@ describe("OpenRouterProvider", () => {
     const prices = loadPrices({ FACTORY_PRICES: path.join(__dirname, "prices.openrouter.json") })!;
     expect(priceFor(prices.table, "openrouter:google/gemini-3.8-flash:batch")).toMatchObject({ in: 0.375, out: 1.875 });
     expect(priceFor(prices.table, "openrouter:deepseek/deepseek-v4.1-flash")).toMatchObject({ in: 0.045, out: 0.5 });
+  });
+});
+
+describe("GatewayProvider", () => {
+  it("posts chat completions with a JSON schema, auto caching, no-training routing and a reasoning effort", async () => {
+    const seen: { url: string; headers: Record<string, string>; body: string }[] = [];
+    const provider = new GatewayProvider({
+      apiKey: "gw-key",
+      noTraining: true,
+      tags: ["app:tomo-factory"],
+      transport: async (url, init) => {
+        seen.push({ url, headers: init.headers, body: init.body });
+        return reply(200, {
+          choices: [{ message: { content: '{"ok":true}' }, finish_reason: "stop" }],
+          usage: { prompt_tokens: 900, completion_tokens: 30, total_tokens: 930, prompt_tokens_details: { cached_tokens: 600 } },
+          model: "anthropic/claude-haiku-5.5",
+        });
+      },
+    });
+    const response = await provider.generate({
+      model: "anthropic/claude-haiku-5.5",
+      system: "stable rules",
+      parts: [{ text: "item" }],
+      jsonSchema: { type: "object", properties: { ok: { type: "boolean" } } },
+      temperature: 0,
+      thinking: "low",
+    });
+    expect(response.text).toBe('{"ok":true}');
+    expect(response.usage).toEqual({ inputTokens: 300, outputTokens: 30, totalTokens: 930, cacheReadTokens: 600 });
+    expect(seen[0].url).toBe("https://ai-gateway.vercel.sh/v1/chat/completions");
+    expect(seen[0].headers.authorization).toBe("Bearer gw-key");
+    const body = JSON.parse(seen[0].body);
+    expect(body.messages[0]).toEqual({ role: "system", content: expect.stringContaining("stable rules") });
+    expect(body.response_format).toEqual({ type: "json_schema", json_schema: { name: "output", strict: true, schema: { type: "object", properties: { ok: { type: "boolean" } }, additionalProperties: false } } });
+    expect(body.providerOptions).toEqual({ gateway: { caching: "auto", disallowPromptTraining: true, tags: ["app:tomo-factory"] } });
+    expect(body.reasoning).toEqual({ effort: "low" });
+    expect(body.max_tokens).toBe(4096);
+  });
+
+  it("routes gateway: settings to the gateway key", () => {
+    expect(parseModel("gateway:anthropic/claude-haiku-5.5")).toEqual({ provider: "gateway", model: "anthropic/claude-haiku-5.5" });
+    const config = loadAIConfig({ AI_GATEWAY_API_KEY: "gw", GENERATOR_MODEL: "gateway:anthropic/claude-haiku-5.5" });
+    expect(config.keys.gateway).toBe("gw");
+    expect(config.gatewayNoTraining).toBe(true);
+    expect(config.distractorJudgeStyle).toBe("rubric");
+    expect(loadAIConfig({ FACTORY_DISTRACTOR_JUDGE: "verdict" }).distractorJudgeStyle).toBe("verdict");
+    expect(() => loadAIConfig({ FACTORY_DISTRACTOR_JUDGE: "vibes" })).toThrow(/FACTORY_DISTRACTOR_JUDGE/);
+  });
+});
+
+describe("normalizeUnitScale", () => {
+  const schema = z.object({ question_number: z.number().int().min(1).max(200), report: z.object({ a: z.number().min(0).max(1), b: z.number().min(0).max(1), count: z.number().int() }) });
+  const json = z.toJSONSchema(schema) as Parameters<typeof normalizeUnitScale>[1];
+
+  it("reads every unit field of an object on the 0–5 scale once one of them is above 1, and leaves other numbers alone", () => {
+    expect(normalizeUnitScale({ question_number: 3, report: { a: 4, b: 1, count: 3 } }, json)).toEqual({ question_number: 3, report: { a: 0.8, b: 0.2, count: 3 } });
+  });
+
+  it("keeps a 0..1 answer as it is", () => {
+    expect(normalizeUnitScale({ question_number: 3, report: { a: 1, b: 0.3, count: 2 } }, json)).toEqual({ question_number: 3, report: { a: 1, b: 0.3, count: 2 } });
   });
 });
 

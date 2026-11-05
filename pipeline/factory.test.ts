@@ -16,7 +16,7 @@ import { distractorJudgeUser } from "./ai/prompts/distractor-judge.v3";
 import { createAIService, JudgeNotIndependent } from "./ai/service";
 import type { AIProvider, ModelRequest, ModelResponse } from "./ai/types";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { distractorDecision, distractorJudgeReport, distractorJudgeReportFor, validateDistractor, type DistractorJudgeReport, type ExperimentalJudgeReport, type GeneratedDistractor } from "@/modules/factory/distractor";
+import { distractorDecision, distractorJudgeReport, distractorJudgeReportFor, distractorVerdicts, reportFromVerdict, validateDistractor, type DistractorJudgeReport, type DistractorVerdict, type ExperimentalJudgeReport, type GeneratedDistractor } from "@/modules/factory/distractor";
 import { parseExperiments, type FactoryExperiment } from "@/modules/factory/experiments";
 import { buildDistractorSpecs, type DistractorSpec } from "@/modules/factory/distractor-spec";
 import type { ItemExplanation } from "@/modules/factory/explanation";
@@ -409,6 +409,23 @@ describe("distractor judge decision", () => {
   it("moves with the single acceptability threshold", () => {
     expect(decide({ unintendedCorrectness: 0.6 }, 0.5).decision).toBe("REGENERATE");
     expect(decide({ unintendedCorrectness: 0.6 }, 0.8).decision).toBe("HUMAN_REVIEW");
+  });
+});
+
+describe("verdict judge (distractor-judge.v7)", () => {
+  const decideVerdict = (verdict: DistractorVerdict["verdict"], sure = true) => distractorDecision({ dspec: dspec("A"), report: reportFromVerdict({ verdict, sure, reason: "r" }) });
+
+  it("accepts a sure good verdict and regenerates each sure flaw for its own reason", () => {
+    expect(decideVerdict("good")).toMatchObject({ decision: "ACCEPT", failures: [], concerns: [] });
+    expect(decideVerdict("second_answer").failures).toEqual(expect.arrayContaining(["competent_candidate_could_select", "unintended_correctness"]));
+    expect(decideVerdict("repeats_answer").failures).toEqual(["answer_clause_reuse"]);
+    expect(decideVerdict("ungrammatical").failures).toEqual(["ungrammatical"]);
+    expect(decideVerdict("unnatural").failures).toEqual(["incoherent_clause"]);
+    expect(decideVerdict("too_obvious").failures).toEqual(["too_obvious"]);
+  });
+
+  it("sends every unsure verdict to a human", () => {
+    for (const verdict of distractorVerdicts) expect(decideVerdict(verdict, false).decision).toBe("HUMAN_REVIEW");
   });
 });
 

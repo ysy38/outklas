@@ -1,12 +1,12 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
-import type { z } from "zod";
+import { z } from "zod";
 import { dataRoot } from "../lib/artifacts";
 import { analysisDraft, blindSolution, coerceAnalysisJson, transcription } from "@/modules/analysis/contract";
 import type { ReconstructedQuestion } from "@/modules/analysis/surface";
 import { generatedQuestionCandidate, type GeneratedQuestionCandidate } from "@/modules/factory/candidate";
 import { itemAuditReport } from "@/modules/factory/audit";
-import { distractorJudgeReport, distractorJudgeReportFor, generatedDistractor } from "@/modules/factory/distractor";
+import { distractorJudgeReport, distractorJudgeReportFor, distractorVerdict, generatedDistractor, reportFromVerdict } from "@/modules/factory/distractor";
 import { itemExplanation } from "@/modules/factory/explanation";
 import { judgeReport, optionAcceptability } from "@/modules/factory/judge";
 import { experimentGeneration } from "@/modules/factory/experiments";
@@ -16,6 +16,7 @@ import { AnthropicProvider } from "./anthropic";
 import { loadAIConfig, parseModel, sameModel, type AIConfig, type ModelRole, type ProviderName } from "./config";
 import { GeminiProvider } from "./gemini";
 import { OpenAICompatibleProvider } from "./openai-compatible";
+import { GatewayProvider } from "./gateway";
 import { OpenRouterProvider } from "./openrouter";
 import { acceptabilityPromptVersion, acceptabilityResponseSchema, acceptabilitySystem, acceptabilityUser } from "./prompts/acceptability.v1";
 import { analyzerPromptVersion, analyzerResponseSchema, analyzerSystem, analyzerUser } from "./prompts/analyzer.v2";
@@ -25,6 +26,7 @@ import { distractorPromptVersion, distractorResponseSchema, distractorSystem, di
 import { distractorExperimentalPromptVersion, distractorSystemFor, distractorUserFor } from "./prompts/distractor.v5";
 import { distractorRevisionPromptVersion, distractorRevisionSystem, distractorRevisionUser } from "./prompts/distractor.v6";
 import { distractorJudgeRevisionPromptVersion, distractorJudgeRevisionSystem, distractorJudgeRevisionUser } from "./prompts/distractor-judge.v6";
+import { distractorVerdictPromptVersion, distractorVerdictResponseSchema, distractorVerdictSystem, distractorVerdictUser } from "./prompts/distractor-judge.v7";
 import { skeletonCheckPromptVersion, skeletonCheckResponseSchema, skeletonCheckSystem, skeletonCheckUser } from "./prompts/skeleton-check.v1";
 import { itemAuditPromptVersion, itemAuditResponseSchema, itemAuditSystem, itemAuditUser } from "./prompts/item-audit.v2";
 import { explanationPromptVersion, explanationResponseSchema, explanationSystem, explanationUser } from "./prompts/explanation.v2";
@@ -91,17 +93,46 @@ export function extractJsonText(text: string): string {
   return cleaned.slice(start);
 }
 
-/** Some OpenRouter models emit 0–5 Likert scores for 0–1 unit fields; rescale before Zod. */
-function normalizeUnitScale(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(normalizeUnitScale);
-  if (!value || typeof value !== "object") return value;
+type UnitSchema = { type?: string | string[]; maximum?: number; minimum?: number; properties?: Record<string, UnitSchema>; items?: UnitSchema; anyOf?: UnitSchema[] };
+
+const isUnit = (schema: UnitSchema | undefined) => schema?.type === "number" && schema.minimum === 0 && schema.maximum === 1;
+
+/**
+ * Some models answer 0..1 fields on a 0–5 scale. Only fields the schema declares as 0..1 are touched, and only when one
+ * of them in the same object is above 1: then every unit field of that object is read on the 0–5 scale, so a "1" there
+ * means 0.2, not certainty.
+ */
+export function normalizeUnitScale(value: unknown, schema: UnitSchema | undefined): unknown {
+  if (!schema || value === null || typeof value !== "object") return value;
+  const options = schema.anyOf ?? [schema];
+  if (Array.isArray(value)) {
+    const items = options.find((option) => option.items)?.items;
+    return items ? value.map((entry) => normalizeUnitScale(entry, items)) : value;
+  }
+  const properties = options.find((option) => option.properties)?.properties;
+  if (!properties) return value;
+  const record = value as Record<string, unknown>;
+  const unitKeys = Object.keys(properties).filter((key) => isUnit(properties[key]) && typeof record[key] === "number");
+  const likert = unitKeys.some((key) => (record[key] as number) > 1) && unitKeys.every((key) => (record[key] as number) <= 5);
   return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>).map(([key, entry]) => {
-      if (typeof entry === "number" && entry > 1 && entry <= 5) return [key, Math.round((entry / 5) * 1000) / 1000];
-      return [key, normalizeUnitScale(entry)];
+    Object.entries(record).map(([key, entry]) => {
+      if (likert && unitKeys.includes(key)) return [key, Math.round(((entry as number) / 5) * 1000) / 1000];
+      return [key, normalizeUnitScale(entry, properties[key])];
     }),
   );
 }
+
+const unitSchemas = new WeakMap<z.ZodType, UnitSchema>();
+const unitSchemaFor = (schema: z.ZodType): UnitSchema | undefined => {
+  if (!unitSchemas.has(schema)) {
+    try {
+      unitSchemas.set(schema, z.toJSONSchema(schema, { io: "input", unrepresentable: "any" }) as UnitSchema);
+    } catch {
+      return undefined;
+    }
+  }
+  return unitSchemas.get(schema);
+};
 
 function parse<T>(text: string, schema: z.ZodType<T>): { ok: true; value: T } | { ok: false; error: string } {
   let json: unknown;
@@ -110,7 +141,7 @@ function parse<T>(text: string, schema: z.ZodType<T>): { ok: true; value: T } | 
   } catch {
     return { ok: false, error: "output is not valid JSON" };
   }
-  const result = schema.safeParse(coerceAnalysisJson(normalizeUnitScale(json)));
+  const result = schema.safeParse(coerceAnalysisJson(normalizeUnitScale(json, unitSchemaFor(schema))));
   return result.success
     ? { ok: true, value: result.data }
     : { ok: false, error: result.error.issues.slice(0, 8).map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ") };
@@ -195,6 +226,14 @@ export function createProvider(config: AIConfig, name: ProviderName = config.pro
         promptCache: config.promptCache ?? "5m",
         dataCollection: config.openrouterDataCollection,
         title: "tomo-factory",
+        ...common,
+      });
+    case "gateway":
+      return new GatewayProvider({
+        apiKey: config.keys.gateway ?? "",
+        baseUrl: config.gatewayBaseUrl,
+        noTraining: config.gatewayNoTraining ?? true,
+        tags: ["app:tomo-factory"],
         ...common,
       });
   }
@@ -347,6 +386,16 @@ export function createAIService(config: AIConfig = loadAIConfig(), providers?: P
             temperature: 0,
             maxOutputTokens: 2048,
           });
+        if (config.distractorJudgeStyle === "verdict") {
+          const judged = await call("distractorJudge", distractorVerdictPromptVersion, distractorVerdict, {
+            system: distractorVerdictSystem,
+            parts: [{ text: distractorVerdictUser(input) }],
+            jsonSchema: distractorVerdictResponseSchema(),
+            temperature: 0,
+            maxOutputTokens: 1024,
+          });
+          return { ...judged, value: reportFromVerdict(judged.value) };
+        }
         return call("distractorJudge", distractorJudgePromptVersion, distractorJudgeReport, {
           system: distractorJudgeSystem,
           parts: [{ text: distractorJudgeUser(input) }],

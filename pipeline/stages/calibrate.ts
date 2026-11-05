@@ -158,6 +158,8 @@ export type ModelCalibMetrics = {
   falseReject: { n: number; of: number; rate: number | null };
   missFlaw: { n: number; of: number; rate: number | null };
   catchBad: { n: number; of: number; rate: number | null };
+  /** Optional so metrics files written before it still load. */
+  flagBad?: { n: number; of: number; rate: number | null };
   humanReview: { n: number; of: number; rate: number | null };
   acceptOnGood: number;
   regenerateOnBad: number;
@@ -208,6 +210,7 @@ export function metricsFor(model: string, results: JudgeCallResult[], usage: Tok
     falseReject: count(falseReject.length, goods.length),
     missFlaw: count(missFlaw.length, bads.length),
     catchBad: count(catchBad.length, bads.length),
+    flagBad: count(bads.filter((row) => row.decision !== "ACCEPT").length, bads.length),
     humanReview: count(humanReview.length, judged.length),
     acceptOnGood: goods.filter((row) => row.decision === "ACCEPT").length,
     regenerateOnBad: catchBad.length,
@@ -241,13 +244,17 @@ export async function factoryJudgeCalibrate(options: {
   log(`gold: ${items} rated items → ${allSlots.length} labeled wrong options (${skippedOptions} skipped); pool ${slots.length}`);
 
   const base = options.config ?? loadAIConfig();
-  if (!base.keys.openrouter) throw new Error("OPENROUTER_API_KEY is required for OpenRouter calibration (read from .env.local)");
+  for (const model of options.models) {
+    const owner = parseModel(model, base.provider).provider;
+    if (!base.keys[owner]) throw new Error(`${model} needs the ${owner} API key in .env.local`);
+  }
   const concurrency = options.concurrency ?? 6;
   mkdirSync(options.out, { recursive: true });
   const byModel: Record<string, { metrics: ModelCalibMetrics; results: JudgeCallResult[] }> = {};
 
   for (const model of options.models) {
-    const writer = sameModel(model, "openrouter:qwen/qwen3.8-flash", base.provider) ? "openrouter:deepseek/deepseek-v4.1-flash" : "openrouter:qwen/qwen3.8-flash";
+    // Only the judge is called; the writer setting just has to differ so the independence check passes.
+    const writer = sameModel(model, "calibration:writer-a", base.provider) ? "calibration:writer-b" : "calibration:writer-a";
     const config: AIConfig = {
       ...base,
       experiments: [],
@@ -339,7 +346,7 @@ export async function factoryJudgeCalibrate(options: {
     ranSlots: slots.length,
     skippedOptions,
     goldCounts: { good: allSlots.filter((s) => s.gold === "good").length, bad: allSlots.filter((s) => s.gold === "bad").length },
-    prompt: "distractor-judge.v3 (FACTORY_EXPERIMENTS empty)",
+    prompt: base.distractorJudgeStyle === "verdict" ? "distractor-judge.v7 (verdict)" : "distractor-judge.v3 (rubric, FACTORY_EXPERIMENTS empty)",
     dataCollection: base.openrouterDataCollection,
     prices: base.prices?.source ?? null,
     limits: base.limits ?? {},
@@ -385,10 +392,11 @@ export function calibrationMarkdown(summary: {
   models: Record<string, ModelCalibMetrics>;
 }): string {
   const rows = Object.values(summary.models);
+  const flag = (m: ModelCalibMetrics) => (m.flagBad ? `${m.flagBad.n}/${m.flagBad.of} (${pct(m.flagBad.rate)})` : "—");
   const line = (m: ModelCalibMetrics) =>
-    `| \`${m.model}\` | ${m.agreement.n}/${m.agreement.of} (${pct(m.agreement.rate)}) | ${m.falseReject.n}/${m.falseReject.of} (${pct(m.falseReject.rate)}) | ${m.catchBad.n}/${m.catchBad.of} (${pct(m.catchBad.rate)}) | ${m.jsonErrorRate.n}/${m.jsonErrorRate.of} (${pct(m.jsonErrorRate.rate)}) | $${m.costUsd ?? "?"} | ${m.meanLatencyMs ?? "—"} ms | ${m.stopped ?? "—"} |`;
+    `| \`${m.model}\` | ${m.agreement.n}/${m.agreement.of} (${pct(m.agreement.rate)}) | ${m.falseReject.n}/${m.falseReject.of} (${pct(m.falseReject.rate)}) | ${m.catchBad.n}/${m.catchBad.of} (${pct(m.catchBad.rate)}) | ${flag(m)} | ${m.humanReview.n}/${m.humanReview.of} | ${m.jsonErrorRate.n}/${m.jsonErrorRate.of} (${pct(m.jsonErrorRate.rate)}) | $${m.costUsd ?? "?"} | ${m.meanLatencyMs ?? "—"} ms | ${m.stopped ?? "—"} |`;
   return [
-    "# Distractor-judge calibration (OpenRouter)",
+    "# Distractor-judge calibration",
     "",
     `At: ${summary.at}`,
     "",
@@ -396,14 +404,14 @@ export function calibrationMarkdown(summary: {
     `Prompt: ${summary.prompt}. Data collection: ${summary.dataCollection ?? "—"}. Prices: ${summary.prices ?? "none"}.`,
     "",
     "Agreement = ACCEPT on good + REGENERATE on bad (HUMAN_REVIEW excluded from hard agreement).",
-    "False-reject = REGENERATE on human-good. Catch-bad = REGENERATE on human-bad (inverse of miss-flaw).",
+    "False-reject = REGENERATE on human-good (the option is thrown away; this is what costs yield). Catch-bad = REGENERATE on human-bad.",
+    "Flag-bad = REGENERATE or HUMAN_REVIEW on human-bad (a HUMAN_REVIEW option is kept but flagged for the reviewer).",
     "",
-    "| Model | Agreement | False-reject | Catch-bad | JSON-error | Cost | Mean latency | Stop |",
-    "|---|---|---|---|---|---|---|---|",
+    "| Model | Agreement | False-reject | Catch-bad | Flag-bad | Human-review | JSON-error | Cost | Mean latency | Stop |",
+    "|---|---|---|---|---|---|---|---|---|---|",
     ...rows.map(line),
     "",
-    "Provisional only — production `modelDefaults` stay Claude; use env overrides for serial OpenRouter runs.",
-    "Batch (`:batch`) remains for later offline serial; this calibration used sync + `reasoning.exclude`.",
+    "Provisional only — production `modelDefaults` stay Claude; use env overrides for serial runs.",
   ].join("\n");
 }
 

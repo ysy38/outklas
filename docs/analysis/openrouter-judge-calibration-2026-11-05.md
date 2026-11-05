@@ -1,77 +1,73 @@
 # OpenRouter distractor-judge calibration (2026-11-05)
 
-Sync bakeoff on the 54 human-rated blind-review items (`.data/analysis/_factory/blind-review/2026-10-13-calibration`). No item regeneration, no bank writes, no Anthropic direct spend. `OPENROUTER_DATA_COLLECTION=deny`. Prices: `pipeline/ai/prices.openrouter.json`. Prompt: baseline `distractor-judge.v3` (empty `FACTORY_EXPERIMENTS`) so every model shares one rubric.
+Gold: 54 human-rated items from `blind-review/2026-10-13-calibration` → 216 wrong-option slots (172 good / 44 bad). Prompt: `distractor-judge.v3` (no experiments). Sync only; `OPENROUTER_DATA_COLLECTION=deny`; `FACTORY_PRICES=pipeline/ai/prices.openrouter.json`. Artifacts: `.data/analysis/_factory/judge-calibration/openrouter-2026-11-05-v2/`.
 
-## Gold
+## What was broken
 
-| | |
-|---|---|
-| Rated items | 54 |
-| Wrong-option slots | 216 (4 × 54) |
-| Good (APPROVE, unflagged) | 172 — judge should **ACCEPT** |
-| Bad (EDIT/REJECT or option flags) | 44 — judge should **REGENERATE** |
+1. **Empty `content` on reasoning models.** DeepSeek (and similar) spent the whole `max_tokens` budget on `message.reasoning` (`finish_reason=length`, `content=""`). Downstream `JSON.parse` failed → ~25% `output is not valid JSON`.
+2. **Foreground kill (exit 143).** Long sync bakeoffs were attached to a shell that got SIGTERM; progress was not resumable.
+3. **Gemini new-account RPM.** `google/gemini-3.8-flash` is limited to ~20 req/min on new accounts; concurrency 6 immediately 429’d.
 
-CLI: `npx tsx pipeline/cli.ts factory-judge-calibrate --dir … --out … --models …`
+## Fixes
 
-Artifacts: `.data/analysis/_factory/judge-calibration/openrouter-2026-11-05/{summary.md,summary.json,results.json}`.
+- OpenRouter always sends `reasoning: { exclude: true }`; falls back to reasoning text if content is empty.
+- `extractJsonText` strips fences / pulls the first balanced `{...}`; 0–5 Likert scores rescale to 0–1 before Zod.
+- `factory-judge-calibrate` writes per-model JSONL, skips successful slots on resume, retries errors; parallel workers via `scripts/run-judge-calibrate-parallel.sh`.
+- Gemini finished with concurrency 1 after the RPM stop.
 
-## Results
+## Results (216 slots each)
 
-| Model | Judged | Errors | Agreement | False-reject | Miss-flaw | Human-review | Fresh cost (approx) | Notes |
-|---|---|---|---|---|---|---|---|---|
-| `deepseek/deepseek-v4.1-flash` | 182 | 34 JSON | **109/182 (60%)** | 47/143 (**33%**) | 26/39 (**67%**) | 0 | ~$0.36 (first pass) | Best agreement among complete runs; often accepts bad options; schema fragility |
-| `qwen/qwen3.8-flash` | 213 | 3 | 84/209 (40%) | 113/169 (**67%**) | 12/44 (27%) | 4 | ~$0.15–0.3* | Harsh: rejects many human-good distractors |
-| `xiaomi/mimo-v2.6-pro` | 216 | **0** | 95/211 (45%) | 101/172 (59%) | 15/44 (34%) | 5 | **$0.14** | Most reliable JSON; middle agreement |
-| `google/gemini-3.8-flash` | 23 | 193 (mostly post-429) | 14/23 (61%)* | 9/23 (39%)* | — | 0 | $0.05 then **429** | Incomplete — do not rank |
+| Model | Agreement | False-reject | Catch-bad | JSON-error | Cost | Mean latency |
+|---|---|---|---|---|---|---|
+| `deepseek/deepseek-v4.1-flash` | 115/185 (**62%**) | 49/149 (33%) | 16/37 (43%) | **30/216 (14%)** | ~$0.46 | ~17–24 s |
+| `qwen/qwen3.8-flash` | 89/208 (43%) | 108/171 (63%) | 30/43 (70%) | 2/216 (1%) | ~$0.21 | ~28 s |
+| `xiaomi/mimo-v2.6-pro` | 88/209 (42%) | 107/172 (62%) | 26/44 (59%) | 0/216 (0%) | ~$0.14 | ~16 s |
+| `google/gemini-3.8-flash` | 110/216 (**51%**) | 85/172 (49%) | 23/44 (52%) | 0/216 (0%) | ~$0.51 | ~5.7 s |
 
-\*Gemini rates are on a 23-slot stub after quota; not comparable. \*Qwen fresh cost was mostly cached on the final summary pass; first-pass spend was higher than the $0.001 cache residual.
-
-Agreement = ACCEPT on good + REGENERATE on bad (HUMAN_REVIEW out of the hard denominator). False-reject = REGENERATE on good. Miss-flaw = ACCEPT on bad.
+Approx total spend for this bakeoff: **~$1.32** (under the $5 cap). No Anthropic direct calls. No bank writes.
 
 ## Interpretation (provisional)
 
-- **No model meets a “switch production defaults” bar.** Top complete agreement is ~60%, with painful tradeoffs.
-- **DeepSeek** maximizes agreement and minimizes false-reject, but **misses critical flaws** (67%) and fails structured JSON ~16% of slots — risky as sole distractor judge.
-- **Qwen** is a poor distractor judge here (67% false-reject → factory yield collapse).
-- **Xiaomi** is the safest *operational* judge (0 schema errors) but still ~45% agreement / high false-reject.
-- **Gemini 3.8 Flash** hit OpenRouter **429** mid-run; unfinished. Keep as a final-judge *candidate* only after quota recovers; not calibrated here.
+- **Drop DeepSeek as distractor-judge** until JSON error rate stays under 10% (still fine as a cheap **writer** after `reasoning.exclude`).
+- **Qwen / Xiaomi** are JSON-reliable but reject too many human-good options (~62% false-reject) — they would crush serial yield.
+- **Gemini 3.8 Flash** is the only candidate that finished cleanly with middling agreement and no JSON failures. Not “human-criteria ready,” but the least-bad OpenRouter distractor-judge in this bakeoff.
+- Production `modelDefaults` stay Claude. Serial OpenRouter runs are **env-only**.
 
-**Do not claim a winning stack.** Code `modelDefaults` stay Claude. Use env overrides for experiments.
-
-## Recommended env for capped serial A (research only)
-
-Independent writer ≠ distractor judge. Prefer cheap schema-OK writer + least-bad judge from this table; final judge provisional Gemini when quota allows:
+## Recommended serial env (caps + human gate)
 
 ```bash
-OPENROUTER_API_KEY=          # .env.local only — rotate if ever pasted into chat
+OPENROUTER_API_KEY=          # .env.local only — rotate if exposed
 OPENROUTER_DATA_COLLECTION=deny
 FACTORY_PRICES=pipeline/ai/prices.openrouter.json
-FACTORY_MAX_COST_USD=1.0
-FACTORY_MAX_CALLS=80
-FACTORY_MAX_REGENERATIONS=2
+FACTORY_MAX_COST_USD=2
+FACTORY_MAX_CALLS=200
+FACTORY_MAX_REGENERATIONS=40
 AI_MAX_RETRIES=2
+AI_MAX_WAIT_MS=45000
 
 GENERATOR_MODEL=openrouter:deepseek/deepseek-v4.1-flash
 DISTRACTOR_MODEL=openrouter:deepseek/deepseek-v4.1-flash
-EXPLANATION_MODEL=openrouter:deepseek/deepseek-v4.1-flash
-DISTRACTOR_JUDGE_MODEL=openrouter:xiaomi/mimo-v2.6-pro
+EXPLANATION_MODEL=openrouter:qwen/qwen3.8-flash
+DISTRACTOR_JUDGE_MODEL=openrouter:google/gemini-3.8-flash
 FINAL_JUDGE_MODEL=openrouter:google/gemini-3.8-flash
 ```
 
-Rationale (hypothesis, not proven superiority): DeepSeek as writer (cheap + prior schema OK); Xiaomi as distractor judge (zero JSON failures, mid metrics); Gemini as final judge when not 429. DeepSeek-as-judge is *not* recommended despite higher agreement, because miss-flaw is unacceptable for quality gates.
+Commands:
 
-Stop conditions: budget / calls / **429**. Human review gate before any bank write. No auto-approve.
+```bash
+# Capped serial smoke (example ≤12 skeletons) — stop on 429 / budget
+npx tsx pipeline/cli.ts factory --family sentence_completion.concession --band medium --count 12 --tag or-serial-smoke
+
+# Blind sheet for human queue (never open key.json in chat)
+npx tsx pipeline/cli.ts factory-blind --variants "A=<runDir>" --out .data/analysis/_factory/blind-review/<date>-or-smoke
+```
+
+Human review remains mandatory. No auto-approve. No production bank import step in this run.
 
 ## Batch later
 
-Interactive calibration stayed **sync**. For offline serial / 54-gold re-runs at ~½ token price, use `OpenRouterBatchClient` and `:batch` model ids (not sync `generate`). Batch cannot use ZDR — prefer sync + `deny` for sensitive stems.
+Use `:batch` + `OpenRouterBatchClient` for offline 54-gold / large serial only after sync stack is stable. Batch cannot use ZDR.
 
-## Serial smoke
+## Security
 
-Not run in this pass: no clear distractor-judge winner and Gemini final-judge quota 429. Re-run a ≤12-skeleton A smoke only after Gemini quota recovers or with a non-429 final judge, under the caps above.
-
-## Human next steps
-
-1. **Rotate** any OpenRouter key that was pasted into chat.
-2. Rate any new blind-sheet items before changing defaults.
-3. Decide human criteria for “good enough” judge agreement / false-reject / miss-flaw (see gemini-factory note thresholds for full stack promotion).
+If an OpenRouter key was pasted into chat, **rotate/revoke it on the OpenRouter dashboard** and keep the new key only in `.env.local`.
