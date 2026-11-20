@@ -3,144 +3,162 @@ import type { Article } from "./types";
 
 export const sifirdan: Article = {
   path: "/yds-sifirdan-hazirlik",
-  eyebrow: "YDS · YÖKDİL sıfırdan",
+  eyebrow: "YDS · YÖKDİL · gerçek sıfır",
   title: "YDS’ye sıfırdan hazırlık:",
-  accent: "hangi sırayla, ne kadar sürede?",
-  metaTitle: "YDS’ye Sıfırdan Nasıl Hazırlanılır? Sıra ve Süre",
+  accent: "cümleyi çözemiyorsan ilk 12 hafta.",
+  metaTitle: "YDS’ye Sıfırdan Hazırlık: Cümleyi Okuyamıyorsan İlk 12 Hafta",
   description:
-    "YDS ve YÖKDİL’e sıfırdan hazırlanacaksan: nereden başlanır, hangi sırayla çalışılır, kaç ay sürer, ilk 4 haftada ne yapılır. Gerçekçi süre tablosu ve ücretsiz seviye testi.",
+    "YDS ve YÖKDİL’e gerçek sıfırdan başlayanlar için: üç cümlelik yer tespiti, ilk 12 haftanın saat hesabı, gramer kitabında atlanacaklar ve neden okuma ile denemeye erken girilmez.",
   lead:
-    "Sıfırdan başlayanlar en çok vakti sınavın sormadığı işlere harcıyor: konuşma, yazma, kural ezberi. YDS ve YÖKDİL senden İngilizce üretmeni beklemiyor; okuduğun cümleyi doğru çözümlemeni bekliyor. Önerdiğimiz sıra şu: önce cümlenin iskeletini kuran yapılar ve bağlaçlar, bunlarla aynı anda her gün az ama düzenli kelime, sonra cümle düzeyindeki soru tipleri, en son okuma ve deneme. Ne kadar süreceğini başlangıç noktan belirliyor, o yüzden önce onu ölç.",
+    "Bu sayfa “YDS’ye nasıl çalışılır” özeti değil. O döngü [hazırlık sayfasında](/yds-hazirlik). Burada soru şu: İngilizce cümlede asıl fiili henüz göremiyorsan, ilk 12 haftada neyi bilinçli olarak erteleyeceksin? Sıfırdan başlayanların çoğu vakti sınavın sormadığı işe harcıyor: konuşma, yazma, kural ezberi, erken deneme. YDS ve YÖKDİL senden İngilizce üretmeni beklemiyor; 20–35 kelimelik bir cümlede özneyi, yüklemi ve bağlacı bulmanı bekliyor.",
   sections: [
     {
-      id: "sifir-neresi",
-      title: "Önce senin “sıfır”ın neresi, onu bul",
+      id: "gercek-sifir",
+      title: "Önce “sıfır”ın gerçekten sıfır mı, onu ayır",
       blocks: [
         {
-          kind: "table",
-          head: ["Durumun", "Belirtisi", "İlk iş"],
-          rows: [
-            ["Gerçek sıfır", "Kısa bir İngilizce cümlede fiili bulamıyorsun.", "Temel yapılar: zamanlar, edilgen yapı, yan cümleler. Soru çözmeye birkaç hafta sonra geç."],
-            ["Lise ya da üniversite temeli", "Cümleyi tanıyorsun ama uzun cümlede kayboluyorsun; kelime eksik.", "Cümle çözümleme ve kelimeyle başla, soru tiplerine erkenden geç."],
-            ["Dili biliyorsun, sınavı bilmiyorsun", "Metni anlıyorsun ama şıklarda ikide kalıyorsun.", "Doğrudan soru tipleri ve çeldirici mantığı. Birkaç hafta içinde tam deneme. [Taktikler](/yds-taktikleri) sayfasından başla."],
+          kind: "p",
+          text: "İnsanlar “sıfırdan başlıyorum” deyince çoğunlukla 45–55 bandını kastediyor. O bant sıfır değil; sınavı tanımıyor. Gerçek sıfır, aşağıdaki üç cümleden birincisinde bile yüklemi işaretleyememektir. Kalemi al, her cümlede asıl fiili bul. Sözlüğe bakma.",
+        },
+        {
+          kind: "example",
+          sentence: "1. The committee approved the proposal.  2. The results published last year have been widely cited.  3. Although several studies conducted in the early 2000s suggested that rapid urbanization would erode traditional networks, later archival work demonstrated that extended families adapted.",
+          lines: [
+            {
+              label: "Cümle 1",
+              text: "Yüklem approved. Bunu göremiyorsan gerçek sıfırdasın. İlk işin zamanlar, edilgen yapı ve kısa cümlede özne–yüklem. Soru çözme birkaç hafta sonra.",
+            },
+            {
+              label: "Cümle 2",
+              text: "Yüklem have been cited; published bir sıfat. Bunu kaçırıyorsan lise/üniversite temelin var ama uzun cümlede kayboluyorsun. Cümle çözümleme ve kelimeyle başla, soru tiplerine erken geç.",
+            },
+            {
+              label: "Cümle 3",
+              text: "Although bir zıtlık kuruyor; asıl yargı later archival work demonstrated. Bunu görüp şıklarda yine ikide kalıyorsan dilin var, sınavın yok. Bu sayfa sana göre değil: [taktikler](/yds-taktikleri) ve [70-80-90 hata hakkı](/yds-70-80-90-nasil-alinir).",
+            },
           ],
         },
         {
           kind: "p",
-          text: `Kendini bu tabloya göre tahmin etmek zorunda değilsin. ${brand.diagnosticQuestions} soruluk [seviye testi](/teshis) yaklaşık ${brand.diagnosticMinutes} dakika sürüyor ve hangi bölümde ne kadar puan kaybettiğini gösteriyor. Sıfıra yakınsan sonuç düşük çıkacak, bu gayet normal. Bu testte puandan çok nereden başlayacağın önemli.`,
+          text: `Tahmin etmek zorunda değilsin. ${brand.diagnosticQuestions} soruluk [seviye testi](/teshis) yaklaşık ${brand.diagnosticMinutes} dakika. Sıfıra yakınsan puan düşük çıkar; burada önemli olan puan değil, cümle 1’de mi 3’te mi olduğun.`,
         },
       ],
     },
     {
-      id: "sira",
-      title: "Sıfırdan hazırlığın sırası",
-      blocks: [
-        {
-          kind: "steps",
-          items: [
-            {
-              title: "Cümlenin iskeletini kuran yapılar",
-              body: "YDS kuralı yazdırmıyor, cümlenin içinde tanımanı istiyor. Önce şunları tanıyabilir hale gel: zamanlar ve edilgen yapı, sıfat cümlecikleri (who, which, that), isim cümlecikleri (what, whether, that), koşul cümleleri ve bağlaçlar. Kuralı açıkça görerek çalışmanın işe yaradığını 49 çalışmayı birleştiren bir meta-analiz de destekliyor ([Norris ve Ortega, 2000](#kaynak-norris-2000)). Yine de amaç bir gramer kitabını bitirmek olmamalı; uzun bir cümlede asıl özneyi ve yüklemi bulabildiğinde bu adım tamamdır. Soru tipine göre anlatım [dil bilgisi rehberinde](/rehber/grammar).",
-            },
-            {
-              title: "Her gün kelime, cümlenin içinde",
-              body: "Yazılı bir metni rahat anlamak için kelimelerinin yaklaşık %98’ini tanımak gerekiyor; bu da 8.000–9.000 kelime ailesine karşılık geliyor ([Nation, 2006](#kaynak-nation-2006)). Bu sayı gözünü korkutmasın, sınavda şıklar ve bağlam işini kolaylaştırıyor. Ama kelimenin neden her gün ve az az çalışılması gerektiğini de açıklıyor. Kelimeyi listede değil, bir cümlenin içinde gör ve şıklar arasından anlamını seç; aynı kelimeyle farklı cümlelerde karşılaştıkça bilgin derinleşir ([Webb, 2007](#kaynak-webb-2007)). Akademik metinlerde sık geçen 570 kelime ailesi iyi bir başlangıç listesi ([Coxhead, 2000](#kaynak-coxhead-2000)). Fiili edatıyla birlikte öğren: depend on, contribute to, result in.",
-            },
-            {
-              title: "Cümle düzeyindeki soru tipleri",
-              body: "Kelime, dil bilgisi, paragrafta boşluk, cümle tamamlama ve çeviri ilk 42 soruyu oluşturuyor; toplamı 52,5 puan. Birinci adımda kazandığın beceri doğrudan buraya yansır. Okumadan önce bunlara geç: puanın yarısından fazlası burada ve okumada gereken cümle çözümlemesi de burada hızlanır. Her birinin çözüm adımları rehberde: [kelime](/rehber/vocabulary), [paragrafta boşluk](/rehber/cloze), [cümle tamamlama](/rehber/sentence), [çeviri](/rehber/translation).",
-            },
-            {
-              title: "Okuma, paragraf soruları, deneme",
-              body: "Okuma 20 soru ve 25 puan. Önce süre tutmadan çalış ve her cevabın dayandığı cümleyi metinde işaretle; sonra süre tutmaya başla ([okuduğunu anlama rehberi](/rehber/reading)). Tam [denemeye](/deneme) cümle düzeyindeki sorularda oturduktan sonra geç. Erken çözülen deneme sadece düşük bir sayı gösterir.",
-            },
-          ],
-        },
-      ],
-    },
-    {
-      id: "kac-ay",
-      title: "Kaç ayda hazırlanılır?",
+      id: "ilk-100-saat",
+      title: "İlk 100 saat nereye gidecek?",
       blocks: [
         {
           kind: "p",
-          text: "Kesin bir süre yok; ÖSYM de böyle bir süre vermiyor. Süreyi bugünkü puanın, hedefin ve haftada ayırabildiğin zaman belirliyor. Aşağıdaki aralıklar, günde yaklaşık 1–1,5 saat düzenli çalışan biri için kaba bir çerçeve. Söz olarak değil, fikir vermesi için yazdık.",
+          text: "Günde 1 saat, haftada 6 gün: 12 hafta ≈ 72 saat. Günde 90 dakika: ≈ 108 saat. “Kaç ayda bitiyor?” sorusunun düzgün cevabı ay değil, bu saatin nereye gittiği. Aşağıdaki dağılım gerçek sıfır içindir; cümle 2’deysen 1. ve 2. satırı yarıya indirip 3. satırı öne al.",
         },
         {
           kind: "table",
-          head: ["Başlangıç", "60 civarı için", "70 ve üstü için"],
+          head: ["Blok", "≈ saat", "Ne çalışılır", "Ne çalışılmaz"],
           rows: [
-            ["Gerçek sıfır", "6–9 ay", "9–12 ay"],
-            ["Lise ya da üniversite temeli", "3–5 ay", "5–7 ay"],
-            ["Dili biliyor, sınavı bilmiyor", "1–2 ay", "2–4 ay"],
+            ["Cümle iskeleti", "35", "Zamanlar, edilgen, who/which/that, that/whether, if/unless, bağlaç yönü", "Speaking, writing, IELTS/TOEFL kitabı, kural ezberi yarışması"],
+            ["Kelime, cümlenin içinde", "25", "Her gün 10 kelime + fiil+edat (depend on, result in); yanlış olan 3–7–21 günde geri gelir", "570’lik Academic Word List’i baştan ezberlemek, 8.000 kelime hedefi"],
+            ["Cümle soruları", "25", "Kelime, dil bilgisi, boşluk, cümle tamamlama, çeviri: YDS’de ilk 42 soru = 52,5 puan", "80 soruluk deneme, 1.500 kelimelik okuma"],
+            ["İlk okuma teması", "15", "Kısa paragraf, süre tutmadan, cevabın dayandığı cümleyi işaretleyerek", "Süreye karşı 20 soruluk okuma seti"],
           ],
-          caption: "Kaba tahmindir. Senin süren seviye testinden sonra, sınav tarihine göre kurulan planda netleşir.",
+          caption: "Toplam ~100 saat. Deneme bu tablonun dışında: cümle sorularında iskeleti görmeden 180 dakikalık deneme yalnızca düşük bir sayı üretir.",
         },
         {
           kind: "p",
-          text: "Süreyi kısaltan şey, saati artırmaktan çok o saatin nereye gittiği. Aynı içeriği tek oturuma yığmak yerine günlere yaymak da daha kalıcı ([Cepeda ve ark., 2006](#kaynak-cepeda-2006)). Puan farkını doğru sayısına çevirmek de işe yarar: 50’den 70’e çıkmak 16 doğru daha demek. O 16 doğrunun hangi bölümden gelebileceğini [70, 80, 90 sayfasında](/yds-70-80-90-nasil-alinir) gösteriyoruz.",
+          text: "Yazılı bir metni rahat okumak için kelimelerinin yaklaşık %98’ini tanımak gerekiyor; bu da 8.000–9.000 kelime ailesi ([Nation, 2006](#kaynak-nation-2006)). Bu sayı gerçek sıfıra ilk hedef olarak yazılmaz. Sınavda şık ve bağlam işini küçültüyor. İlk 100 saatte kovalanacak şey o 8.000 değil: cümlede fiili görmek ve her gün az kelimeyi farklı cümlelerde tekrar görmek. Bir kelimeyle bağlam içinde kaç kez karşılaşıldığı arttıkça bilgi büyüyor; on karşılaşmadan sonra bile tam olmuyor ([Webb, 2007](#kaynak-webb-2007)).",
         },
       ],
     },
     {
-      id: "ilk-4-hafta",
-      title: "İlk 4 hafta",
+      id: "gramer-kitabi",
+      title: "Gramer kitabında neyi atlayacaksın?",
       blocks: [
         {
-          kind: "table",
-          head: ["Hafta", "Odak", "Her gün"],
-          rows: [
-            ["1", "Seviye testi; zamanlar ve edilgen yapı", "20 dakika yapı, 10 kelime, 10 bağlaç"],
-            ["2", "Sıfat ve isim cümlecikleri; uzun cümlede özne ve yüklemi bulmak", "25 dakika yapı, 10 kelime, 5 dil bilgisi sorusu"],
-            ["3", "Bağlaçlar: zıtlık, sebep, sonuç, koşul, amaç", "20 dakika bağlaç, 10 kelime, 10 cümle tamamlama sorusu"],
-            ["4", "Çeviri ve kelime soruları; ilk tekrarlar", "6 çeviri, 6 kelime sorusu, önceki yanlışlar"],
-          ],
-          caption: "Gerçek sıfırdan başlıyorsan her haftayı iki haftaya yay. Üçüncü haftadan önce [bağlaç testini](/yds-baglac-testi) çözmek hangi ilişkide zorlandığını gösterir.",
+          kind: "p",
+          text: "Kuralı açıkça görmek işe yarıyor; 49 çalışmayı birleştiren bir meta-analiz de bunu destekliyor ([Norris ve Ortega, 2000](#kaynak-norris-2000)). Yine de kitap bitirmek hedef değil. YDS kural yazdırmıyor, kuralı 30 kelimelik cümlenin içinde tanımanı istiyor. Aşağıdakiler ilk 12 haftada bilinçli olarak ertelenir:",
         },
-      ],
-    },
-    {
-      id: "hatalar",
-      title: "Sıfırdan başlayanların en sık yaptığı hatalar",
-      blocks: [
         {
           kind: "list",
           items: [
-            "Gramer kitabını baştan sona bitirmeye çalışmak. Sınav konu listesini sormuyor, cümlede tanıyıp tanımadığına bakıyor.",
-            "Listeden kelime ezberlemek. Bağlamsız ezberlenen kelime sınavda çoğu zaman tanınmıyor.",
-            "Temel oturmadan her hafta deneme çözmek. Düşük puan moral bozar ve yeni bir şey öğretmez.",
-            "İzlemeyi çalışmak sanmak. Video konuyu tanıtır; öğrenme, soruyu kendin çözümlediğinde oluyor ([Bjork ve ark., 2013](#kaynak-bjork-2013)).",
-            "Okumayı sona bırakıp hiç başlamamak. 20 soru, 25 puan; ertelendikçe en büyük kayıp burada birikir.",
+            "İnce farklar: wish / if only, inversion, cleft sentences. Sınav bunları sormuyor diye değil; henüz iskeleti görmeden bunlara gitmek sırayı bozuyor.",
+            "Üretim alıştırması: “şu kurala göre beş cümle yaz.” Sınav yazmanı istemiyor. Aynı kuralı bir YDS cümlesinde işaretlemek daha ucuz.",
+            "Tense tablosunu ezberleyip cümleye bakmamak. Asıl iş, The results published last year have been cited cümlesinde hangisinin yüklem olduğunu bulmak.",
+            "Academic Word List’in 570 ailesini sıra numarasından gitmek ([Coxhead, 2000](#kaynak-coxhead-2000)). Liste kötü değil; sıfırın ilk işi değil. Önce cümlede işini gören fiiller ve bağlaçlar.",
+          ],
+        },
+        {
+          kind: "p",
+          text: "On çalışma tekniğini karşılaştıran derlemede tekrar okuma ve altını çizme en az işe yarayanlar arasında; kendini sınamak ve aralıklı çalışma en çok işe yarayanlar arasında ([Dunlosky ve ark., 2013](#kaynak-dunlosky-2013)). Gramer notunu üçüncü kez okumak yerine, dün gördüğün kuralı yeni bir cümlede bulmaya çalış.",
+        },
+      ],
+    },
+    {
+      id: "ilk-12-hafta",
+      title: "12 haftalık sıra (gerçek sıfır)",
+      blocks: [
+        {
+          kind: "table",
+          head: ["Hafta", "İskelet", "Kelime / bağlaç", "Soru"],
+          rows: [
+            ["1–2", "Yüklemi bul; present / past / present perfect; edilgen", "Günlük 10 kelime, 10 bağlaç: zıtlık ve sebep", "Yok. Sadece cümlede fiili işaretle."],
+            ["3–4", "who / which / that; isim cümlesi (that, whether)", "Fiil+edat: depend on, contribute to, result in, lead to", "5 kısa dil bilgisi sorusu, süre yok"],
+            ["5–6", "if / unless / although / despite", "Zıtlık ve koşul bağlaçlarını karıştırmamak", "10 cümle tamamlama; her yanlışta bağlacın yönünü yaz"],
+            ["7–8", "Çeviride zaman ve olumsuzluk", "may / must / will farkını kelime kartına değil cümleye bağla", "6 çeviri + 6 kelime sorusu"],
+            ["9–10", "Paragrafta boşluk: cümleler arası ilişki", "Aynı kelimeyi üçüncü cümlede gör", "10 boşluk; süre hâlâ yok"],
+            ["11–12", "Kısa okuma, cevabın cümlesini işaretle", "Önceki yanlışlar 3 ve 7 günde geri gelir", "İlk kez süre tut: 8–10 okuma sorusu, 25 dakika"],
+          ],
+          caption: "Cümle 2’de başlıyorsan 1–4. haftaları iki haftaya sıkıştır. Cümle 3’teysen bu tabloyu kullanma.",
+        },
+        {
+          kind: "p",
+          text: "Aynı 100 saati tek oturuma yığmak yerine günlere yaymak daha kalıcı ([Cepeda ve ark., 2006](#kaynak-cepeda-2006)). Bu yüzden “hafta sonu 6 saat” yerine “her gün 50–70 dakika” yazıyoruz. Video izlerken her şey anlaşılır görünür; bu his çoğu zaman abartılıdır ([Bjork ve ark., 2013](#kaynak-bjork-2013)). Sınavda cümleyi kendi başına çözeceksin.",
+        },
+      ],
+    },
+    {
+      id: "neden-deneme-yok",
+      title: "Neden henüz deneme yok?",
+      blocks: [
+        {
+          kind: "p",
+          text: "80 soru, 180 dakika, okuma 20 soru. İskeleti görmeden girilen deneme üç şey üretir: düşük puan, “ben yapamıyorum” hissi ve yanlış bir öncelik (okumaya daha çok saat). Okuma 25 puan ama okuma, cümle çözümlemesinin üzerine biner. Cümle soruları YDS’de 42 soru ve 52,5 puan; YÖKDİL’de çeviri 12, dil bilgisi 14 soru olduğu için bu taban daha da kalın.",
+        },
+        {
+          kind: "list",
+          items: [
+            "Denemeye geçiş işareti: rastgele 10 cümle tamamlama sorusunda bağlacın yönünü 7’sinde doğru görmek.",
+            "İkinci işaret: bir çeviri cümlesinde özneyi ve yüklemi sözlüğe bakmadan ayırmak.",
+            "Tam [deneme](/deneme) bu iki işaretten sonra. Erken deneme ölçmez, korkutur.",
           ],
         },
       ],
     },
     {
-      id: "yokdil",
-      title: "YÖKDİL’e sıfırdan hazırlanıyorsan",
+      id: "yokdil-sifir",
+      title: "YÖKDİL’e sıfırdan: alan kelimesi öne alınır, sıra değişmez",
       blocks: [
         {
           kind: "p",
-          text: "Sıra aynı, fark üçüncü adımda. YÖKDİL’de çeviri 12, dil bilgisi 14 soru; diyalog ve anlamca yakın cümle yok. Bu yüzden cümle düzeyindeki sorular YÖKDİL’de daha da ağır basıyor. Alan metinlerini (sağlık, fen, sosyal) dördüncü adımda, okumaya geçtiğinde ekle.",
+          text: "Sıra aynı. Fark 7–12. haftada. YÖKDİL’de diyalog ve anlamca yakın cümle yok; çeviri 12, dil bilgisi 14, okuma 15. Alanının (sağlık, fen, sosyal) 30–40 tekrar eden ismini kelime listene 5. haftadan itibaren ekle — genel haber İngilizcesi değil, kendi metninde her gün geçenler. Although sağlık metninde de zıtlık kurar.",
         },
       ],
     },
     {
       id: "outklas",
-      title: `Sıfırdan başlayan için ${brand.name} ne yapar?`,
+      title: `Sıfırdan başlayan için ${brand.name} neyi öne alır?`,
       blocks: [
         {
           kind: "list",
           items: [
-            "Seviye testi nereden başlayacağını gösteriyor ve puanı tek bir sayı yerine bir aralık olarak veriyor.",
-            `Her gün ${brand.freeDailyWords} kelime ve ${brand.freeDailyConnectors} bağlaç ücretsiz. Kelime cümlenin içinde geliyor, yanlışların aralıklarla tekrar karşına çıkıyor.`,
-            "Cümle Röntgeni bir cümleyi iskelet, ilişki ve çeldirici olarak açıyor; birinci adımdaki beceriyi gerçek bir soru üzerinde çalıştırıyor.",
-            "Günlük plan ayırabildiğin dakikaya ve sınav tarihine göre kuruluyor.",
+            "Seviye testi cümle 1 / 2 / 3 ayrımını puanı bir aralık olarak vererek somutlar. Üyelik gerekmez.",
+            `Her gün ${brand.freeDailyWords} kelime ve ${brand.freeDailyConnectors} bağlaç ücretsiz; kelime cümlenin içinde, yanlış 10 dakika sonra ve 3–7–21 günde geri gelir.`,
+            "Cümle Röntgeni ilk 35 saatin işini (iskelet, bağlaç, çeldirici) gerçek bir cümlede açar.",
+            "Günlük plan ayırabildiğin dakikaya göre kurulur; henüz deneme dayatmaz.",
           ],
         },
         {
           kind: "cta",
-          text: "Sıfırın neresi olduğunu 30 dakikada gör. Üyelik gerekmez.",
+          text: "Üç cümlelik yer tespiti yetmezse 30 dakikalık test hangi bölümden başlayacağını gösterir.",
           href: "/teshis",
           label: "Ücretsiz seviye testi →",
         },
@@ -149,36 +167,36 @@ export const sifirdan: Article = {
   ],
   faqs: [
     {
-      question: "YDS’ye 3 ayda sıfırdan hazırlanılır mı?",
+      question: "YDS’ye hiç İngilizce bilmeden başlanır mı?",
       answer:
-        "Gerçek sıfırdan 3 ayda 60–70 bandına çıkmak zor. Lise ya da üniversiteden gelen bir temelin varsa 3 ay 60 civarı için gerçekçi olabilir. Önce nerede olduğunu ölç; plan ona göre kısalır ya da uzar.",
+        "Başlanır, ama ilk iş soru çözmek değildir. Kısa cümlede fiili göremiyorsan birkaç hafta yalnızca iskelet ve günlük kelime. Konuşma ve yazma bu sınavın ölçtüğü şey değil.",
     },
     {
-      question: "Önce gramer mi, kelime mi?",
+      question: "YDS sıfırdan kaç ay sürer?",
       answer:
-        "İkisi birlikte. İlk haftalarda yapıya daha çok zaman ayır, kelimeyi ise her gün az ve sürekli çalış. Kelimeyi bekletip sonra toplu ezberlemek, her gün az az çalışmaktan daha az kalıcı oluyor.",
+        "Gerçek sıfır, günde 1–1,5 saat, 60 civarı için kabaca 6–9 ay; 70 için 9–12 ay. Lise temelin varsa süre yarıya iner. Ay değil, ilk 100 saatin nereye gittiği belirler.",
     },
     {
-      question: "Sıfırdan YDS için kurs şart mı?",
+      question: "Sıfırdan YDS’ye önce gramer mi kelime mi?",
       answer:
-        "Şart değil, ama bir sıraya ve geri bildirime ihtiyacın var. Kendi başına çalışıyorsan ölçerek başla, yanlışlarının nedenini gör ve her gün kısa da olsa çalış.",
+        "İkisi birlikte, ama ağırlık ilk haftalarda iskelette. Kelime her gün az ve cümlenin içinde. Gramer kitabını bitirip sonra kelimeye geçmek, aralıklı tekrarın tersine işler.",
     },
     {
-      question: "Hangi kaynakla başlamalıyım?",
+      question: "A2 ile YDS’ye girilir mi?",
       answer:
-        "Kaynaktan önce sıra önemli. Tek bir temel gramer kaynağı ve günlük kelime yeterli. Soru tiplerini görmek için en güvenilir kaynak, ÖSYM’nin yayımladığı çıkmış soru kitapçıkları.",
+        "A2, cümle 1–2 aralığıdır. Direkt 80 soruluk denemeye girilmez. Önce fiili görmek, sonra cümle soruları; okuma en son.",
     },
     {
-      question: "Sıfırdan YÖKDİL mi daha kolay, YDS mi?",
+      question: "Sıfırdan YÖKDİL mi daha kolay?",
       answer:
-        "Puanlama aynı, fark soru dağılımında. YÖKDİL’de okuma daha az, çeviri ve dil bilgisi daha çok; metinler de kendi alanından geliyor. Hangi sınavın geçerli olduğu başvurduğun kuruma bağlı, önce onu kontrol et.",
+        "Puanlama aynı. YÖKDİL’de okuma daha az, çeviri ve dil bilgisi daha çok; metin senin alandan gelir. Hangisinin geçerli olduğunu başvuru kılavuzu söyler, his değil.",
     },
   ],
-  sources: ["norris-2000", "nation-2006", "webb-2007", "coxhead-2000", "cepeda-2006", "bjork-2013"],
+  sources: ["norris-2000", "nation-2006", "webb-2007", "coxhead-2000", "cepeda-2006", "bjork-2013", "dunlosky-2013"],
   related: [
-    { label: "YDS ve YÖKDİL hazırlık", href: "/yds-hazirlik" },
+    { label: "YDS ve YÖKDİL hazırlık döngüsü", href: "/yds-hazirlik" },
+    { label: "YDS’den 70, 80, 90: hata hakkı", href: "/yds-70-80-90-nasil-alinir" },
     { label: "YDS ve YÖKDİL taktikleri", href: "/yds-taktikleri" },
-    { label: "YDS’den 70, 80, 90 nasıl alınır?", href: "/yds-70-80-90-nasil-alinir" },
     { label: "Dil bilgisi rehberi", href: "/rehber/grammar" },
     { label: "Kelime bilgisi rehberi", href: "/rehber/vocabulary" },
     { label: "YDS bağlaç testi", href: "/yds-baglac-testi" },

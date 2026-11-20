@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { brand } from "@/brand";
 import { ScoreCalculator } from "@/components/score-calculator";
 import { TopicLinks } from "@/components/topic-links";
 import { faqsFor } from "@/content/seo";
@@ -37,7 +38,7 @@ export default function ScorePage() {
         name: "YDS ve YÖKDİL puan hesaplama",
         applicationCategory: "EducationalApplication",
         operatingSystem: "Web",
-        offers: { "@type": "Offer", price: "0", priceCurrency: "TRY" },
+        offers: { "@type": "Offer", price: "0", priceCurrency: "TRY", priceValidUntil: brand.priceValidUntil },
         inLanguage: "tr-TR",
         description: "Doğru sayısından YDS, e-YDS, YÖKDİL ve e-YÖKDİL puanını hesaplar. İptal edilen soruyu da hesaba katar.",
       },

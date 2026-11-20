@@ -4,8 +4,8 @@ export type TopicLink = { href: string; label: string; note: string };
 export const topicLinks: TopicLink[] = [
   { href: "/yds-hazirlik", label: "YDS ve YÖKDİL hazırlık", note: "Nereden başlanır, 5 adımlık çalışma döngüsü" },
   { href: "/yds-taktikleri", label: "YDS ve YÖKDİL taktikleri", note: "Üç kontrol, yaygın taktiklerin sınırı, 180 dakika planı" },
-  { href: "/yds-sifirdan-hazirlik", label: "YDS’ye sıfırdan hazırlık", note: "Çalışma sırası, kaba süreler, ilk 4 hafta" },
-  { href: "/yds-70-80-90-nasil-alinir", label: "YDS’den 70, 80, 90", note: "Hedefe göre doğru sayısı ve hata hakkı" },
+  { href: "/yds-sifirdan-hazirlik", label: "YDS’ye sıfırdan hazırlık", note: "Üç cümlelik yer tespiti, ilk 100 saat, 12 hafta" },
+  { href: "/yds-70-80-90-nasil-alinir", label: "YDS’de 70, 80, 90", note: "Okuma tavanı, 56/64/72 doğru, band band bütçe" },
   { href: "/blog/yds-yokdil-100-saatlik-video-devri-neden-kapandi", label: "100 saatlik video izleme devri", note: "Bloom 2 Sigma adaptif modeli ve çeldirici analizi" },
   { href: "/blog/yds-yokdil-celdirici-nasil-tespit-edilir", label: "İki şık arasında kalma ve çeldirici tespiti", note: "3 katmanlı çeldirici analizi ve şık eleme taktikleri" },
   { href: "/yds-puan-hesaplama", label: "YDS puan hesaplama", note: "Doğru sayısından puan ve düzey" },

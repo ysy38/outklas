@@ -11,7 +11,7 @@ export const hazirlik: Article = {
   description:
     "YDS ve YÖKDİL’e hazırlanmak için önce hangi bölümde kaç puan kaybettiğini ölç, sonra her gün tek bir açığa çalış. Soru dağılımı, çalışma döngüsü, YÖKDİL farkı ve ücretsiz seviye testi.",
   lead:
-    "Önce hangi bölümde kaç puan kaybettiğini ölç. Sonra her gün o açığı kapatacak tek bir işe odaklan, yanlışlarını aralıklarla yeniden çöz ve birkaç haftada bir tam deneme gir. Kelime ezberi de soru çözmek de bu döngünün içinde; ikisi de tek başına bir plan sayılmaz. YÖKDİL, e-YDS ve e-YÖKDİL için de yol aynı.",
+    "Önce hangi bölümde kaç puan kaybettiğini ölç. Sonra her gün o açığı kapatacak tek bir işe odaklan, yanlışlarını aralıklarla yeniden çöz ve birkaç haftada bir tam deneme gir. Kelime ezberi de soru çözmek de bu döngünün içinde; ikisi de tek başına bir plan sayılmaz. Cümlede fiili henüz göremiyorsan sıra [sıfırdan hazırlıkta](/yds-sifirdan-hazirlik); hedefin 70, 80 veya 90 ise hata bütçesi [o sayfada](/yds-70-80-90-nasil-alinir). YÖKDİL, e-YDS ve e-YÖKDİL için de yol aynı.",
   sections: [
     {
       id: "neden-takiliyor",

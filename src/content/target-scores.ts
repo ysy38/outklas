@@ -1,5 +1,5 @@
 import { ydsBlueprint } from "@/modules/exam/blueprint";
-import { YDS_QUESTIONS, correctsForScore, ydsLevel } from "@/modules/exam/yds-points";
+import { YDS_QUESTIONS, correctsForScore, ydsLevel, ydsPoints } from "@/modules/exam/yds-points";
 import { yokdilBands } from "./yokdil";
 
 export const targets = [70, 80, 90] as const;
@@ -46,6 +46,17 @@ export function splitRows(paper: Paper): string[][] {
   });
   const totals = targets.map((_, index) => paperBands(paper).reduce((sum, band) => sum + (split[band.id]?.[index] ?? 0), 0));
   return [...rows, ["Toplam doğru", ...totals.map((total) => `${total}`)]];
+}
+
+/** If the rest of the YDS (60 questions) is perfect, what does each reading score cap you at? */
+export function readingCeilingRows(readingCounts: readonly number[] = [0, 4, 8, 12, 16, 20]): string[][] {
+  const rest = YDS_QUESTIONS - 20;
+  return readingCounts.map((reading) => {
+    const total = rest + reading;
+    const score = ydsPoints(total);
+    const cap = score >= 90 ? "90 mümkün" : score >= 80 ? "80 mümkün, 90 değil" : score >= 70 ? "70 mümkün, 80 değil" : "70’in altında";
+    return [`${reading}/20`, `${total}`, score.toLocaleString("tr-TR"), cap];
+  });
 }
 
 export function allowanceRows(scores: readonly number[] = [50, 60, 65, 70, 75, 80, 85, 90]): string[][] {

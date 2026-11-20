@@ -24,6 +24,8 @@ export const brand = {
   },
   /** Kamp is sold at the founder price until this day; the label on the card shows the date. */
   launchUntil: "2026-12-31",
+  /** Merchant listings: date through which displayed prices remain valid. Update yearly. */
+  priceValidUntil: "2027-12-31",
   diagnosticQuestions: 40,
   diagnosticMinutes: 30,
   freeDailyWords: 10,

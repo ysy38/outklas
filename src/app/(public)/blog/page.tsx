@@ -48,13 +48,13 @@ const guides = [
   {
     href: "/yds-sifirdan-hazirlik",
     kicker: "Sıfırdan Başlayanlar",
-    title: "YDS’ye sıfırdan hazırlık: nereden başlanır?",
+    title: "YDS’ye sıfırdan hazırlık: cümleyi çözemiyorsan ilk 12 hafta",
     note: "Çalışma sırası, ilk 4 hafta planı ve temel gramer-kelime adımları.",
   },
   {
     href: "/yds-70-80-90-nasil-alinir",
     kicker: "Hedef Puan Stratejisi",
-    title: "YDS’den 70, 80, 90 nasıl alınır?",
+    title: "YDS’de 70, 80 ve 90: üç bant, üç hata bütçesi",
     note: "Hedefe göre doğru sayısı, bölüm bazlı hata hakkı ve soru dağılımı.",
   },
 ] as const;

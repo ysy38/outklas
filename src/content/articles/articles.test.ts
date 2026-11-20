@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { updatedAt } from "@/content/editorial";
 import { guides } from "@/content/guides";
-import { paperBands, targetSplit, targets } from "@/content/target-scores";
+import { paperBands, readingCeilingRows, targetSplit, targets } from "@/content/target-scores";
+import { hazirlik } from "./hazirlik";
+import { hedefPuan } from "./hedef-puan";
+import { sifirdan } from "./sifirdan";
 import { topicLinks } from "@/content/topics";
 import { correctsForScore } from "@/modules/exam/yds-points";
 import { ydsBlueprint } from "@/modules/exam/blueprint";
@@ -97,6 +100,15 @@ describe("articles", () => {
   });
 });
 
+describe("prep page intents", () => {
+  it("keeps distinct titles and does not share a lead sentence", () => {
+    const titles = [hazirlik, sifirdan, hedefPuan].map((article) => `${article.title} ${article.accent}`);
+    expect(new Set(titles).size).toBe(3);
+    const leads = [hazirlik.lead, sifirdan.lead, hedefPuan.lead];
+    expect(new Set(leads).size).toBe(3);
+  });
+});
+
 describe("target splits", () => {
   it.each(["yds", "yokdil"] as const)("%s columns reach 70 / 80 / 90 within each section", (paper) => {
     const split = targetSplit[paper] as Record<string, readonly number[]>;
@@ -107,5 +119,13 @@ describe("target splits", () => {
       expect(total).toBe(correctsForScore(score));
       for (const band of bands) expect(split[band.id]![index]!).toBeLessThanOrEqual(band.count);
     });
+  });
+
+  it("locks 90 behind at least 12/20 reading if the rest is perfect", () => {
+    const rows = readingCeilingRows();
+    const eight = rows.find((row) => row[0] === "8/20");
+    const twelve = rows.find((row) => row[0] === "12/20");
+    expect(eight?.[3]).toBe("80 mümkün, 90 değil");
+    expect(twelve?.[3]).toBe("90 mümkün");
   });
 });

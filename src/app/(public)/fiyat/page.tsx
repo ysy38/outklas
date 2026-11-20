@@ -39,6 +39,7 @@ export default async function PricingPage() {
     description,
     price: price.toFixed(2),
     priceCurrency: "TRY",
+    priceValidUntil: brand.priceValidUntil,
     availability: "https://schema.org/InStock",
     url: `${siteUrl}/fiyat`,
     itemCondition: "https://schema.org/NewCondition",
@@ -58,12 +59,8 @@ export default async function PricingPage() {
     operatingSystem: "Web",
     offers: [
       offer(freeOffer.name, 0, `${freeOffer.points.join(", ")}.`),
-      offer(offers.gelisim.name, offers.gelisim.price, `${offers.gelisim.days} gün erişim, tek ödeme, KDV dahil.`, {
-        priceValidUntil: brand.launchUntil,
-      }),
-      offer(offers.kamp.name, offers.kamp.price, `${offers.kamp.days} gün erişim, tek ödeme, KDV dahil.`, {
-        priceValidUntil: brand.launchUntil,
-      }),
+      offer(offers.gelisim.name, offers.gelisim.price, `${offers.gelisim.days} gün erişim, tek ödeme, KDV dahil.`),
+      offer(offers.kamp.name, offers.kamp.price, `${offers.kamp.days} gün erişim, tek ödeme, KDV dahil.`),
     ],
   };
   return (

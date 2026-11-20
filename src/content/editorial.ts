@@ -52,10 +52,10 @@ export const updatedAt: Record<string, string> = {
   "/iade": "2026-11-04",
   "/mesafeli-satis": "2026-11-04",
   "/yontem": "2026-10-15",
-  "/yds-hazirlik": "2026-11-04",
+  "/yds-hazirlik": "2026-11-20",
   "/yds-taktikleri": "2026-11-04",
-  "/yds-sifirdan-hazirlik": "2026-11-04",
-  "/yds-70-80-90-nasil-alinir": "2026-11-04",
+  "/yds-sifirdan-hazirlik": "2026-11-20",
+  "/yds-70-80-90-nasil-alinir": "2026-11-20",
   "/yds-puan-hesaplama": "2026-11-04",
   "/yds-baglac-testi": "2026-10-15",
   "/yds-okudugunu-anlama": "2026-10-15",
@@ -123,6 +123,6 @@ export function articleJsonLd(input: { path: string; title: string; description:
     mainEntityOfPage: `${siteUrl}${input.path}`,
     author: authorsJsonLd(),
     publisher: { "@id": `${siteUrl}/#organization` },
-    ...(updated ? { dateModified: updated } : {}),
+    ...(updated ? { datePublished: updated, dateModified: updated } : {}),
   };
 }
