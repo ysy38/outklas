@@ -97,6 +97,14 @@ const list: Source[] = [
     url: "https://doi.org/10.1075/pbns.54",
     finding: "Bilimsel yazıda iddialar may, might, suggest, likely gibi sözcüklerle sürekli yumuşatılır. Bu, akademik İngilizcenin en belirgin özelliklerinden biri.",
   },
+  {
+    id: "bloom-1984",
+    cite: "Bloom (1984)",
+    title: "The 2 Sigma Problem: The search for methods of group instruction as effective as one-to-one tutoring",
+    venue: "Educational Researcher, 13(6), 4–16",
+    url: "https://doi.org/10.3102/0013189X013006004",
+    finding: "Birebir özel ders alan ortalama bir öğrenci, geleneksel sınıf veya video eğitimi alan öğrencilerin %98’inden (2 standart sapma) daha yüksek başarı gösterir.",
+  },
 ];
 
 export const sources: Record<string, Source> = Object.fromEntries(list.map((source) => [source.id, source]));

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { EditorialNote } from "@/components/editorial-note";
+import { JsonLd } from "@/components/JsonLd";
 import { articleJsonLd } from "@/content/editorial";
 import { rehberBySection } from "@/content/rehber";
 import { sourceAnchor, sources } from "@/content/articles/sources";
@@ -18,8 +19,15 @@ function Rich({ text }: { text: string }) {
   for (const match of text.matchAll(pattern)) {
     const index = match.index ?? 0;
     if (index > last) parts.push(text.slice(last, index));
+    const href = match[2]!;
+    const isExternal = href.startsWith("http://") || href.startsWith("https://");
     parts.push(
-      <Link key={index} href={match[2]!} className="link-underline font-medium text-pine">
+      <Link
+        key={index}
+        href={href}
+        className="link-underline font-medium text-pine"
+        {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      >
         {match[1]}
       </Link>,
     );
@@ -167,7 +175,13 @@ function BlockView({ block }: { block: Block }) {
   }
 }
 
-export function ArticlePage({ article }: { article: Article }) {
+export function ArticlePage({
+  article,
+  customJsonLd,
+}: {
+  article: Article;
+  customJsonLd?: ReactNode;
+}) {
   const cited = article.sources.map((id) => sources[id]!);
   const hasSectionTips = article.sections.some((section) => section.blocks.some((block) => block.kind === "sectionTips"));
   const jsonLd = {
@@ -179,13 +193,21 @@ export function ArticlePage({ article }: { article: Article }) {
       },
       {
         "@type": "BreadcrumbList",
-        itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Ana sayfa", item: siteUrl },
-          { "@type": "ListItem", position: 2, name: article.eyebrow, item: `${siteUrl}${article.path}` },
-        ],
+        "@id": `${siteUrl}${article.path}#breadcrumb`,
+        itemListElement: article.path.startsWith("/blog/")
+          ? [
+              { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: siteUrl },
+              { "@type": "ListItem", position: 2, name: "Blog", item: `${siteUrl}/blog` },
+              { "@type": "ListItem", position: 3, name: article.title, item: `${siteUrl}${article.path}` },
+            ]
+          : [
+              { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: siteUrl },
+              { "@type": "ListItem", position: 2, name: article.eyebrow, item: `${siteUrl}${article.path}` },
+            ],
       },
       {
         "@type": "FAQPage",
+        "@id": `${siteUrl}${article.path}#faq`,
         mainEntity: article.faqs.map((item) => ({
           "@type": "Question",
           name: item.question,
@@ -197,7 +219,7 @@ export function ArticlePage({ article }: { article: Article }) {
 
   return (
     <article className="landing mx-auto w-full max-w-4xl px-4 py-12 sm:px-5 sm:py-20">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {customJsonLd ?? <JsonLd data={jsonLd} />}
       <p className="text-xs uppercase tracking-[0.18em] text-gold">{article.eyebrow}</p>
       <h1 className="display-xl mt-4 font-serif">
         {article.title} <span className="grad">{article.accent}</span>
@@ -302,14 +324,21 @@ export function ArticlePage({ article }: { article: Article }) {
       <section className="mt-14">
         <h2 className="text-2xl">Devamı</h2>
         <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-          {article.related.map((item) => (
-            <li key={item.href}>
-              <Link href={item.href} className="lift flex items-center justify-between gap-3 rounded-2xl border border-line bg-card px-4 py-3 transition hover:border-pine">
-                <span className="font-medium text-ink">{item.label}</span>
-                <span aria-hidden className="text-pine">→</span>
-              </Link>
-            </li>
-          ))}
+          {article.related.map((item) => {
+            const isExternal = item.href.startsWith("http://") || item.href.startsWith("https://");
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className="lift flex items-center justify-between gap-3 rounded-2xl border border-line bg-card px-4 py-3 transition hover:border-pine"
+                  {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                >
+                  <span className="font-medium text-ink">{item.label}</span>
+                  <span aria-hidden className="text-pine">→</span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </section>
     </article>

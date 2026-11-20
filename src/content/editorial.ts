@@ -36,7 +36,11 @@ export function organizationJsonLd() {
       url: author.profile,
       sameAs: [author.profile],
     })),
-    sameAs: authors.map((author) => author.profile),
+    sameAs: [
+      "https://www.linkedin.com/company/outklas",
+      "https://medium.com/@info_97122",
+      ...authors.map((author) => author.profile),
+    ],
   };
 }
 
@@ -55,6 +59,9 @@ export const updatedAt: Record<string, string> = {
   "/yds-puan-hesaplama": "2026-11-04",
   "/yds-baglac-testi": "2026-10-15",
   "/yds-okudugunu-anlama": "2026-10-15",
+  "/blog": "2026-11-19",
+  "/blog/yds-yokdil-100-saatlik-video-devri-neden-kapandi": "2026-11-19",
+  "/blog/yds-yokdil-celdirici-nasil-tespit-edilir": "2026-11-19",
   "/fiyat": "2026-10-30",
   "/rehber/grammar": "2026-10-21",
   "/rehber/vocabulary": "2026-10-21",

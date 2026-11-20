@@ -40,11 +40,30 @@ export type GuideSource = {
   doi?: string;
 };
 
+export type GuideFaq = {
+  question: string;
+  answer: string;
+  shortAnswer?: string;
+  table?: {
+    headers: string[];
+    rows: string[][];
+  };
+};
+
+export type GuideCourse = {
+  name: string;
+  description: string;
+  educationalLevel?: string;
+  teaches: string[];
+  courseWorkload: string;
+};
+
 export type DeepGuide = {
   section: SectionId;
   seoTitle: string;
   seoDescription: string;
   h1: string;
+  breadcrumbTitle?: string;
   lead: string;
   approach: string;
   layersTitle: string;
@@ -65,7 +84,8 @@ export type DeepGuide = {
   notebook?: { title: string; fields: string[]; tip: string };
   misses?: { title: string; items: string[] };
   errorKinds?: { title: string; items: string[] };
-  faqs?: { question: string; answer: string }[];
+  course?: GuideCourse;
+  faqs?: GuideFaq[];
   disclaimer?: string;
 };
 
@@ -173,6 +193,49 @@ export const deepGuides: Partial<Record<SectionId, DeepGuide>> = {
     ctaLine: "outklas. ile cümleyi parçala, yapıyı bul ve çeldiriciyi gerekçesiyle ele.",
     ctaPrimary: { href: "/teshis", label: "Ücretsiz Cümle Röntgenini dene →" },
     ctaSecondary: { href: "/kelime", label: "Günlük alıştırmaya bak" },
+    breadcrumbTitle: "YDS ve YÖKDİL Akademik Gramer (Grammar) Rehberi",
+    course: {
+      name: "YDS ve YÖKDİL Akademik Gramer, Bağlaçlar ve Cümle Analizi Modülü",
+      description:
+        "YDS ve YÖKDİL sınavlarında doğrudan çıkan Tenses, Modals, Passive & Causative, Conjunctions (Bağlaçlar), Relative/Noun Clauses ve Gerund/Infinitive/Reduction konularının ÖSYM soru mantığıyla analizi.",
+      educationalLevel: "B2-C1 (Akademik İngilizce)",
+      teaches: [
+        "Zaman Uyumu (Tense Agreement) ve Modal Past Yapıları (must have V3, could have V3)",
+        "Zıtlık, Neden-Sonuç ve Koşul Bağlaçları (Adversative & Causal Conjunctions)",
+        "Active/Passive ve Causative (Ettirme) Yapıları",
+        "Relative Clause, Noun Clause ve Participle Kısaltmaları (Reductions)",
+        "Akademik Edat (Preposition) Kombinasyonları",
+      ],
+      courseWorkload: "PT20H",
+    },
+    faqs: [
+      {
+        question: "YDS ve YÖKDİL gramer sorularında en çok hangi konular çıkar?",
+        answer:
+          "YDS ve YÖKDİL'de doğrudan dil bilgisi ve Cloze Test bölümlerinde en yüksek soru ağırlığı Bağlaçlar ve Zarf Cümleciklerine (Conjunctions & Adverbial Clauses) aittir. Bunu Edatlar (Prepositions), Zamanlar ve Kip Ekleri (Tenses & Modals), Edilgen Yapılar (Passive Voice) ile Ortaç Kısaltmaları (Relative/Adverbial Clause Reductions ve Gerund/Infinitive) takip eder.",
+      },
+      {
+        question:
+          "YDS bağlaç sorularında tam cümle alan bağlaçlar ile isim (noun phrase) alan edatlı bağlaçlar nasıl ayırt edilir?",
+        shortAnswer:
+          "Boşluktan sonra özne ve çekimli bir fiil (Subject + Verb) geliyorsa although, because, whereas gibi cümle bağlaçları; çekimli fiil içermeyen bir isim öbeği (Noun Phrase) veya V-ing geliyorsa despite, due to, unlike gibi edatlı bağlaçlar seçilir.",
+        answer:
+          "Boşluktan sonraki yapıda çekimli bir fiil (Subject + Verb) varsa 'although, even though, because, since, whereas' gibi tam cümle bağlaçları seçilir. Boşluktan sonra çekimli fiil bulunmayan bir isim öbeği (Noun Phrase) veya V-ing (Gerund) geliyorsa 'despite, in spite of, because of, due to, owing to, unlike' gibi edat temelli (prepositional) bağlaçlar kullanılır.",
+        table: {
+          headers: ["Anlam İlişkisi", "Tam Cümle Alanlar (+ S + V)", "İsim / V-ing Alanlar (+ Noun / Gerund)"],
+          rows: [
+            ["Zıtlık (Contrast)", "although, even though, though, much as", "despite, in spite of, notwithstanding"],
+            ["Neden-Sonuç (Cause)", "because, since, as, inasmuch as", "because of, due to, owing to, thanks to"],
+            ["Doğrudan Karşılaştırma", "while, whereas", "unlike, in contrast to, contrary to"],
+          ],
+        },
+      },
+      {
+        question: "Kısaltma (Reduction) sorularında V-ing, V3 ve Having V3/Having been V3 seçimi nasıl yapılır?",
+        answer:
+          "Kısaltma sorularında önce öznenin eylemi yapıp yapmadığına (Active vs. Passive), ardından ana fiille zaman farkı olup olmadığına bakılır. Eylem etken (active) ve eş zamanlıysa 'V-ing', edilgen (passive) ise 'V3' seçilir. Kısaltılan eylem ana cümledeki eylemden daha önce gerçekleşmişse etken yapılarda 'Having V3', edilgen yapılarda ise 'Having been V3' (veya doğrudan V3) tercih edilir.",
+      },
+    ],
   },
 
   vocabulary: {
@@ -304,6 +367,45 @@ export const deepGuides: Partial<Record<SectionId, DeepGuide>> = {
     ctaLine: "outklas. Kelime odağı: Kelimeyi bağlamında gör, doğru seçeneği gerekçelendir ve çeldiricinin neden cazip geldiğini öğren.",
     ctaPrimary: { href: "/kelime", label: "Ücretsiz kelime alıştırmasıyla başla →" },
     ctaSecondary: { href: "/teshis", label: "Seviye testini dene" },
+    breadcrumbTitle: "YDS ve YÖKDİL Akademik Kelime (Vocabulary) Rehberi",
+    course: {
+      name: "YDS ve YÖKDİL Akademik Kelime (Vocabulary) ve Çeldirici Analizi Modülü",
+      description:
+        "ÖSYM'nin YDS, e-YDS ve YÖKDİL sınavlarında en yüksek frekansla sorduğu akademik fiiller, sıfatlar, zarflar, phrasal verb yapıları ve bağlamsal eşdizimlilik (collocation) eğitimi.",
+      educationalLevel: "B2-C1 (Akademik İngilizce)",
+      teaches: [
+        "YDS ve YÖKDİL Yüksek Frekanslı Akademik Fiiller (Academic Verbs)",
+        "Akademik Sıfat ve Zarf Eşdizimlilikleri (Adverb-Adjective Collocations)",
+        "ÖSYM Sınavlarında En Sık Çıkan Phrasal Verbs",
+        "Kelime Sorularında Semantik Çeldirici (Distractor) Eleme Teknikleri",
+      ],
+      courseWorkload: "PT15H",
+    },
+    faqs: [
+      {
+        question: "YDS ve YÖKDİL kelime sorularında en çok hangi kelime türleri sorulur?",
+        answer:
+          "YDS ve YÖKDİL sınavlarının ilk 6 sorusu ile Cloze Test bölümlerinde doğrudan kelime bilgisi ölçülür. Bu sorularda akademik fiiller (verbs), isimler (nouns), sıfatlar (adjectives), zarflar (adverbs) ve deyimsel fiiller (phrasal verbs) eşit ağırlıkla yer alır. Doğru yanıta ulaşmak için kelimenin tek başına Türkçe karşılığı değil, boşluktan önceki ve sonraki edat (preposition) veya eşdizimlilik (collocation) ipuçları analiz edilmelidir.",
+      },
+      {
+        question: "YÖKDİL Fen, Sağlık ve Sosyal Bilimler kelime havuzları birbirinden farklı mıdır?",
+        answer:
+          "Evet, temel akademik fiil ve zarf çekirdeği üç alanda ortak olmakla birlikte, terimsel isim ve sıfat seçimleri alana göre ayrışır. Örneğin YÖKDİL Sağlık sınavında semptom, tedavi ve epidemiyoloji odaklı kelimeler (alleviate, susceptible, outbreak); Fen sınavında doğa olayları ve deneysel süreçler (trigger, deplete, abundant); Sosyal sınavında ise tarihsel ve sosyolojik kavramlar (ambiguity, profound, inevitable) ön plana çıkar.",
+        table: {
+          headers: ["Alan", "Odak Kavramlar", "Örnek Kelimeler"],
+          rows: [
+            ["Sağlık Bilimleri", "Semptom, tedavi ve epidemiyoloji", "alleviate, susceptible, outbreak"],
+            ["Fen Bilimleri", "Doğa olayları ve deneysel süreçler", "trigger, deplete, abundant"],
+            ["Sosyal Bilimler", "Tarihsel ve sosyolojik kavramlar", "ambiguity, profound, inevitable"],
+          ],
+        },
+      },
+      {
+        question: "Akademik İngilizce kelime sorularında çeldirici (distractor) şıklar nasıl elenir?",
+        answer:
+          "ÖSYM kelime sorularında çeldiriciler genellikle cümlenin genel konusuyla ilişkili görünen ancak cümlenin artı/eksi (+/-) anlam yönüyle (semantic prosody) veya gramer geçişliliğiyle (transitive/intransitive) uyuşmayan kelimelerden seçilir. Boşluğun bağlı olduğu bağlaç (örneğin 'although' zıtlık veya 'therefore' neden-sonuç) tespit edilerek anlam yönü belirlenmeli ve edat uyumu sağlamayan şıklar ilk aşamada elenmelidir.",
+      },
+    ],
   },
 
   cloze: {

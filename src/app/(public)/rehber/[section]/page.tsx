@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { brand, siteUrl } from "@/brand";
 import { GuideDeep } from "@/components/guide-deep";
 import { GuideSectionNav } from "@/components/guide-section-nav";
+import { JsonLd } from "@/components/JsonLd";
 import { TopicLinks } from "@/components/topic-links";
 import { skillName } from "@/content/labels";
-import { articleJsonLd } from "@/content/editorial";
+import { articleJsonLd, organizationJsonLd } from "@/content/editorial";
 import { deepGuideFor } from "@/content/guide-labs";
 import { rehberBySection } from "@/content/rehber";
 import { and, answers, eq, getDb, inArray, items, mastery } from "@/db/client";
@@ -16,7 +17,8 @@ import { currentProfile } from "@/server/auth";
 type Props = { params: Promise<{ section: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { section } = await params;
+  const { section: rawSection } = await params;
+  const section = rawSection === "grammer" ? "grammar" : rawSection;
   const band = ydsBlueprint.bands.find((item) => item.section === section);
   const note = rehberBySection(section);
   const deep = deepGuideFor(section);
@@ -48,7 +50,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function GuideSectionPage({ params }: Props) {
-  const { section } = await params;
+  const { section: rawSection } = await params;
+  if (rawSection === "grammer") {
+    redirect("/rehber/grammar");
+  }
+  const section = rawSection;
   const band = ydsBlueprint.bands.find((item) => item.section === section);
   const note = rehberBySection(section);
   if (!band || !note) notFound();
@@ -62,15 +68,42 @@ export default async function GuideSectionPage({ params }: Props) {
     ? {
         "@context": "https://schema.org",
         "@graph": [
-          articleJsonLd({ path, title: deep.h1, description: deep.seoDescription }),
+          organizationJsonLd(),
           {
             "@type": "BreadcrumbList",
+            "@id": `${siteUrl}${path}#breadcrumb`,
             itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Ana sayfa", item: siteUrl },
+              { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: siteUrl },
               { "@type": "ListItem", position: 2, name: "Rehber", item: `${siteUrl}/rehber` },
-              { "@type": "ListItem", position: 3, name: band.title, item: `${siteUrl}${path}` },
+              {
+                "@type": "ListItem",
+                position: 3,
+                name: deep.breadcrumbTitle ?? band.title,
+                item: `${siteUrl}${path}`,
+              },
             ],
           },
+          ...(deep.course
+            ? [
+                {
+                  "@type": "Course",
+                  "@id": `${siteUrl}${path}#course`,
+                  name: deep.course.name,
+                  description: deep.course.description,
+                  url: `${siteUrl}${path}`,
+                  inLanguage: "tr-TR",
+                  educationalLevel: deep.course.educationalLevel ?? "B2-C1 (Akademik İngilizce)",
+                  provider: { "@id": `${siteUrl}/#organization` },
+                  teaches: deep.course.teaches,
+                  hasCourseInstance: {
+                    "@type": "CourseInstance",
+                    courseMode: "online",
+                    courseWorkload: deep.course.courseWorkload,
+                  },
+                },
+              ]
+            : []),
+          articleJsonLd({ path, title: deep.h1, description: deep.seoDescription }),
           {
             "@type": "HowTo",
             name: deep.nextTitle,
@@ -84,6 +117,7 @@ export default async function GuideSectionPage({ params }: Props) {
           },
           {
             "@type": "FAQPage",
+            "@id": `${siteUrl}${path}#faq`,
             mainEntity: (
               deep.faqs?.length
                 ? deep.faqs
@@ -111,7 +145,7 @@ export default async function GuideSectionPage({ params }: Props) {
 
   return (
     <article className="landing mx-auto grid w-full max-w-6xl gap-8 px-4 py-10 sm:px-5 sm:py-16 lg:grid-cols-[minmax(0,1fr)_min(100%,280px)] lg:gap-10">
-      {jsonLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /> : null}
+      {jsonLd ? <JsonLd data={jsonLd} /> : null}
       <div className="min-w-0">
         <p className="text-xs uppercase tracking-[0.18em] text-gold">
           <Link href="/rehber" className="hover:text-ink">

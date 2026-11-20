@@ -13,6 +13,7 @@ const sections = new Set<string>(ydsBlueprint.bands.map((band) => band.section))
 
 const publicPaths = new Set([
   "/",
+  "/blog",
   "/teshis",
   "/deneme",
   "/fiyat",
@@ -47,6 +48,9 @@ describe("articles", () => {
       const anchors = new Set(article.sources.map(sourceAnchor));
       const links = [...textsOf(article).flatMap(linksIn), ...article.related.map((item) => item.href)];
       for (const href of links) {
+        if (href.startsWith("http://") || href.startsWith("https://")) {
+          continue;
+        }
         const [path, hash] = href.split("#");
         if (!path) {
           expect(anchors.has(hash!), `${article.path} → ${href}`).toBe(true);

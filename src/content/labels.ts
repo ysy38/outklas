@@ -1,3 +1,5 @@
+import { errorClassLabel } from "@/modules/content/lesson";
+
 const distractors: Record<string, string> = {
   CONTEXT_MISMATCH: "cümlenin bağlamına uymuyor",
   COLLOCATION_ERROR: "kelime bu kalıpla kullanılmıyor",
@@ -11,6 +13,7 @@ const distractors: Record<string, string> = {
 
 export function distractorText(code: string | null | undefined) {
   if (!code) return null;
+  if (code in errorClassLabel) return errorClassLabel[code as keyof typeof errorClassLabel];
   return distractors[code] ?? code;
 }
 

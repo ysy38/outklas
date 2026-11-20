@@ -225,7 +225,41 @@ export function GuideDeep({ guide, path }: { guide: DeepGuide; path: string }) {
             {guide.faqs.map((item) => (
               <div key={item.question} className="rounded-2xl border border-line bg-card px-4 py-4 sm:px-5">
                 <dt className="text-sm font-semibold text-ink sm:text-base">{item.question}</dt>
-                <dd className="mt-2 text-sm leading-7 text-muted">{item.answer}</dd>
+                <dd className="mt-2 text-sm leading-7 text-muted">
+                  {item.shortAnswer ? (
+                    <p className="mb-2 text-ink">
+                      <strong>Kısa Yanıt: </strong>
+                      {item.shortAnswer}
+                    </p>
+                  ) : null}
+                  <p>{item.answer}</p>
+                  {item.table ? (
+                    <div className="mt-4 overflow-x-auto rounded-xl border border-line/70">
+                      <table className="w-full text-left text-xs sm:text-sm">
+                        <thead className="bg-soft/60">
+                          <tr className="border-b border-line text-ink">
+                            {item.table.headers.map((h, i) => (
+                              <th key={i} className="py-2.5 px-3.5 font-semibold">
+                                {h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-line/50">
+                          {item.table.rows.map((row, rIdx) => (
+                            <tr key={rIdx} className="hover:bg-soft/30 transition">
+                              {row.map((cell, cIdx) => (
+                                <td key={cIdx} className="py-2.5 px-3.5 text-muted">
+                                  {cell}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
+                </dd>
               </div>
             ))}
           </dl>

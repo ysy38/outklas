@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { siteUrl } from "@/brand";
+import { JsonLd } from "@/components/JsonLd";
 import { TopicLinks } from "@/components/topic-links";
 import { rehberBySection } from "@/content/rehber";
 import { ydsBlueprint } from "@/modules/exam/blueprint";
@@ -12,9 +14,32 @@ export const metadata: Metadata = {
   alternates: { canonical: "/rehber" },
 };
 
+const breadcrumbLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "@id": `${siteUrl}/rehber#breadcrumb`,
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: siteUrl },
+        { "@type": "ListItem", position: 2, name: "Rehber", item: `${siteUrl}/rehber` },
+      ],
+    },
+    {
+      "@type": "CollectionPage",
+      "@id": `${siteUrl}/rehber#collection`,
+      url: `${siteUrl}/rehber`,
+      name: "YDS ve YÖKDİL Bölüm Rehberi",
+      description: "YDS ve e-YDS’deki 10 bölüm: her bölüm neyi ölçer, nasıl çözülür, en sık nerede hata yapılır.",
+      publisher: { "@id": `${siteUrl}/#organization` },
+    },
+  ],
+};
+
 export default function GuideIndexPage() {
   return (
     <section className="landing mx-auto w-full max-w-6xl px-4 py-12 sm:px-5 sm:py-20">
+      <JsonLd data={breadcrumbLd} />
       <p className="text-xs uppercase tracking-[0.18em] text-gold">Rehber</p>
       <h1 className="display-xl mt-4 max-w-3xl font-serif">
         Sınav 10 bölümden oluşur. <span className="grad">Her birini nasıl çözeceğin burada.</span>
