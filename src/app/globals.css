@@ -127,9 +127,11 @@ html:not(.dark) body {
 }
 
 .display-xl {
-  font-size: clamp(2.75rem, 8vw, 5.4rem);
-  line-height: 0.96;
+  font-size: clamp(2.1rem, 7.2vw, 5.4rem);
+  line-height: 1.08;
   letter-spacing: -0.045em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .landing {
@@ -175,6 +177,8 @@ html:not(.dark) .landing::before {
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .glass {

@@ -17,9 +17,12 @@ export function TopicLinks({
       <ul className="mt-4 grid gap-2 sm:grid-cols-2">
         {links.map((link) => (
           <li key={link.href}>
-            <Link href={link.href} className="lift flex h-full flex-col rounded-2xl border border-line bg-card px-4 py-3 transition hover:border-pine">
-              <span className="font-medium text-ink">
-                {link.label} <span aria-hidden className="text-pine">→</span>
+            <Link href={link.href} className="lift flex h-full min-w-0 flex-col rounded-2xl border border-line bg-card px-4 py-3 transition hover:border-pine">
+              <span className="min-w-0 break-words font-medium leading-snug text-ink">
+                {link.label}{" "}
+                <span aria-hidden className="text-pine">
+                  →
+                </span>
               </span>
               <span className="mt-1 text-sm leading-6 text-muted">{link.note}</span>
             </Link>

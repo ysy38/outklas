@@ -21,6 +21,7 @@ const appLinks: [string, string][] = [
 const publicLinks: [string, string][] = [
   ["Nasıl çalışıyor?", "/#nasil"],
   ["Özellikler", "/#ozellikler"],
+  ["Blog", "/blog"],
   ["Sınavlar", "/deneme"],
   ["Fiyatlar", "/fiyat"],
   ["SSS", "/#sss"],
@@ -32,6 +33,7 @@ const footerColumns: { title: string; links: [string, string][]; columns?: numbe
     links: [
       ["Ücretsiz seviye testi", "/teshis"],
       ["Bölüm rehberi", "/rehber"],
+      ["Blog", "/blog"],
       ["Ücretsiz deneme sınavı", "/deneme"],
       ["Puan hesapla", "/yds-puan-hesaplama"],
     ],
@@ -93,9 +95,9 @@ export function PublicHeader() {
     <header className="sticky top-0 z-40 border-b border-line bg-paper/85 shadow-[0_16px_40px_-32px_rgba(8,9,7,0.55)] backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-5 sm:py-3">
         <Logo href="/" markId="mark-header" />
-        <nav className="hidden items-center gap-6 text-sm font-medium text-muted lg:flex">
+        <nav className="hidden min-w-0 items-center gap-3 text-sm font-medium text-muted lg:flex xl:gap-6">
           {publicLinks.map(([label, href]) => (
-            <Link key={href} href={href} className="link-underline hover:text-ink">
+            <Link key={href} href={href} className="link-underline shrink-0 hover:text-ink">
               {label}
             </Link>
           ))}

@@ -55,7 +55,7 @@ function Table({ head, rows, caption }: { head: string[]; rows: string[][]; capt
             {rows.map((row) => (
               <tr key={row.join("|")}>
                 {row.map((cell, index) => (
-                  <td key={index} className={`px-4 py-3 align-top leading-6 ${index === 0 ? "font-medium text-ink" : "text-muted"}`}>
+                  <td key={index} className={`px-4 py-3 align-top leading-6 break-words ${index === 0 ? "font-medium text-ink" : "text-muted"}`}>
                     <Rich text={cell} />
                   </td>
                 ))}
@@ -108,7 +108,7 @@ function BlockView({ block }: { block: Block }) {
     case "example":
       return (
         <div className="mt-6 rounded-[24px] border border-line bg-card p-5">
-          <p className="font-serif text-xl leading-8 text-ink">{block.sentence}</p>
+          <p className="font-serif text-xl leading-8 break-words text-ink">{block.sentence}</p>
           <dl className="mt-4 grid gap-3">
             {block.lines.map((line) => (
               <div key={line.label} className="grid gap-1 sm:grid-cols-[9rem_1fr]">
@@ -165,9 +165,9 @@ function BlockView({ block }: { block: Block }) {
       );
     case "cta":
       return (
-        <div className="mt-8 flex flex-col gap-4 rounded-[28px] border border-line bg-card/70 p-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="max-w-xl leading-7 text-muted">{block.text}</p>
-          <Link href={block.href} className="shrink-0 rounded-full bg-pine px-6 py-3 text-center text-sm font-semibold transition hover:-translate-y-0.5">
+        <div className="mt-8 flex flex-col gap-4 rounded-[28px] border border-line bg-card/70 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <p className="min-w-0 max-w-xl leading-7 break-words text-muted">{block.text}</p>
+          <Link href={block.href} className="inline-flex min-h-11 w-full shrink-0 items-center justify-center rounded-full bg-pine px-6 py-3 text-center text-sm font-semibold transition hover:-translate-y-0.5 sm:w-auto">
             {block.label}
           </Link>
         </div>
@@ -218,7 +218,7 @@ export function ArticlePage({
   };
 
   return (
-    <article className="landing mx-auto w-full max-w-4xl px-4 py-12 sm:px-5 sm:py-20">
+    <article className="landing mx-auto w-full min-w-0 max-w-4xl overflow-x-clip px-4 py-12 sm:px-5 sm:py-20">
       {customJsonLd ?? <JsonLd data={jsonLd} />}
       <p className="text-xs uppercase tracking-[0.18em] text-gold">{article.eyebrow}</p>
       <h1 className="display-xl mt-4 font-serif">
@@ -232,10 +232,10 @@ export function ArticlePage({
           <Rich text={article.lead} />
         </p>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <Link href="/teshis" className="rounded-full bg-pine px-6 py-3.5 text-center text-sm font-semibold transition hover:-translate-y-0.5">
+          <Link href="/teshis" className="inline-flex min-h-11 items-center justify-center rounded-full bg-pine px-6 py-3.5 text-center text-sm font-semibold transition hover:-translate-y-0.5">
             Ücretsiz seviyemi ölç →
           </Link>
-          <Link href="/yds-puan-hesaplama" className="rounded-full border border-line bg-paper px-6 py-3.5 text-center text-sm font-semibold text-ink transition hover:border-pine">
+          <Link href="/yds-puan-hesaplama" className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-paper px-6 py-3.5 text-center text-sm font-semibold text-ink transition hover:border-pine">
             Puanını hesapla
           </Link>
         </div>
@@ -255,8 +255,8 @@ export function ArticlePage({
       </nav>
 
       {article.sections.map((section) => (
-        <section key={section.id} id={section.id} className="mt-14 scroll-mt-24">
-          <h2 className="text-3xl">{section.title}</h2>
+        <section key={section.id} id={section.id} className="mt-14 min-w-0 scroll-mt-24">
+          <h2 className="text-2xl leading-snug break-words sm:text-3xl">{section.title}</h2>
           {section.blocks.map((block, index) => (
             <BlockView key={index} block={block} />
           ))}
@@ -330,11 +330,13 @@ export function ArticlePage({
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className="lift flex items-center justify-between gap-3 rounded-2xl border border-line bg-card px-4 py-3 transition hover:border-pine"
+                  className="lift flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-line bg-card px-4 py-3 transition hover:border-pine"
                   {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                 >
-                  <span className="font-medium text-ink">{item.label}</span>
-                  <span aria-hidden className="text-pine">→</span>
+                  <span className="min-w-0 break-words font-medium text-ink">{item.label}</span>
+                  <span aria-hidden className="shrink-0 text-pine">
+                    →
+                  </span>
                 </Link>
               </li>
             );
