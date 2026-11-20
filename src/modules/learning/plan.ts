@@ -1,5 +1,6 @@
 import type { SectionId } from "../exam/blueprint";
 import type { PoolItem } from "../exam/select";
+import { initialMastery, targetDifficulty } from "./mastery";
 
 export type PlanBlock =
   | { kind: "vocab"; id: string; minutes: number }
@@ -78,7 +79,14 @@ export function buildPlan(input: {
   const due = new Set(input.dueQuestionIds);
   const used = new Set<string>();
   const unseen = input.pool.filter((item) => !seen.has(item.id));
-  const source = unseen.length >= questionBudget ? unseen : input.pool;
+  const base = unseen.length >= questionBudget ? unseen : input.pool;
+  const levelOf = new Map(input.mastery.map((row) => [row.section, row.mastery]));
+  const source = [...base].sort((a, b) => {
+    const aGap = Math.abs(a.difficulty - targetDifficulty(levelOf.get(a.section) ?? initialMastery()));
+    const bGap = Math.abs(b.difficulty - targetDifficulty(levelOf.get(b.section) ?? initialMastery()));
+    if (aGap !== bGap) return aGap - bGap;
+    return a.slot - b.slot;
+  });
 
   const weak = takeUnique(source, weakCount, used, (item) => open(item) && (weakSections.size === 0 || weakSections.has(item.section)));
   const review = takeUnique(

@@ -36,6 +36,7 @@ describe("exam draft", () => {
       stimulusId: draft.stimulusKey ?? null,
       difficulty: draft.difficulty,
       skillIds: draft.skills,
+      errorClasses: [],
     }));
     expect(selectMock(pool)).toHaveLength(ydsBlueprint.questionCount);
     expect(selectDiagnostic(pool)).toHaveLength(40);
@@ -69,6 +70,7 @@ describe("exam draft", () => {
         stimulusId: draft.stimulusKey ?? null,
         difficulty: draft.difficulty,
         skillIds: draft.skills,
+        errorClasses: [],
       })),
       ...packItems.map((draft) => ({
         id: `pack-${draft.slot}`,
@@ -77,6 +79,7 @@ describe("exam draft", () => {
         stimulusId: draft.stimulusKey ?? null,
         difficulty: draft.difficulty,
         skillIds: draft.skills,
+        errorClasses: [],
       })),
     ];
     const picked = selectDiagnostic(mixed);

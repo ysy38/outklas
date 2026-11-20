@@ -6,14 +6,16 @@ import { discourseForConnector } from "@/modules/knowledge/seed";
 import { contextIssues, mainClauseFrame } from "./context";
 import type { DistractorSpec } from "./distractor-spec";
 import { experimentGeneration, type ExperimentSet } from "./experiments";
-import { completeStem, type QuestionSkeleton } from "./skeleton";
+import { completeStem, type DifficultyStrategy, type QuestionSkeleton } from "./skeleton";
 import { defaultFactoryThresholds, type FactoryThresholds } from "./thresholds";
 import {
   clauseReuse,
+  contentWords,
   hasPhrase,
   integrityProblems,
   keyOverlap,
   leadingConnector,
+  repeatedConnectorInside,
   longestSharedPhrase,
   normalized,
   sharedWording,
@@ -31,6 +33,8 @@ import { factoryVersions } from "./versions";
 export const generatedDistractor = z.object({
   text: z.string().min(1).max(300),
   rationale: z.string().max(300),
+  /** Why a learner might choose the clause before reading the full sentence. Relational items ask for it. */
+  whyPlausible: z.string().max(300).optional(),
 });
 export type GeneratedDistractor = z.infer<typeof generatedDistractor>;
 
@@ -52,6 +56,8 @@ export function validateDistractor(input: {
   originality?: OriginalityIndex;
   thresholds?: FactoryThresholds;
   experiments?: ExperimentSet;
+  /** Relational items may use one connector on several options. Lexical and easier items keep the cross-option ban. */
+  strategy?: DifficultyStrategy | null;
 }): StageValidation & { reuse: ReturnType<typeof clauseReuse>; lexical: LexicalDiagnostics } {
   const { dspec, skeleton, accepted } = input;
   const thresholds = input.thresholds ?? defaultFactoryThresholds;
@@ -67,17 +73,22 @@ export function validateDistractor(input: {
   if (/[.,;:!?]$/.test(text)) add("option_punctuation", "critical");
   if (capitalised(text) !== dspec.grammarConstraint.capitalised) add("capitalisation", "critical");
 
-  const connector = leadingConnector(text);
+  const connector = leadingConnector(text) ?? (/^while\b/i.test(text) && dspec.relationConstraint.connectors.includes("connector:whereas") && !dspec.lexicalConstraint.forbiddenWords.includes("while") ? "connector:whereas" : null);
   if (!connector) add("connector_unrecognised", "critical");
   else if (!dspec.relationConstraint.connectors.includes(connector)) add("distractor_connector_mismatch", "critical", connector);
   if (connector && dspec.relationConstraint.mustNotExpress.includes(discourseForConnector(connector) as never)) add("distractor_has_target_relation", "critical", connector);
-  if (connector && accepted.some((other) => leadingConnector(other.text) === connector)) add("connector_repeated", "critical", connector);
+  const relational = (input.strategy ?? skeleton.difficultyStrategy) === "relational_inference";
+  if (connector && !relational && accepted.some((other) => leadingConnector(other.text) === connector)) add("connector_repeated", "critical", connector);
+  const repeatedInside = relational ? repeatedConnectorInside(text) : null;
+  if (repeatedInside) add("connector_repeated", "critical", repeatedInside);
   for (const marker of dspec.lexicalConstraint.forbiddenWords) if (hasPhrase(text, marker)) add("forbidden_marker_in_distractor", "critical", marker);
 
   const count = words(text).length;
   const range = dspec.lexicalConstraint.words;
   if (count < range.min * 0.5 || count > range.max * 1.5) add("length_far_out", "critical", String(count));
   else if (count < range.min || count > range.max) add("length_out_of_range", "warn", String(count));
+  const keyWords = words(skeleton.correctAnswer).length;
+  if (count < Math.ceil(keyWords * 0.75)) add("length_short", "critical", `${count}<${keyWords}`);
   if (dspec.grammarConstraint.finiteClause && connector && words(text).length < 4) add("not_a_clause", "critical");
 
   if (normalized(text) === normalized(skeleton.correctAnswer)) add("option_duplicate", "critical", "answer");
@@ -106,6 +117,17 @@ export function validateDistractor(input: {
   for (const other of accepted) {
     if (normalized(other.text) === normalized(text)) add("option_duplicate", "critical", other.option);
     else if (clauseReuse(other.text, text, thresholds).level === "copy") add("distractor_clause_reuse", "critical", other.option);
+  }
+  const plan = skeleton.distractorBlueprints?.find((blueprint) => blueprint.option === dspec.option);
+  if (plan) {
+    // Actor, time, and scope are part of the planned meaning. Exact words are not required.
+    // Whether the written clause realizes that meaning is not decided by this check.
+    const written = contentWords(text);
+    for (const other of skeleton.distractorBlueprints ?? []) {
+      if (other.option === plan.option) continue;
+      const repeated = [...contentWords(other.proposition)].filter((word) => written.has(word));
+      if (repeated.length >= 4) add("plan_repeats_sibling", "critical", other.option);
+    }
   }
 
   if (input.originality) {
@@ -139,6 +161,93 @@ export const distractorJudgeReport = z.object({
   reasons: z.array(z.string().max(200)).max(4),
 });
 export type DistractorJudgeReport = z.infer<typeof distractorJudgeReport>;
+
+/**
+ * Legacy exclusive labels. The blind reviewer no longer returns one of these.
+ * reportFromVerdict still maps them so an older fixture decides the same way.
+ */
+export const distractorVerdicts = ["second_answer", "repeats_answer", "ungrammatical", "unnatural", "too_obvious", "good"] as const;
+export type DistractorVerdictKind = (typeof distractorVerdicts)[number];
+/** faithful and changed are supplied by a caller. The blind reviewer does not choose them. */
+export const planFidelityValues = ["faithful", "changed", "unverified"] as const;
+export type PlanFidelity = (typeof planFidelityValues)[number];
+
+export const distractorVerdict = z.object({
+  /** Asked for in at most 20 words; the cap only stops a runaway answer, since a repair call costs more than a long reason. */
+  reason: z.string().max(600),
+  verdict: z.enum(distractorVerdicts),
+  /** False when the reviewer is genuinely torn; the option then goes to a human instead of being decided. */
+  sure: z.boolean(),
+});
+export type DistractorVerdict = z.infer<typeof distractorVerdict>;
+
+/** Readings of one completed sentence. Several may apply. They are not a choice among five options. */
+export const standaloneReadings = ["second_answer", "restatement", "unsupported_inference", "discourse_failure", "uncertain"] as const;
+export type StandaloneReading = (typeof standaloneReadings)[number];
+/** Surface of the clause. sound is grammatical and natural. It is not a verdict that the distractor is good. */
+export const standaloneSurfaces = ["sound", "ungrammatical", "unnatural", "too_obvious"] as const;
+export type StandaloneSurface = (typeof standaloneSurfaces)[number];
+
+export const standaloneDistractorReview = z.object({
+  reason: z.string().max(600),
+  surface: z.enum(standaloneSurfaces),
+  readings: z.array(z.enum(standaloneReadings)).max(5),
+  sure: z.boolean(),
+});
+export type StandaloneDistractorReview = z.infer<typeof standaloneDistractorReview>;
+
+/** A missing label is not a verified match. Only an explicit faithful or changed value is kept. */
+export function planRealization(fidelity: PlanFidelity | null | undefined): PlanFidelity {
+  return fidelity === "faithful" || fidelity === "changed" ? fidelity : "unverified";
+}
+
+/**
+ * Reads a verdict as the rubric report, so distractorDecision stays the one place that decides. A sure verdict sets
+ * its dimension to certainty; an unsure one sits below the threshold, which leaves a concern for a human.
+ */
+export function reportFromVerdict({ verdict, sure, reason, planFidelity }: DistractorVerdict & { planFidelity?: PlanFidelity }): ExperimentalJudgeReport {
+  const flag = (kind: DistractorVerdictKind) => (verdict === kind ? (sure ? 1 : 0.4) : 0);
+  return {
+    standaloneSentenceAcceptable: verdict === "second_answer" && sure,
+    grammaticalValidity: verdict === "ungrammatical" ? (sure ? 0 : 0.6) : 1,
+    semanticCoherence: verdict === "unnatural" ? (sure ? 0 : 0.6) : 1,
+    unintendedCorrectness: flag("second_answer"),
+    answerClauseReuse: flag("repeats_answer"),
+    ambiguity: 0,
+    obviouslyWrong: flag("too_obvious"),
+    competentCandidateCouldSelect: verdict === "second_answer",
+    confidence: sure ? 0.9 : 0.4,
+    reasons: [reason],
+    ...(planFidelity ? { planFidelity } : {}),
+  };
+}
+
+/**
+ * Maps one blind reading onto the scores distractorDecision already uses.
+ * second_answer still rejects this clause. It does not decide which of five options is the key.
+ * unsupported_inference and discourse_failure stay on the report and do not reject by themselves.
+ * restatement is a concern, so the clause is not accepted as a successful inference distractor.
+ * Plan fidelity is unverified: this call never saw the plan.
+ */
+export function reportFromStandalone(review: StandaloneDistractorReview): ExperimentalJudgeReport {
+  const sure = review.sure && !review.readings.includes("uncertain");
+  const second = review.readings.includes("second_answer");
+  const flag = sure ? 1 : 0.4;
+  return {
+    standaloneSentenceAcceptable: second && sure,
+    grammaticalValidity: review.surface === "ungrammatical" ? (sure ? 0 : 0.6) : 1,
+    semanticCoherence: review.surface === "unnatural" ? (sure ? 0 : 0.6) : 1,
+    unintendedCorrectness: second ? flag : 0,
+    answerClauseReuse: 0,
+    ambiguity: 0,
+    obviouslyWrong: review.surface === "too_obvious" ? flag : 0,
+    competentCandidateCouldSelect: second,
+    confidence: sure ? 0.9 : 0.4,
+    reasons: [review.reason],
+    planFidelity: "unverified",
+    standaloneReadings: [...review.readings],
+  };
+}
 
 /** Extra dimensions of the experimental judge (distractor-judge.v4); each belongs to one experiment. */
 export const experimentalJudgeFields = {
@@ -182,6 +291,8 @@ export type ExperimentalJudgeReport = DistractorJudgeReport &
     superficialRewrite: number;
     targetRelationReading: number;
     alternativeReadingCorrect: number;
+    planFidelity: PlanFidelity;
+    standaloneReadings: StandaloneReading[];
   }>;
 
 /**
@@ -222,6 +333,8 @@ export function distractorDecision(input: { dspec: DistractorSpec; report: Exper
   const concerns: string[] = [];
   const sure = report.confidence >= t;
 
+  if (planRealization(report.planFidelity) === "changed") failures.push("plan_fidelity");
+  if (report.standaloneReadings?.includes("restatement")) concerns.push("stem_restatement");
   if (report.competentCandidateCouldSelect) (sure ? failures : concerns).push("competent_candidate_could_select");
   if (report.standaloneSentenceAcceptable) (sure ? failures : concerns).push("sentence_acceptable_alone");
   if (report.unintendedCorrectness >= t) failures.push("unintended_correctness");

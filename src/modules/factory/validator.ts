@@ -5,7 +5,9 @@ import { ref, type NodeRef } from "@/modules/knowledge/graph";
 import { discourseForConnector, knowledgeNodes } from "@/modules/knowledge/seed";
 import type { GeneratedQuestionCandidate } from "./candidate";
 import type { ExperimentSet } from "./experiments";
+import { concessiveMarkerBan, slotForBlueprint } from "./families";
 import { connectorSurface } from "./spec-engine";
+import { assignedStrategy } from "./strategy";
 import type { QuestionSpec } from "./spec";
 import { defaultFactoryThresholds, type FactoryThresholds } from "./thresholds";
 import { factoryVersions } from "./versions";
@@ -63,6 +65,27 @@ export const contentWords = (text: string) => new Set(words(text).map(lower).fil
 export function leadingConnector(option: string): NodeRef | null {
   const text = lower(option.trim());
   return connectorSurfaces.find((entry) => new RegExp(`^${escape(entry.surface)}\\b`).test(text))?.ref ?? null;
+}
+
+const innerConnectors = ["as long as", "as soon as", "even though", "even if", "although", "though", "whereas", "because", "unless"];
+
+/** A second clause connector inside one option. Different options may share an opener. */
+export function repeatedConnectorInside(option: string): string | null {
+  if (!leadingConnector(option)) return null;
+  const body = lower(optionBody(option));
+  return innerConnectors.find((surface) => new RegExp(`(^|[^\\p{L}])${escape(surface)}([^\\p{L}]|$)`, "u").test(body)) ?? null;
+}
+
+const concessiveSurfaces = new Set(["although", "even though", "though"]);
+
+/** True when the key is the only option that opens with a concessive connector. */
+export function soleConcessiveConnector(options: Record<OptionLabel, string>, key: OptionLabel): boolean {
+  const surface = (text: string) => {
+    const connector = leadingConnector(text);
+    return connector ? connectorSurface(connector) : "";
+  };
+  if (!concessiveSurfaces.has(surface(options[key]))) return false;
+  return optionLabels.every((label) => label === key || !concessiveSurfaces.has(surface(options[label])));
 }
 
 export const hasPhrase = (text: string, phrase: string) => new RegExp(`(^|[^\\p{L}])${escape(lower(phrase))}([^\\p{L}]|$)`, "u").test(lower(text));
@@ -180,6 +203,8 @@ export function validateCandidate(input: {
   thresholds?: FactoryThresholds;
   /** Only `overlap` changes this validator: overlap then rejects copying, not shared topic words. */
   experiments?: ExperimentSet;
+  /** Joint plans for a relational item. Absent plans keep the ordinal connector slots. */
+  blueprints?: { option: OptionLabel; relationFamily: string; connectorStrategy: string }[];
 }): CandidateValidation {
   const { spec, candidate } = input;
   const scoped = input.experiments?.includes("overlap") ?? false;
@@ -248,19 +273,35 @@ export function validateCandidate(input: {
   const overlap = (label: OptionLabel) => [...contentWords(options[label])].filter((word) => stemContent.has(word)).length;
   if (overlap(correct) >= 2 && distractorLabels.every((label) => overlap(label) + 2 <= overlap(correct))) add("lexical_overlap_clue", "warn", { option: correct });
 
+  const relational = assignedStrategy(spec) === "relational_inference";
+  const markerBan = new Set<string>(concessiveMarkerBan);
+  const connectorSlots = spec.distractorPlan.map((slot) =>
+    relational ? slotForBlueprint(slot, input.blueprints?.find((entry) => entry.option === slot.option)) : slot,
+  );
   const connectors = Object.fromEntries(optionLabels.map((label) => [label, leadingConnector(options[label])])) as Record<OptionLabel, NodeRef | null>;
+  if (relational) {
+    for (const slot of connectorSlots) {
+      const text = options[slot.option].trim();
+      if (!connectors[slot.option] && slot.connectors.includes("connector:whereas") && /^while\b/i.test(text)) connectors[slot.option] = "connector:whereas";
+    }
+  }
   const answerConnector = connectors[correct];
   if (!answerConnector || !spec.answerConstraints.connectors.includes(answerConnector)) add("answer_connector_not_allowed", "critical", { option: correct, detail: answerConnector ?? "none" });
   if (answerConnector && hasPhrase(stem, connectorSurface(answerConnector))) add("stem_contains_answer_connector", "warn");
-  for (const slot of spec.distractorPlan) {
+  for (const slot of connectorSlots) {
     const found = connectors[slot.option];
     if (!found) add("connector_unrecognised", "critical", { option: slot.option });
     else if (!slot.connectors.includes(found)) add("distractor_connector_mismatch", "critical", { option: slot.option, detail: `${found} ∉ ${slot.expresses}` });
-    if (found && spec.discourseRelation && discourseForConnector(found) === spec.discourseRelation) add("distractor_has_target_relation", "critical", { option: slot.option });
+  }
+  for (const slot of spec.distractorPlan) {
+    const found = connectors[slot.option];
+    if (found && spec.discourseRelation && discourseForConnector(found) === spec.discourseRelation && !relational) add("distractor_has_target_relation", "critical", { option: slot.option });
     for (const marker of spec.vocabularyConstraints.forbiddenInDistractors) {
+      if (relational && markerBan.has(marker)) continue;
       if (hasPhrase(options[slot.option], marker)) add("forbidden_marker_in_distractor", "critical", { option: slot.option, detail: marker });
     }
   }
+  if (relational && soleConcessiveConnector(options, correct)) add("sole_concessive_clue", "critical", { option: correct });
   for (const label of distractorLabels) {
     const reuse = clauseReuse(options[correct], options[label], input.thresholds);
     if (reuse.level === "copy") add("connector_swap", "critical", { option: label, detail: `${reuse.tokenOverlap}/${reuse.trigramOverlap}` });
@@ -285,7 +326,13 @@ export function validateCandidate(input: {
     }
   }
   const used = Object.values(connectors).filter((value): value is NodeRef => !!value);
-  if (new Set(used).size !== used.length) add("connector_repeated", "warn");
+  if (!relational && new Set(used).size !== used.length) add("connector_repeated", "warn");
+  if (relational) {
+    for (const label of optionLabels) {
+      const repeated = repeatedConnectorInside(options[label]);
+      if (repeated) add("connector_repeated", "critical", { option: label, detail: repeated });
+    }
+  }
   for (const label of optionLabels) {
     const said = candidate.metadata.connectorByOption[label]?.trim();
     if (said && connectors[label] && lower(said) !== connectorSurface(connectors[label]!)) add("connector_self_report", "warn", { option: label, detail: said });
@@ -303,7 +350,7 @@ export function validateCandidate(input: {
   for (const value of [candidate.targetConcept, candidate.targetSkill]) if (!known.has(value)) add("unknown_ref", "critical", { detail: value });
 
   const explanation = candidate.explanation;
-  if (!looksTurkish(explanation)) add("explanation_language", "warn");
+  if (!looksTurkish(explanation)) add("explanation_language", "critical");
   const named = explanation.match(/[Dd]oğru\s+(?:cevap|yanıt|seçenek|şık)[a-zçğıöşü]*\s+(?:olan\s+)?\(?([A-E])(?=[\s).,:;'’]|$)/)?.[1];
   if (named && named !== correct) add("explanation_names_other_answer", "critical", { detail: named });
   if (answerConnector && !hasPhrase(explanation, connectorSurface(answerConnector))) add("explanation_missing_connector", "warn");

@@ -1,9 +1,10 @@
+import type { Lesson } from "@/modules/content/lesson";
 import type { GeneratedQuestionCandidate } from "./candidate";
 import type { DistractorDiagnosis } from "./diagnosis";
 import { advance, type GenerationTrace } from "./generation";
 import type { JudgeDecision } from "./judge";
 import type { Provenance } from "./provenance";
-import type { QuestionSpec } from "./spec";
+import { difficultyBands, type QuestionSpec } from "./spec";
 import type { CandidateValidation } from "./validator";
 import { factoryVersions } from "./versions";
 
@@ -44,14 +45,29 @@ export type CandidateRecord = {
   generation?: GenerationTrace;
   /** Each wrong option's misconception label, assigned by construction from its DistractorSpec; absent on older records. */
   diagnoses?: OptionDiagnosis[];
+  /** Sentence x-ray built from verified spans. Absent when the item never became a candidate. */
+  lesson?: Lesson;
 };
 
 export type OptionDiagnosis = { option: GeneratedQuestionCandidate["correctOption"]; role: string; diagnosis: DistractorDiagnosis };
 
+/**
+ * Engine admission. A clean pass is approved at the judge's estimated band.
+ * A review whose only open point is the band estimate is approved at that estimate.
+ * Any other review, a second answer, or a failed check is not banked. No extra model call.
+ * The estimate is not a psychometric difficulty.
+ */
+export function engineAdmission(input: { validation: CandidateValidation; judge: JudgeDecision | null }): { status: CandidateStatus; state: "APPROVED" | "REJECTED"; failure: string | null } {
+  const { validation, judge } = input;
+  if (validation.status !== "pass") return { status: "validator_rejected", state: "REJECTED", failure: "final_validator" };
+  if (!judge || judge.verdict === "REJECT") return { status: "judge_rejected", state: "REJECTED", failure: "final_judge" };
+  const lingering = judge.concerns.filter((concern) => !concern.startsWith("difficulty_"));
+  if (lingering.length === 0) return { status: "approved", state: "APPROVED", failure: null };
+  return { status: "judge_rejected", state: "REJECTED", failure: "unresolved_review" };
+}
+
 export function initialStatus(validation: CandidateValidation, judge: JudgeDecision | null): CandidateStatus {
-  if (validation.status !== "pass") return "validator_rejected";
-  if (!judge || judge.verdict === "REJECT") return "judge_rejected";
-  return "pending_review";
+  return engineAdmission({ validation, judge }).status;
 }
 
 export const inReviewQueue = (record: CandidateRecord) => record.status === "pending_review" || record.status === "needs_revalidation";
@@ -59,12 +75,26 @@ export const inReviewQueue = (record: CandidateRecord) => record.status === "pen
 export const currentVersion = (record: CandidateRecord) => record.versions[record.versions.length - 1];
 
 /**
+ * The return type keeps `difficultyBasis` on `"engine" | "human"`.
+ * A spread written inside `map` is not contextually typed, and TypeScript then widens the fresh `"human"` literal to `string`.
+ */
+function approveAtBand(version: CandidateVersion, band: (typeof difficultyBands)[number]): CandidateVersion {
+  return {
+    ...version,
+    candidate: {
+      ...version.candidate,
+      metadata: { ...version.candidate.metadata, approvedBand: band, difficultyBasis: "human" },
+    },
+  };
+}
+
+/**
  * Applies a human decision without losing history. EDIT appends a new version that must pass the validator again
  * (the caller validates it); APPROVE requires the latest version to pass; REJECT keeps every version for the record.
  */
 export function applyReview(
   record: CandidateRecord,
-  review: { decision: ReviewDecision; reviewer: string; notes?: string; at: string; edit?: { candidate: GeneratedQuestionCandidate; validation: CandidateValidation } },
+  review: { decision: ReviewDecision; reviewer: string; notes?: string; at: string; band?: (typeof difficultyBands)[number]; edit?: { candidate: GeneratedQuestionCandidate; validation: CandidateValidation } },
 ): CandidateRecord {
   if (!review.reviewer.trim()) throw new Error("reviewer is required");
   const latest = currentVersion(record);
@@ -74,9 +104,11 @@ export function applyReview(
   } else if (review.edit) throw new Error(`${review.decision} does not take an edit`);
   if (review.decision === "APPROVE" && latest.validation.status !== "pass") throw new Error("the latest version does not pass the validator");
 
-  const versions = review.edit
+  const drafted = review.edit
     ? [...record.versions, { version: latest.version + 1, author: `human:${review.reviewer}` as const, candidate: review.edit.candidate, validation: review.edit.validation, createdAt: review.at }]
     : record.versions;
+  const band = review.band;
+  const versions = review.decision === "APPROVE" && band ? drafted.map((version, index) => (index === drafted.length - 1 ? approveAtBand(version, band) : version)) : drafted;
   const entry: ReviewEntry = { reviewVersion: factoryVersions.review, decision: review.decision, reviewer: review.reviewer, appliesToVersion: versions[versions.length - 1].version, notes: review.notes ?? "", at: review.at };
   const status: CandidateStatus =
     review.decision === "REJECT" ? "rejected" : review.decision === "APPROVE" ? "approved" : review.edit!.validation.status === "pass" ? "pending_review" : "needs_revalidation";

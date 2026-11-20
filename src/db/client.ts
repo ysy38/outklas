@@ -3,14 +3,18 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
+import { skillLinkRows } from "@/modules/learning/mastery";
 import { ydsBlueprint, type SectionId } from "@/modules/exam/blueprint";
 import { publishBlockers } from "@/modules/content/publish";
 import type { PoolItem } from "@/modules/exam/select";
 import { hashPassword } from "@/server/password";
 import { examDraft, skillTree, stimuli, vocabDrafts, vocabLinkDrafts, type DraftItem } from "./exam-draft";
 import { packItems, packStimuli } from "./pack-draft";
+import { factoryItems } from "./factory-pack";
+import { factoryLessons } from "./factory-lessons";
+import { bandItems, bandLessons } from "./factory-bands";
 import { initSql } from "./init-sql";
-import { answers, choices, drillAnswers, events, itemSkills, itemVocabulary, items, mastery, plans, profiles, reviews, sessionItems, sessions, skills, stimuli as stimuliTable, subscriptions, vocabulary, vocabLinks } from "./schema";
+import { answers, choices, drillAnswers, errorMastery, events, itemSkills, itemVocabulary, items, mastery, plans, profiles, reviews, sessionItems, sessions, skills, stimuli as stimuliTable, subscriptions, vocabulary, vocabLinks } from "./schema";
 
 type AppDb = PgliteDatabase;
 
@@ -86,9 +90,7 @@ export async function seed(db: AppDb) {
       })),
     ),
   );
-  await db.insert(itemSkills).values(
-    examDraft.flatMap((draft) => draft.skills.map((skillId) => ({ itemId: `item-${draft.slot}`, skillId }))),
-  );
+  await db.insert(itemSkills).values(examDraft.flatMap((draft) => skillLinkRows(`item-${draft.slot}`, draft.skills)));
   const vocabRows = examDraft.flatMap((draft) =>
     (draft.vocab ?? []).map((vocabularyId) => ({ itemId: `item-${draft.slot}`, vocabularyId })),
   );
@@ -160,8 +162,56 @@ async function syncPack(db: AppDb) {
       })),
     ),
   );
-  await db.insert(itemSkills).values(packItems.flatMap((draft) => draft.skills.map((skillId) => ({ itemId: `pack-${draft.slot}`, skillId }))));
+  await db.insert(itemSkills).values(packItems.flatMap((draft) => skillLinkRows(`pack-${draft.slot}`, draft.skills)));
   packReady = true;
+}
+
+const practiceItems = [...factoryItems, ...bandItems];
+const practiceLessons: Record<number, (typeof factoryLessons)[number]> = { ...factoryLessons, ...bandLessons };
+
+function factoryChoiceRows(draft: (typeof practiceItems)[number]) {
+  const lesson = practiceLessons[draft.slot];
+  return draft.choices.map((choice, index) => ({
+    id: `factory-${draft.slot}-c${index}`,
+    itemId: `factory-${draft.slot}`,
+    position: index,
+    body: choice.text,
+    correct: Boolean(choice.correct),
+    distractorType: choice.distractor ?? null,
+    errorClass: lesson?.choices[index]?.error ?? null,
+  }));
+}
+
+async function syncFactory(db: AppDb) {
+  for (const draft of practiceItems) assertDraft(draft);
+  for (const draft of practiceItems) {
+    const id = `factory-${draft.slot}`;
+    const lesson = practiceLessons[draft.slot] ?? null;
+    const present = await db.select({ id: items.id }).from(items).where(eq(items.id, id)).limit(1);
+    if (present.length === 0) {
+      await db.insert(items).values({
+        id,
+        slot: draft.slot,
+        section: draft.section,
+        layout: draft.layout,
+        direction: null,
+        stem: draft.stem,
+        explanation: draft.explanation,
+        difficulty: draft.difficulty,
+        status: "published",
+        stimulusId: null,
+        lesson,
+      });
+      await db.insert(choices).values(factoryChoiceRows(draft));
+      await db.insert(itemSkills).values(skillLinkRows(id, draft.skills));
+      continue;
+    }
+    if (!lesson) continue;
+    await db.update(items).set({ lesson, explanation: draft.explanation, difficulty: draft.difficulty }).where(eq(items.id, id));
+    for (const choice of factoryChoiceRows(draft)) {
+      await db.update(choices).set({ errorClass: choice.errorClass }).where(eq(choices.id, choice.id));
+    }
+  }
 }
 
 async function openPglite(dataDir?: string): Promise<AppDb> {
@@ -176,7 +226,7 @@ async function openPglite(dataDir?: string): Promise<AppDb> {
 
 const schemaVersion = createHash("sha256")
   .update(initSql)
-  .update(`${examDraft.length}:${packItems.length}:${packStimuli.length}`)
+  .update(`${examDraft.length}:${packItems.length}:${packStimuli.length}:${factoryItems.length}:${bandItems.length}`)
   .digest("hex")
   .slice(0, 16);
 
@@ -190,12 +240,28 @@ async function storedVersion(db: AppDb): Promise<string | null> {
   }
 }
 
+/** Rewrites link weights from the draft order. Does not touch mastery or error_mastery rows. */
+async function syncSkillWeights(db: AppDb) {
+  const drafts = [
+    ...examDraft.map((draft) => ({ id: `item-${draft.slot}`, skills: draft.skills })),
+    ...packItems.map((draft) => ({ id: `pack-${draft.slot}`, skills: draft.skills })),
+    ...practiceItems.map((draft) => ({ id: `factory-${draft.slot}`, skills: draft.skills })),
+  ];
+  for (const draft of drafts) {
+    if (draft.skills.length === 0) continue;
+    await db.delete(itemSkills).where(eq(itemSkills.itemId, draft.id));
+    await db.insert(itemSkills).values(skillLinkRows(draft.id, draft.skills));
+  }
+}
+
 /** Full migrate, seed and pack sync only when the schema or content version changes. */
 async function prepare(db: AppDb) {
   if ((await storedVersion(db)) === schemaVersion) return;
   await migrate(db);
   await seed(db);
   await syncPack(db);
+  await syncFactory(db);
+  await syncSkillWeights(db);
   await db.execute(
     sql`insert into app_meta (key, value) values ('schema', ${schemaVersion}) on conflict (key) do update set value = excluded.value`,
   );
@@ -276,7 +342,7 @@ export async function publishedPool(scope: "study" | "mock" = "study"): Promise<
   const hit = poolCache.get(scope);
   if (hit && Date.now() - hit.at < 5 * 60 * 1000) return hit.rows;
   const db = await getDb();
-  const [rows, links] = await Promise.all([
+  const [rows, links, choiceRows] = await Promise.all([
     db
       .select({
         id: items.id,
@@ -289,12 +355,20 @@ export async function publishedPool(scope: "study" | "mock" = "study"): Promise<
       .where(inArray(items.status, scope === "mock" ? ["published", "booklet"] : ["published"]))
       .orderBy(asc(items.slot)),
     db.select().from(itemSkills),
+    db.select({ itemId: choices.itemId, errorClass: choices.errorClass }).from(choices),
   ]);
   const byItem = new Map<string, string[]>();
   for (const link of links) {
     const list = byItem.get(link.itemId) ?? [];
     list.push(link.skillId);
     byItem.set(link.itemId, list);
+  }
+  const errorsByItem = new Map<string, string[]>();
+  for (const choice of choiceRows) {
+    if (!choice.errorClass) continue;
+    const list = errorsByItem.get(choice.itemId) ?? [];
+    list.push(choice.errorClass);
+    errorsByItem.set(choice.itemId, list);
   }
   const mapped = rows
     .filter((row) => row.slot != null)
@@ -305,9 +379,10 @@ export async function publishedPool(scope: "study" | "mock" = "study"): Promise<
       stimulusId: row.stimulusId,
       difficulty: row.difficulty,
       skillIds: byItem.get(row.id) ?? [],
+      errorClasses: [...new Set(errorsByItem.get(row.id) ?? [])],
     }));
   poolCache.set(scope, { at: Date.now(), rows: mapped });
   return mapped;
 }
 
-export { and, asc, desc, eq, gte, inArray, lt, sql, answers, choices, drillAnswers, events, itemSkills, items, mastery, plans, profiles, reviews, sessionItems, sessions, skills, subscriptions, vocabulary, vocabLinks, stimuliTable };
+export { and, asc, desc, eq, gte, inArray, lt, sql, answers, choices, drillAnswers, errorMastery, events, itemSkills, items, mastery, plans, profiles, reviews, sessionItems, sessions, skills, subscriptions, vocabulary, vocabLinks, stimuliTable };

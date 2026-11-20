@@ -17,6 +17,7 @@ function pool(): PoolItem[] {
         stimulusId,
         difficulty: (slot % 5) + 1,
         skillIds: [band.section],
+        errorClasses: [],
       });
     }
   }
@@ -142,5 +143,20 @@ describe("select", () => {
     const cloze = picked.filter((item) => item.section === "cloze").length;
     expect(cloze).toBeLessThanOrEqual(4);
     expect(picked).toHaveLength(10);
+  });
+
+  it("serves an item that carries the learner's weak error class first", () => {
+    const items = pool().filter((item) => item.section === "sentence").slice(0, 2);
+    items[0] = { ...items[0], errorClasses: ["scope"] };
+    items[1] = { ...items[1], errorClasses: ["discourse_relation"] };
+    const picked = selectItems({
+      pool: items,
+      count: 1,
+      seenIds: [],
+      preferredSections: [],
+      difficulty: 3,
+      weakErrors: ["discourse_relation"],
+    });
+    expect(picked[0]?.errorClasses).toContain("discourse_relation");
   });
 });

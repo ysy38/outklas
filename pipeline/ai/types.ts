@@ -6,7 +6,7 @@ import type { GeneratedQuestionCandidate } from "@/modules/factory/candidate";
 import type { ExperimentalJudgeReport, GeneratedDistractor, LexicalDiagnostics } from "@/modules/factory/distractor";
 import type { DistractorSpec } from "@/modules/factory/distractor-spec";
 import type { ItemCore, ItemExplanation } from "@/modules/factory/explanation";
-import type { QuestionSkeleton, SkeletonCheckReport } from "@/modules/factory/skeleton";
+import type { DifficultyStrategy, DistractorBlueprint, PlannerDecline, QuestionSkeleton, SkeletonCheckReport } from "@/modules/factory/skeleton";
 import type { NodeRef } from "@/modules/knowledge/graph";
 import type { DistractorCheckSummary } from "./prompts/judge.v2";
 import type { JudgeReport, OptionAcceptability } from "@/modules/factory/judge";
@@ -39,14 +39,28 @@ export type ModelRequest = {
  * `inputTokens` is the uncached input. Providers with prompt caching report the cached prefix separately: tokens
  * written to the cache (`cacheWrite1hTokens` is the part written with a one-hour lifetime) and tokens read from it.
  */
-export type Usage = { inputTokens: number; outputTokens: number; totalTokens: number; cacheWriteTokens?: number; cacheWrite1hTokens?: number; cacheReadTokens?: number };
+export type Usage = {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  cacheWriteTokens?: number;
+  cacheWrite1hTokens?: number;
+  cacheReadTokens?: number;
+  /** Present only when the provider reports a reasoning-token field. Never inferred from the visible output. */
+  reasoningTokens?: number;
+};
 
-export type ModelResponse = { text: string; model: string; usage: Usage; finishReason?: string };
+export type ModelResponse = { text: string; model: string; usage: Usage; finishReason?: string; servedProvider?: string };
 
 /** Transport only: no prompts, no roles. Adding OpenAI or Claude means adding one of these. */
 export interface AIProvider {
   readonly name: string;
   generate(request: ModelRequest): Promise<ModelResponse>;
+  /**
+   * Controls the provider adds when it sends the request, such as a reasoning default or a token floor.
+   * They belong in the cache key and are not sent a second time.
+   */
+  wireIdentity?(request: ModelRequest): Record<string, unknown>;
 }
 
 export type AIResult<T> = {
@@ -57,6 +71,8 @@ export type AIResult<T> = {
   requestHash: string;
   usage: Usage;
   cached: boolean;
+  finishReason?: string;
+  servedProvider?: string;
 };
 
 export type AnalyzerInput = { question: ReconstructedQuestion; questionType: string; answerKey: string; examLabel: string };
@@ -91,11 +107,13 @@ export interface Judge {
  * the spec, the answer position or the taxonomy; their outputs are text that deterministic code places and checks.
  */
 export interface ItemFactory {
-  skeleton(spec: QuestionSpec, feedback: string[]): Promise<AIResult<QuestionSkeleton>>;
+  skeleton(spec: QuestionSpec, feedback: string[], avoided?: string[]): Promise<AIResult<QuestionSkeleton | PlannerDecline>>;
   /** Independent semantic check of the stem and key before any distractor is written (skeleton gate). */
   checkSkeleton?(input: { spec: QuestionSpec; skeleton: QuestionSkeleton }): Promise<AIResult<SkeletonCheckReport>>;
-  distractor(input: { dspec: DistractorSpec; skeleton: QuestionSkeleton; usedConnectors: NodeRef[]; feedback: string[] }): Promise<AIResult<GeneratedDistractor>>;
-  judgeDistractor(input: { dspec: DistractorSpec; skeleton: QuestionSkeleton; text: string; lexical?: LexicalDiagnostics }): Promise<AIResult<ExperimentalJudgeReport>>;
+  /** answer_first only: four wrong beliefs for an accepted stem and correct continuation. Same generator role. */
+  planDistractors?(input: { spec: QuestionSpec; skeleton: QuestionSkeleton; feedback: string[] }): Promise<AIResult<{ distractorBlueprints: DistractorBlueprint[] }>>;
+  distractor(input: { dspec: DistractorSpec; skeleton: QuestionSkeleton; usedConnectors: NodeRef[]; feedback: string[]; strategy?: DifficultyStrategy | null; blueprints?: QuestionSkeleton["distractorBlueprints"] }): Promise<AIResult<GeneratedDistractor>>;
+  judgeDistractor(input: { dspec: DistractorSpec; skeleton: QuestionSkeleton; text: string; lexical?: LexicalDiagnostics; strategy?: DifficultyStrategy | null }): Promise<AIResult<ExperimentalJudgeReport>>;
   explain(input: { spec: QuestionSpec; core: ItemCore; dspecs: DistractorSpec[]; feedback: string[] }): Promise<AIResult<ItemExplanation>>;
 }
 export type Evaluator = Judge;

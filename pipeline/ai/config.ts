@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { parseExperiments, type FactoryExperiment } from "@/modules/factory/experiments";
 import { defaultFactoryThresholds, type FactoryThresholds } from "@/modules/factory/thresholds";
 import { promptCacheModes, type PromptCacheMode } from "./anthropic";
@@ -57,7 +59,18 @@ const thresholdEnv: Record<keyof FactoryThresholds, string> = {
   copiedPhraseWords: "COPIED_PHRASE_WORDS",
 };
 
-export const providers = ["gemini", "nvidia", "anthropic", "openrouter"] as const;
+export const providers = ["gemini", "nvidia", "anthropic", "openrouter", "gateway"] as const;
+
+/**
+ * FACTORY_DISTRACTOR_JUDGE: `rubric` asks for eight scored dimensions (distractor-judge.v3) and shows the intended correct option.
+ * The experiment judges built on that rubric show it too. `verdict` (distractor-judge.v7) does not show the key, including when experiments are on.
+ */
+export const distractorJudgeStyles = ["rubric", "verdict"] as const;
+export type DistractorJudgeStyle = (typeof distractorJudgeStyles)[number];
+
+/** plan_first keeps the stem, the key, and the four beliefs in one generator call. answer_first writes the stem and the key first. */
+export const productionSequences = ["plan_first", "answer_first"] as const;
+export type ProductionSequence = (typeof productionSequences)[number];
 export type ProviderName = (typeof providers)[number];
 
 /**
@@ -87,6 +100,16 @@ export type AIConfig = {
   openrouterBaseUrl: string;
   /** OPENROUTER_DATA_COLLECTION: allow (default) or deny (prefer no-train / no-log endpoints). */
   openrouterDataCollection?: OpenRouterDataPolicy;
+  gatewayBaseUrl?: string;
+  /** AI_GATEWAY_NO_TRAINING: route only to providers that do not train on prompts (on unless set to off). */
+  gatewayNoTraining?: boolean;
+  /** GATEWAY_ONLY: hard provider allowlist for this process. Unset leaves routing unchanged. */
+  gatewayOnly?: string[];
+  /** FACTORY_PLANNER_MAX_OUTPUT_TOKENS: relational skeleton budget for one experiment process. Unset keeps 3072. */
+  plannerMaxOutputTokens?: number;
+  /** FACTORY_SCENARIO_BRIEFS: spec id to assigned situation. Unset means the writer invents the situation. */
+  scenarioBriefs?: Record<string, string>;
+  distractorJudgeStyle?: DistractorJudgeStyle;
   models: Record<ModelRole, string>;
   thresholds: FactoryThresholds;
   /** Distractor revisions switched on (FACTORY_EXPERIMENTS); empty is the baseline. */
@@ -98,6 +121,11 @@ export type AIConfig = {
   seed: number;
   /** FACTORY_SKELETON_GATE: semantic skeleton check before distractors (on unless set to off, 0 or false). */
   skeletonGate: boolean;
+  /**
+   * FACTORY_PRODUCTION_SEQUENCE: plan_first (default) plans four wrong beliefs in the skeleton call.
+   * answer_first writes the stem and the correct continuation first, then plans. Only relational items split the call.
+   */
+  productionSequence: ProductionSequence;
   /** ANTHROPIC_PROMPT_CACHE: 5m (default), 1h or off; the cache lifetime of the system prompt. */
   promptCache?: PromptCacheMode;
   /** FACTORY_MAX_CALLS, FACTORY_MAX_REGENERATIONS, FACTORY_MAX_TOKENS, FACTORY_MAX_COST_USD. */
@@ -113,6 +141,20 @@ export type AIConfig = {
 };
 
 const countThresholds = new Set<keyof FactoryThresholds>(["answerSharedContentWords", "stemSharedContentWords", "copiedPhraseWords"]);
+
+function loadScenarioBriefs(env: Record<string, string | undefined>): Record<string, string> | undefined {
+  const raw = env.FACTORY_SCENARIO_BRIEFS?.trim();
+  if (!raw) return undefined;
+  if (!existsSync(path.resolve(raw))) throw new Error(`FACTORY_SCENARIO_BRIEFS points to ${raw}, which does not exist`);
+  const parsed = JSON.parse(readFileSync(path.resolve(raw), "utf8")) as unknown;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("FACTORY_SCENARIO_BRIEFS must be a JSON object of spec id to situation text");
+  const briefs: Record<string, string> = {};
+  for (const [id, text] of Object.entries(parsed)) {
+    if (typeof text !== "string" || !text.trim()) throw new Error(`FACTORY_SCENARIO_BRIEFS entry ${id} must be text`);
+    briefs[id] = text.trim();
+  }
+  return briefs;
+}
 
 function loadThresholds(env: Record<string, string | undefined>): FactoryThresholds {
   return Object.fromEntries(
@@ -144,6 +186,14 @@ export function loadAIConfig(env: Record<string, string | undefined> = process.e
   if (!Number.isInteger(seed) || seed < 1) throw new Error("FACTORY_SEED must be a whole number of at least 1");
   const promptCache = (env.ANTHROPIC_PROMPT_CACHE?.trim() || "5m") as PromptCacheMode;
   if (!promptCacheModes.includes(promptCache)) throw new Error(`ANTHROPIC_PROMPT_CACHE must be one of ${promptCacheModes.join(", ")}`);
+  const plannerRaw = env.FACTORY_PLANNER_MAX_OUTPUT_TOKENS?.trim();
+  const plannerMaxOutputTokens = plannerRaw ? Number(plannerRaw) : undefined;
+  if (plannerRaw && (!Number.isInteger(plannerMaxOutputTokens) || plannerMaxOutputTokens! < 1024 || plannerMaxOutputTokens! > 32768)) {
+    throw new Error("FACTORY_PLANNER_MAX_OUTPUT_TOKENS must be a whole number from 1024 to 32768");
+  }
+  const gatewayOnly = env.GATEWAY_ONLY?.split(",").map((name) => name.trim()).filter(Boolean);
+  if (gatewayOnly?.some((name) => !/^[a-z0-9-]+$/.test(name))) throw new Error("GATEWAY_ONLY must be a comma-separated list of provider slugs");
+  const scenarioBriefs = loadScenarioBriefs(env);
   const thinking: Partial<Record<ModelRole, ThinkingLevel>> = {};
   for (const role of Object.keys(modelEnv) as ModelRole[]) {
     const names = modelEnv[role].map((name) => name.replace(/_MODEL$/, "_THINKING"));
@@ -157,7 +207,12 @@ export function loadAIConfig(env: Record<string, string | undefined> = process.e
     nvidia: env.NVIDIA_API_KEY?.trim() || null,
     anthropic: env.CLAUDE_API_KEY?.trim() || env.ANTHROPIC_API_KEY?.trim() || null,
     openrouter: env.OPENROUTER_API_KEY?.trim() || null,
+    gateway: env.AI_GATEWAY_API_KEY?.trim() || null,
   };
+  const distractorJudgeStyle = (env.FACTORY_DISTRACTOR_JUDGE?.trim() || "rubric") as DistractorJudgeStyle;
+  if (!distractorJudgeStyles.includes(distractorJudgeStyle)) throw new Error(`FACTORY_DISTRACTOR_JUDGE must be one of ${distractorJudgeStyles.join(", ")}`);
+  const productionSequence = (env.FACTORY_PRODUCTION_SEQUENCE?.trim() || "plan_first") as ProductionSequence;
+  if (!productionSequences.includes(productionSequence)) throw new Error(`FACTORY_PRODUCTION_SEQUENCE must be one of ${productionSequences.join(", ")}`);
   const openrouterDataCollection = (env.OPENROUTER_DATA_COLLECTION?.trim() || "allow") as OpenRouterDataPolicy;
   if (!openrouterDataPolicies.includes(openrouterDataCollection)) {
     throw new Error(`OPENROUTER_DATA_COLLECTION must be one of ${openrouterDataPolicies.join(", ")}`);
@@ -173,6 +228,13 @@ export function loadAIConfig(env: Record<string, string | undefined> = process.e
     nvidiaBaseUrl: env.NVIDIA_API_URL?.trim() || "https://integrate.api.nvidia.com/v1",
     openrouterBaseUrl: env.OPENROUTER_API_URL?.trim() || "https://openrouter.ai/api/v1",
     openrouterDataCollection,
+    gatewayBaseUrl: env.AI_GATEWAY_URL?.trim() || "https://ai-gateway.vercel.sh/v1",
+    gatewayNoTraining: !/^(off|0|false|no)$/i.test(env.AI_GATEWAY_NO_TRAINING?.trim() ?? ""),
+    ...(gatewayOnly?.length ? { gatewayOnly } : {}),
+    ...(plannerMaxOutputTokens ? { plannerMaxOutputTokens } : {}),
+    ...(scenarioBriefs ? { scenarioBriefs } : {}),
+    distractorJudgeStyle,
+    productionSequence,
     models,
     thresholds: loadThresholds(env),
     experiments: parseExperiments(env.FACTORY_EXPERIMENTS),

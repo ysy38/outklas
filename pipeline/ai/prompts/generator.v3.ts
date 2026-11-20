@@ -9,6 +9,12 @@ export const generatorPromptVersion = "generator.v3";
 const name = (value: NodeRef | null) => (value ? parseRef(value).slug.replaceAll("_", " ") : "none");
 const words = (list: NodeRef[]) => list.map((value) => `"${connectorSurface(value)}"`).join(", ");
 
+function bandNote(band: QuestionSpec["difficulty"]["band"]): string {
+  if (band === "easy") return "EASY: B1 and one plain clause, with no embedded clause and only words a B1 reader knows. The obstacle is explicit, and the concession is visible on one reading. Wrong options wear the wrong relation openly.";
+  if (band === "hard") return "HARD: C1. Inside the correct option, one which/who/that clause that contains both the precise word and the fact a reader needs in order to expect the opposite outcome. A clause that only adds when, how long, who confirmed it, or a restatement does not count. Difficulty comes from that fact, not from a second obstacle or a list of three hardships.";
+  return "MEDIUM: B2. Ordinary academic vocabulary a B2 reader knows, and no term that only a C1 reader would know. The connector is needed to confirm the concession, and two wrong options stay plausible until that check.";
+}
+
 /* Static layers: identical for every spec of the same type and family, so they sit in the system instruction. */
 
 const role = `ROLE
@@ -18,6 +24,7 @@ const ydsRules = `YDS RULES
 - Five options, A to E, exactly one defensible correct answer; every wrong option fails for one clear, principled reason.
 - Academic register on general-interest academic topics (science, health, history, society, education). No trivia, no culture-specific knowledge, no named real people, no current events, no brand names, no statistics a candidate would need to know.
 - Standard written English (British or American, consistent), grammatically flawless, natural, never telegraphic.
+- Sound like a human exam setter. One concrete situation. No stacked abstractions, no adjective triads, no thesaurus display. Do not use: interplay, tapestry, landscape, delve, pivotal, robust, underscore, testament, shed light, it is worth noting, not only... but also as decoration. A rare word earns its place by being the exact term, not by sounding advanced.
 - No accidental clues: the correct option must not be the longest or the only one echoing words of the stem, and the options must be parallel in length and structure.
 - Never use the words "correct", "answer", "option" or option letters inside the item text.`;
 
@@ -77,7 +84,8 @@ Misconception the item probes: ${name(spec.targetMisconception)}. Difficulty: ${
 - Vocabulary up to CEFR ${spec.vocabularyConstraints.cefrCeiling}, academic register. Never in a wrong option: ${spec.vocabularyConstraints.forbiddenInDistractors.map((word) => `"${word}"`).join(", ")}.
 - Option layout (letter → role):
 ${slots.map((line) => `  ${line}`).join("\n")}
-- Exactly one option may be defended as correct. Use five different connectors.`;
+- Exactly one option may be defended as correct. Use five different connectors.
+- ${bandNote(spec.difficulty.band)}`;
   const specForModel = { ...spec, evidenceReferences: undefined };
   return [target, `QUESTION SPEC\n${JSON.stringify(specForModel, null, 1)}`, constraints].join("\n\n");
 }

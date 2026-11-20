@@ -6,11 +6,12 @@ import { analysisDraft, blindSolution, coerceAnalysisJson, transcription } from 
 import type { ReconstructedQuestion } from "@/modules/analysis/surface";
 import { generatedQuestionCandidate, type GeneratedQuestionCandidate } from "@/modules/factory/candidate";
 import { itemAuditReport } from "@/modules/factory/audit";
-import { distractorJudgeReport, distractorJudgeReportFor, distractorVerdict, generatedDistractor, reportFromVerdict } from "@/modules/factory/distractor";
+import { distractorJudgeReport, distractorJudgeReportFor, generatedDistractor, reportFromStandalone, standaloneDistractorReview } from "@/modules/factory/distractor";
 import { itemExplanation } from "@/modules/factory/explanation";
 import { judgeReport, optionAcceptability } from "@/modules/factory/judge";
 import { experimentGeneration } from "@/modules/factory/experiments";
-import { questionSkeleton, skeletonCheckReport } from "@/modules/factory/skeleton";
+import { distractorPlanOutput, questionSkeleton, relationalPlannerOutput, settleRelationalPlanner, skeletonCheckReport } from "@/modules/factory/skeleton";
+import { assignedStrategy } from "@/modules/factory/strategy";
 import { cachedGenerate } from "./cache";
 import { AnthropicProvider } from "./anthropic";
 import { loadAIConfig, parseModel, sameModel, type AIConfig, type ModelRole, type ProviderName } from "./config";
@@ -27,13 +28,13 @@ import { distractorExperimentalPromptVersion, distractorSystemFor, distractorUse
 import { distractorRevisionPromptVersion, distractorRevisionSystem, distractorRevisionUser } from "./prompts/distractor.v6";
 import { distractorJudgeRevisionPromptVersion, distractorJudgeRevisionSystem, distractorJudgeRevisionUser } from "./prompts/distractor-judge.v6";
 import { distractorVerdictPromptVersion, distractorVerdictResponseSchema, distractorVerdictSystem, distractorVerdictUser } from "./prompts/distractor-judge.v7";
-import { skeletonCheckPromptVersion, skeletonCheckResponseSchema, skeletonCheckSystem, skeletonCheckUser } from "./prompts/skeleton-check.v1";
+import { skeletonCheckPromptVersion, skeletonCheckResponseSchema, skeletonCheckSystem, skeletonCheckUser } from "./prompts/skeleton-check.v2";
 import { itemAuditPromptVersion, itemAuditResponseSchema, itemAuditSystem, itemAuditUser } from "./prompts/item-audit.v2";
 import { explanationPromptVersion, explanationResponseSchema, explanationSystem, explanationUser } from "./prompts/explanation.v2";
 import { responseSchema } from "./prompts/schema";
 import { generatorPromptVersion, generatorResponseSchema, generatorSystem, generatorUser } from "./prompts/generator.v3";
 import { judgePromptVersion, judgeResponseSchema, judgeSystem, judgeUser } from "./prompts/judge.v2";
-import { skeletonPromptVersion, skeletonResponseSchema, skeletonSystem, skeletonUser } from "./prompts/skeleton.v1";
+import { distractorPlanPromptVersion, distractorPlanResponseSchema, distractorPlanSystem, distractorPlanUser, skeletonPromptVersion, skeletonResponseSchema, skeletonSystem, skeletonUser } from "./prompts/skeleton.v2";
 import { solvePromptVersion, solveSystem, solveUser, transcribePromptVersion, transcribeSystem, transcribeUser } from "./prompts/verifier.v1";
 import type { AIProvider, AIResult, AIRole, AIService, ModelRequest, Usage } from "./types";
 
@@ -41,6 +42,11 @@ export class AIOutputError extends Error {
   constructor(
     message: string,
     readonly finishReason?: string,
+    readonly usage?: Usage,
+    readonly servedProvider?: string,
+    readonly requestHash?: string,
+    /** True when every attempt of this call was served from the local cache. A replay is not a new provider request. */
+    readonly cached = false,
   ) {
     super(message);
   }
@@ -61,7 +67,7 @@ const notImplemented = (role: AIRole) => async (): Promise<never> => {
 
 const addUsage = (a: Usage, b: Usage): Usage => {
   const sum: Usage = { inputTokens: a.inputTokens + b.inputTokens, outputTokens: a.outputTokens + b.outputTokens, totalTokens: a.totalTokens + b.totalTokens };
-  for (const key of ["cacheWriteTokens", "cacheWrite1hTokens", "cacheReadTokens"] as const) if (a[key] || b[key]) sum[key] = (a[key] ?? 0) + (b[key] ?? 0);
+  for (const key of ["cacheWriteTokens", "cacheWrite1hTokens", "cacheReadTokens", "reasoningTokens"] as const) if (a[key] != null || b[key] != null) sum[key] = (a[key] ?? 0) + (b[key] ?? 0);
   return sum;
 };
 
@@ -151,8 +157,11 @@ function parse<T>(text: string, schema: z.ZodType<T>): { ok: true; value: T } | 
 export async function structuredCall<T>(provider: AIProvider, promptVersion: string, schema: z.ZodType<T>, request: ModelRequest): Promise<AIResult<T>> {
   const full: ModelRequest = { ...request, jsonSchema: request.jsonSchema ?? responseSchema(schema) };
   const first = await cachedGenerate(provider, promptVersion, full);
+  const bill = (hit: { response: { usage: Usage }; cached: boolean }, total: Usage) => (hit.cached ? total : addUsage(total, hit.response.usage));
+  let billed: Usage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+  billed = bill(first, billed);
   if (first.response.finishReason && declined.has(first.response.finishReason)) {
-    throw new AIOutputError(`${promptVersion}: the model declined (${first.response.finishReason})`, first.response.finishReason);
+    throw new AIOutputError(`${promptVersion}: the model declined (${first.response.finishReason})`, first.response.finishReason, billed, first.response.servedProvider, first.requestHash, first.cached);
   }
   let usage = first.response.usage;
   let outcome = parse(first.response.text, schema);
@@ -164,10 +173,22 @@ export async function structuredCall<T>(provider: AIProvider, promptVersion: str
     };
     last = await cachedGenerate(provider, promptVersion, repair);
     usage = addUsage(usage, last.response.usage);
+    billed = bill(last, billed);
     outcome = parse(last.response.text, schema);
   }
-  if (!outcome.ok) throw new AIOutputError(`${promptVersion}: ${outcome.error}`, last.response.finishReason);
-  return { value: outcome.value, provider: provider.name, model: last.response.model, promptVersion, requestHash: last.requestHash, usage, cached: first.cached && last.cached };
+  const spent = billed.inputTokens + billed.outputTokens + (billed.cacheReadTokens ?? 0) + (billed.cacheWriteTokens ?? 0) + (billed.reasoningTokens ?? 0) > 0;
+  if (!outcome.ok) throw new AIOutputError(`${promptVersion}: ${outcome.error}`, last.response.finishReason, spent ? billed : undefined, last.response.servedProvider, last.requestHash, first.cached && last.cached);
+  return {
+    value: outcome.value,
+    provider: provider.name,
+    model: last.response.model,
+    promptVersion,
+    requestHash: last.requestHash,
+    usage,
+    cached: first.cached && last.cached,
+    ...(last.response.finishReason ? { finishReason: last.response.finishReason } : {}),
+    ...(last.response.servedProvider ? { servedProvider: last.response.servedProvider } : {}),
+  };
 }
 
 /** Retries are logged for the pilot's pipeline-error count; the key never appears in them. */
@@ -233,6 +254,7 @@ export function createProvider(config: AIConfig, name: ProviderName = config.pro
         apiKey: config.keys.gateway ?? "",
         baseUrl: config.gatewayBaseUrl,
         noTraining: config.gatewayNoTraining ?? true,
+        ...(config.gatewayOnly?.length ? { only: config.gatewayOnly } : {}),
         tags: ["app:tomo-factory"],
         ...common,
       });
@@ -256,11 +278,12 @@ export function createAIService(config: AIConfig = loadAIConfig(), providers?: P
   const route = typeof providers === "function" ? providers : providerRouter(config, providers);
   const experiments = config.experiments ?? [];
   const generation = experimentGeneration(experiments);
-  const salt = config.seed && config.seed > 1 ? { cacheSalt: `seed:${config.seed}` } : {};
-  const call = <T>(role: ModelRole, promptVersion: string, schema: z.ZodType<T>, request: Omit<ModelRequest, "model">) => {
+  const seedSalt = config.seed && config.seed > 1 ? `seed:${config.seed}` : "";
+  const call = <T>(role: ModelRole, promptVersion: string, schema: z.ZodType<T>, request: Omit<ModelRequest, "model">, identity?: string) => {
     const target = route(config.models[role]);
     const thinking = config.thinking?.[role];
-    return structuredCall(target.provider, promptVersion, schema, { ...request, ...(thinking ? { thinking } : {}), ...salt, model: target.model });
+    const cacheSalt = [seedSalt, identity].filter(Boolean).join("|");
+    return structuredCall(target.provider, promptVersion, schema, { ...request, ...(thinking ? { thinking } : {}), ...(cacheSalt ? { cacheSalt } : {}), model: target.model });
   };
   return {
     analyzer: {
@@ -326,14 +349,32 @@ export function createAIService(config: AIConfig = loadAIConfig(), providers?: P
       },
     },
     factory: {
-      skeleton: (spec, feedback) =>
-        call("generator", skeletonPromptVersion, questionSkeleton, {
-          system: skeletonSystem(spec),
-          parts: [{ text: skeletonUser(spec, feedback) }],
-          jsonSchema: skeletonResponseSchema(),
+      skeleton: async (spec, feedback, avoided = []) => {
+        const brief = config.scenarioBriefs?.[spec.id];
+        if (config.scenarioBriefs && !brief) throw new Error(`FACTORY_SCENARIO_BRIEFS has no situation for ${spec.id}`);
+        const strategy = assignedStrategy(spec);
+        const answerFirst = config.productionSequence === "answer_first" && strategy === "relational_inference";
+        const sequence = answerFirst ? "answer_first" : "plan_first";
+        const request = {
+          system: skeletonSystem(spec, sequence),
+          parts: [{ text: skeletonUser(spec, feedback, avoided, brief, sequence) }],
+          jsonSchema: skeletonResponseSchema(spec.difficulty.band, answerFirst ? null : strategy, sequence),
           temperature: 0.8,
-          maxOutputTokens: 2048,
-        }),
+          maxOutputTokens: !answerFirst && strategy === "relational_inference" ? (config.plannerMaxOutputTokens ?? 3072) : 2048,
+        };
+        if (strategy !== "relational_inference" || answerFirst) return call("generator", skeletonPromptVersion, questionSkeleton, request, spec.id);
+        const result = await call("generator", skeletonPromptVersion, relationalPlannerOutput, request, spec.id);
+        const settled = settleRelationalPlanner(result.value);
+        return { ...result, value: settled };
+      },
+      planDistractors: async (input) =>
+        call("generator", distractorPlanPromptVersion, distractorPlanOutput, {
+          system: distractorPlanSystem(),
+          parts: [{ text: distractorPlanUser(input.spec, input.skeleton, input.feedback) }],
+          jsonSchema: distractorPlanResponseSchema(),
+          temperature: 0.4,
+          maxOutputTokens: config.plannerMaxOutputTokens ?? 3072,
+        }, input.spec.id),
       checkSkeleton: async (input) => {
         assertIndependent(config, "skeleton");
         return call("distractorJudge", skeletonCheckPromptVersion, skeletonCheckReport, {
@@ -370,6 +411,16 @@ export function createAIService(config: AIConfig = loadAIConfig(), providers?: P
             }),
       judgeDistractor: async (input) => {
         assertIndependent(config, "distractor");
+        if (config.distractorJudgeStyle === "verdict") {
+          const judged = await call("distractorJudge", distractorVerdictPromptVersion, standaloneDistractorReview, {
+            system: distractorVerdictSystem,
+            parts: [{ text: distractorVerdictUser(input) }],
+            jsonSchema: distractorVerdictResponseSchema(),
+            temperature: 0,
+            maxOutputTokens: 1024,
+          });
+          return { ...judged, value: reportFromStandalone(judged.value) };
+        }
         if (generation === "second")
           return call("distractorJudge", distractorJudgeRevisionPromptVersion, distractorJudgeReportFor(experiments), {
             system: distractorJudgeRevisionSystem(experiments),
@@ -386,16 +437,6 @@ export function createAIService(config: AIConfig = loadAIConfig(), providers?: P
             temperature: 0,
             maxOutputTokens: 2048,
           });
-        if (config.distractorJudgeStyle === "verdict") {
-          const judged = await call("distractorJudge", distractorVerdictPromptVersion, distractorVerdict, {
-            system: distractorVerdictSystem,
-            parts: [{ text: distractorVerdictUser(input) }],
-            jsonSchema: distractorVerdictResponseSchema(),
-            temperature: 0,
-            maxOutputTokens: 1024,
-          });
-          return { ...judged, value: reportFromVerdict(judged.value) };
-        }
         return call("distractorJudge", distractorJudgePromptVersion, distractorJudgeReport, {
           system: distractorJudgeSystem,
           parts: [{ text: distractorJudgeUser(input) }],

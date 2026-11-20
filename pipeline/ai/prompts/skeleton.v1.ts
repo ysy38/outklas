@@ -10,6 +10,12 @@ export const skeletonPromptVersion = "skeleton.v1";
 const name = (value: NodeRef | null) => (value ? parseRef(value).slug.replaceAll("_", " ") : "none");
 const quoted = (list: string[]) => list.map((word) => `"${word}"`).join(", ");
 
+function bandNote(band: QuestionSpec["difficulty"]["band"]): string {
+  if (band === "easy") return "EASY: B1 and one plain clause, with no embedded clause and only words a B1 reader knows. The obstacle is explicit. An impossible result is not a concession.";
+  if (band === "hard") return "HARD: C1. Inside the correct option, one which/who/that clause that contains both the precise word and the fact a reader needs in order to expect the opposite outcome. A clause that only adds when, how long, who confirmed it, or a restatement does not count: 'rescinded the permit, which it had issued a fortnight earlier' fails, because cancelling the permit is already the obstacle. 'a storage solution that had turned hypoxic' works, because the clash depends on the solution having lost oxygen. An impossible result is not a concession.";
+  return "MEDIUM: B2. Ordinary academic vocabulary a B2 reader knows, and no term that only a C1 reader would know. An impossible result is not a concession.";
+}
+
 /* Static layers. */
 
 export const skeletonHeader = "SKELETON WRITER";
@@ -19,7 +25,8 @@ You write the skeleton of one entirely original item for the Turkish YDS English
 
 const ydsRules = `YDS RULES
 - Academic register on general-interest academic topics. No trivia, no named real people, no current events, no brand names, no statistics a candidate would need to know.
-- Standard written English, grammatically flawless, natural, never telegraphic.`;
+- Standard written English, grammatically flawless, natural, never telegraphic.
+- Sound like a human exam setter. One concrete situation. No adjective triads, no empty abstractions. Do not use: interplay, tapestry, landscape, delve, pivotal, robust, underscore, testament, shed light.`;
 
 const typeRules: Record<string, string> = {
   "question_type:sentence_completion": `SENTENCE COMPLETION SKELETON
@@ -32,6 +39,7 @@ const typeRules: Record<string, string> = {
 const relationRules: Record<string, string> = {
   "discourse_relation:concession": `RELATION: concession
 - The main clause states an outcome. The correct option states a fact that would clearly and directly lead a reader to expect the OPPOSITE outcome (an obstacle, a disadvantage, a reason against). The clash between expectation and outcome must be strong and obvious.
+- The outcome must stay possible. An obstacle that makes the result impossible (a sharp image through an opaque mirror, a complete record of speakers who were already dead) is not a concession.
 - Make the main clause specific enough that only this unexpected-outcome reading completes it well: avoid main clauses that almost any reason, condition or time clause could complete.`,
 };
 
@@ -60,6 +68,7 @@ export function skeletonUser(spec: QuestionSpec, feedback: string[] = []): strin
     `- The correct option opens with one of: ${quoted(spec.answerConstraints.connectors.map(connectorSurface))}.`,
     `- Never in the stem: ${quoted(banned)}.`,
     `- Vocabulary up to CEFR ${spec.vocabularyConstraints.cefrCeiling}.`,
+    `- ${bandNote(spec.difficulty.band)}`,
   ];
   if (feedback.length) lines.push("", "YOUR PREVIOUS SKELETON WAS REJECTED BY AUTOMATIC CHECKS", ...feedback.map((line) => `- ${line}`), "Write a new skeleton that fixes these problems.");
   return lines.join("\n");

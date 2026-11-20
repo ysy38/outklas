@@ -17,6 +17,10 @@ export const transcribeUser = (label: string) => `Transcribe this image (${label
 
 export const solvePromptVersion = "verifier-solve.v1";
 
-export const solveSystem = `You are taking the Turkish YDS English exam. Choose the single best option for the item. Return the option letter, your confidence from 0 to 1, and a rationale of at most 25 words in your own words; do not copy five or more consecutive words from the item.`;
+export const solveSystem = `You are taking the Turkish YDS English exam. Choose the single best option for the item.
+Return the option letter, your confidence from 0 to 1, and a rationale of at most 25 words in your own words; do not copy five or more consecutive words from the item.
+Also return stemEvidence: the short stem expression the choice rests on, at most four consecutive words copied from the stem. Name that wording, not a topic.
+Return equallyDefensible: the letter of another option that is as suitable as your answer once all five are compared, or null when none is. A sentence that is only grammatical is not equally defensible.
+Return uncertain: true when the stem does not settle the choice. A matching letter does not prove the reason.`;
 
 export const solveUser = (question: ReconstructedQuestion) => formatItem(question);

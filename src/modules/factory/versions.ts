@@ -17,6 +17,13 @@ export const factoryVersions = {
   skeletonGate: "skeleton-gate.v1",
   originality: "shingle5.v1",
   review: "review.v1",
+  /** Item-model factory. It does not replace question-spec.v2 or the sentence-completion pipeline. */
+  itemModel: "item-model.v1",
+  itemReview: "item-review.v1",
+  /** Frozen call contract for the 11-question precheck. It does not open the 90-item profile. */
+  itemExecution: "item-model-execution.v3.4",
+  itemJudgePrompt: "item-model.judge.v3.1",
+  itemSchema: "item-model-schema.v3.4",
 } as const;
 
 export const dnaVersion = "1";

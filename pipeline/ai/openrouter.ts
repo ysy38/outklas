@@ -23,7 +23,10 @@ type ChatBody = {
     prompt_tokens?: number;
     completion_tokens?: number;
     total_tokens?: number;
+    reasoning_tokens?: number;
     prompt_tokens_details?: { cached_tokens?: number; cache_write_tokens?: number };
+    completion_tokens_details?: { reasoning_tokens?: number };
+    output_tokens_details?: { reasoning_tokens?: number };
   };
   model?: string;
   error?: { message?: string } | string;
@@ -76,12 +79,14 @@ export function openrouterUsage(usage: ChatBody["usage"]): Usage {
   const read = usage?.prompt_tokens_details?.cached_tokens ?? 0;
   const write = usage?.prompt_tokens_details?.cache_write_tokens ?? 0;
   const input = Math.max(0, prompt - read);
+  const reasoning = usage?.completion_tokens_details?.reasoning_tokens ?? usage?.output_tokens_details?.reasoning_tokens ?? usage?.reasoning_tokens;
   return {
     inputTokens: input,
     outputTokens: output,
     totalTokens: usage?.total_tokens ?? prompt + output,
     ...(write ? { cacheWriteTokens: write } : {}),
     ...(read ? { cacheReadTokens: read } : {}),
+    ...(typeof reasoning === "number" ? { reasoningTokens: reasoning } : {}),
   };
 }
 

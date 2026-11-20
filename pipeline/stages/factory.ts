@@ -1,3 +1,4 @@
+import { bandItems } from "@/db/factory-bands";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { distributionCorpus } from "@/modules/analysis/corpus";
@@ -10,6 +11,8 @@ import { distractorDiagnosisVersion } from "@/modules/factory/diagnosis";
 import { familyBlueprints } from "@/modules/factory/families";
 import { buildExamProfile, type YdsExamProfile } from "@/modules/factory/profile";
 import { applyReview, reviewDecisions, type CandidateRecord, type ReviewDecision } from "@/modules/factory/review";
+import { scenarioFromApproved } from "@/modules/factory/scenario";
+import { sameTargetLemma } from "@/modules/factory/skeleton";
 import { buildQuestionSpec } from "@/modules/factory/spec-engine";
 import type { QuestionSpec } from "@/modules/factory/spec";
 import { attemptLimits } from "@/modules/factory/thresholds";
@@ -19,10 +22,10 @@ import { SpendBudget } from "../ai/budget";
 import { loadAIConfig, parseModel, type AIConfig } from "../ai/config";
 import { addTokens, emptyRow, estimateCost, type Prices, type TokenUsage } from "../ai/prices";
 import { acceptabilityPromptVersion } from "../ai/prompts/acceptability.v1";
-import { skeletonCheckPromptVersion } from "../ai/prompts/skeleton-check.v1";
+import { skeletonCheckPromptVersion } from "../ai/prompts/skeleton-check.v2";
 import { explanationPromptVersion } from "../ai/prompts/explanation.v2";
 import { judgePromptVersion } from "../ai/prompts/judge.v2";
-import { skeletonPromptVersion } from "../ai/prompts/skeleton.v1";
+import { skeletonPromptVersion } from "../ai/prompts/skeleton.v2";
 import { assertIndependent, createAIService, providerRouter } from "../ai/service";
 import type { AIService } from "../ai/types";
 import { dataRoot, readJson, readManifest } from "../lib/artifacts";
@@ -84,8 +87,8 @@ const tally = (values: string[]) => Object.entries(values.reduce<Record<string, 
 const reasonCode = (reason: string) => reason.split(",").map((part) => part.trim().replace(/\(.*$/, "").replace(/@[A-E]$/, "").replace(/:.*$/, ""));
 
 /**
- * Fresh provider work of a slice from the per-call logs: tokens per item, per item that reached the human review
- * queue, and on items that did not; cost per model when FACTORY_PRICES is set, otherwise "unknown", never zero.
+ * Fresh provider work of a slice from the per-call logs: tokens per item, per item the engine admitted
+ * (or an older run left for a person), and on items that did not; cost per model when FACTORY_PRICES is set.
  */
 export function sliceSpend(outcomes: ItemOutcome[], prices: Prices | null) {
   const byModel: TokenUsage = {};
@@ -94,11 +97,12 @@ export function sliceSpend(outcomes: ItemOutcome[], prices: Prices | null) {
     if (call.localCache === "hit") continue;
     // Logged Gemini models are bare names; price tables key every model as provider:model.
     const { provider, model } = parseModel(call.model, "gemini");
-    addTokens((byModel[`${provider}:${model}`] ??= emptyRow()), { inputTokens: call.inputTokens, outputTokens: call.outputTokens, totalTokens: 0, cacheWriteTokens: call.cacheWriteTokens, cacheReadTokens: call.cacheReadTokens });
+    addTokens((byModel[`${provider}:${model}`] ??= emptyRow()), { inputTokens: call.inputTokens, outputTokens: call.outputTokens, totalTokens: 0, cacheWriteTokens: call.cacheWriteTokens, cacheReadTokens: call.cacheReadTokens, ...(call.reasoningTokens != null ? { reasoningTokens: call.reasoningTokens } : {}) });
   }
-  const accepted = outcomes.filter((outcome) => outcome.trace.state === "HUMAN_REVIEW");
+  const admitted = (outcome: ItemOutcome) => outcome.trace.state === "APPROVED" || outcome.trace.state === "HUMAN_REVIEW";
+  const accepted = outcomes.filter(admitted);
   const total = outcomes.reduce((sum, outcome) => sum + tokensOf(outcome), 0);
-  const failed = outcomes.filter((outcome) => outcome.trace.state !== "HUMAN_REVIEW").reduce((sum, outcome) => sum + tokensOf(outcome), 0);
+  const failed = outcomes.filter((outcome) => !admitted(outcome)).reduce((sum, outcome) => sum + tokensOf(outcome), 0);
   const calls = outcomes.flatMap((outcome) => outcome.trace.cost?.log ?? []);
   const cost = estimateCost(byModel, prices);
   return {
@@ -114,8 +118,34 @@ export function sliceSpend(outcomes: ItemOutcome[], prices: Prices | null) {
   };
 }
 
+const bandOf = (record: CandidateRecord) => record.versions.at(-1)?.candidate.metadata.approvedBand;
+
+/** Human-approved items, split by the band a reviewer actually assigned. Stem-gate pass is not a banked item. */
+function bankedCounts(records: CandidateRecord[]) {
+  const approved = records.filter((record) => record.status === "approved");
+  return {
+    human_approved: approved.length,
+    banked_hard: approved.filter((record) => bandOf(record) === "hard").length,
+    banked_medium: approved.filter((record) => bandOf(record) === "medium").length,
+    banked_easy: approved.filter((record) => bandOf(record) === "easy").length,
+  };
+}
+
+/** Extra uses of one target lemma inside the records that reached a candidate. Zero means the slice lock held. */
+function duplicateTargetLemmas(records: CandidateRecord[]): number {
+  const seen: string[] = [];
+  let extra = 0;
+  for (const record of records) {
+    const term = record.versions.at(-1)?.candidate.metadata.gate?.preciseTerm ?? "";
+    if (!term) continue;
+    if (seen.some((used) => sameTargetLemma(used, term))) extra += 1;
+    else seen.push(term);
+  }
+  return extra;
+}
+
 /** Pipeline behaviour of one slice: where items fall out, how often each stage retries, and what it costs. */
-export function sliceMetrics(outcomes: ItemOutcome[], providerCalls: number | null) {
+export function sliceMetrics(outcomes: ItemOutcome[], providerCalls: number | null, costUsd: number | null = null) {
   const attempts = outcomes.flatMap((outcome) => outcome.trace.attempts);
   const skeletonAttempts = attempts.filter((attempt) => attempt.stage === "skeleton");
   const distractorAttempts = attempts.filter((attempt) => attempt.stage === "distractor");
@@ -132,6 +162,14 @@ export function sliceMetrics(outcomes: ItemOutcome[], providerCalls: number | nu
   const records = outcomes.map((outcome) => outcome.record).filter((record): record is CandidateRecord => !!record);
   const roles = [...new Set(slots.map((slot) => slot.role))].sort();
   const verdict = (value: string) => records.filter((record) => record.judge?.verdict === value).length;
+  const failureReasons = tally([
+    ...attempts.flatMap((attempt) => (attempt.rejectionReason ? reasonCode(attempt.rejectionReason).map((code) => `${attempt.stage}:${code}`) : [])),
+    ...outcomes.flatMap((outcome) => (outcome.trace.failure ? [`item:${outcome.trace.failure.replace(/_[A-E]_.*$/, "")}`] : [])),
+    ...records.flatMap((record) => (record.judge?.failures ?? []).map((failure) => `final_judge:${failure.replace(/_[A-E]+$/, "")}`)),
+  ]);
+  const banks = bankedCounts(records);
+  const requested = outcomes.length;
+  const stemPass = outcomes.filter((outcome) => outcome.trace.skeleton).length;
   return {
     items: outcomes.length,
     skeleton: {
@@ -170,6 +208,21 @@ export function sliceMetrics(outcomes: ItemOutcome[], providerCalls: number | nu
     humanReview: records.filter((record) => record.status === "pending_review").length,
     humanApproved: records.filter((record) => record.status === "approved").length,
     endStates: tally(outcomes.map((outcome) => outcome.trace.state)),
+    production: {
+      requested_count: requested,
+      first_attempt_pass: outcomes.filter((outcome) => outcome.trace.skeleton && outcome.trace.attempts.filter((attempt) => attempt.stage === "skeleton").length === 1).length,
+      total_stem_gate_pass: stemPass,
+      distractor_judged_pass: outcomes.filter((outcome) => outcome.trace.distractorSpecs.length > 0 && outcome.trace.distractors.length === outcome.trace.distractorSpecs.length).length,
+      final_approved: verdict("APPROVE"),
+      final_review: verdict("REVIEW"),
+      final_rejected: verdict("REJECT"),
+      ...banks,
+      duplicate_target_lemmas: duplicateTargetLemmas(records),
+      rejection_reason_distribution: failureReasons,
+      total_api_cost: costUsd,
+      hard_yield_of_requested: requested ? banks.banked_hard / requested : null,
+      hard_yield_of_stem_pass: stemPass ? banks.banked_hard / stemPass : null,
+    },
     avgModelCallsPerItem: rate(outcomes.reduce((sum, outcome) => sum + outcome.modelCalls, 0), outcomes.length),
     avgProviderCallsPerItem: providerCalls === null ? null : rate(providerCalls, outcomes.length),
     avgLatencyMsPerItem: outcomes.length ? Math.round(outcomes.reduce((sum, outcome) => sum + outcome.latencyMs, 0) / outcomes.length) : null,
@@ -180,11 +233,7 @@ export function sliceMetrics(outcomes: ItemOutcome[], providerCalls: number | nu
       inputTokens: outcomes.reduce((sum, outcome) => sum + (outcome.trace.cost?.inputTokens ?? 0), 0),
       outputTokens: outcomes.reduce((sum, outcome) => sum + (outcome.trace.cost?.outputTokens ?? 0), 0),
     },
-    failureReasons: tally([
-      ...attempts.flatMap((attempt) => (attempt.rejectionReason ? reasonCode(attempt.rejectionReason).map((code) => `${attempt.stage}:${code}`) : [])),
-      ...outcomes.flatMap((outcome) => (outcome.trace.failure ? [`item:${outcome.trace.failure.replace(/_[A-E]_.*$/, "")}`] : [])),
-      ...records.flatMap((record) => (record.judge?.failures ?? []).map((failure) => `final_judge:${failure.replace(/_[A-E]+$/, "")}`)),
-    ]),
+    failureReasons,
   };
 }
 
@@ -236,7 +285,46 @@ function reviewSheet(outcomes: ItemOutcome[]): string {
  * `tag` separates runs of the same specs with different models; it becomes part of the run directory name.
  * `first` is the ordinal of the first spec (default 1), so a small run can reuse specs of an earlier, larger one.
  */
-export type SliceOptions = { family: string; count: number; first?: number; band?: QuestionSpec["difficulty"]["band"]; tag?: string; service?: AIService; config?: AIConfig; log?: (message: string) => void };
+export type SliceOptions = {
+  family: string;
+  count: number;
+  first?: number;
+  /** Chosen spec ordinals. When set, the slice runs one item at a time so each accepted plan is visible to the next. */
+  ordinals?: number[];
+  band?: QuestionSpec["difficulty"]["band"];
+  tag?: string;
+  service?: AIService;
+  config?: AIConfig;
+  log?: (message: string) => void;
+};
+
+/** Approved candidates from earlier runs. Their sentences and plans stay local; nothing is copied into the bank. */
+function approvedScenarios(skipDir: string): { sentences: string[]; plans: NonNullable<ReturnType<typeof scenarioFromApproved>>["plan"][] } {
+  const runs = path.join(factoryRoot(), "runs");
+  const sentences: string[] = [];
+  const plans: NonNullable<ReturnType<typeof scenarioFromApproved>>["plan"][] = [];
+  if (!existsSync(runs)) return { sentences, plans };
+  for (const name of readdirSync(runs)) {
+    const dir = path.join(runs, name);
+    if (path.resolve(dir) === path.resolve(skipDir)) continue;
+    const candidates = path.join(dir, "candidates");
+    if (!existsSync(candidates)) continue;
+    for (const file of readdirSync(candidates)) {
+      if (!file.endsWith(".json")) continue;
+      let record: unknown;
+      try {
+        record = JSON.parse(readFileSync(path.join(candidates, file), "utf8"));
+      } catch {
+        continue;
+      }
+      const found = scenarioFromApproved(record);
+      if (!found) continue;
+      sentences.push(found.sentence);
+      if (found.plan) plans.push(found.plan);
+    }
+  }
+  return { sentences, plans };
+}
 
 /** One vertical slice through the atomic pipeline. Nothing is written to the question bank. */
 export async function factorySlice(options: SliceOptions) {
@@ -246,6 +334,8 @@ export async function factorySlice(options: SliceOptions) {
   if (options.tag !== undefined && !/^[a-z0-9-]+$/.test(options.tag)) throw new Error("tag must be lowercase letters, digits and hyphens");
   const first = options.first ?? 1;
   if (!Number.isInteger(first) || first < 1) throw new Error("first must be a whole number of at least 1");
+  const ordinals = options.ordinals;
+  if (ordinals && (ordinals.length !== options.count || ordinals.some((ordinal) => !Number.isInteger(ordinal) || ordinal < 1))) throw new Error("ordinals must be one whole number of at least 1 per item");
   const config = options.config ?? loadAIConfig();
   assertIndependent(config);
   const prices = config.prices ?? null;
@@ -259,16 +349,35 @@ export async function factorySlice(options: SliceOptions) {
   const log = options.log ?? (() => undefined);
 
   const { profile } = factoryProfile();
-  const specs = Array.from({ length: options.count }, (_, index) => buildQuestionSpec({ profile, family, ordinal: first + index, band: options.band }));
-  const runDir = path.join(factoryRoot(), "runs", `${family.id}.${specs[0].difficulty.band}.n${options.count}${first > 1 ? `-from${first}` : ""}.${factoryVersions.pipeline}${options.tag ? `.${options.tag}` : ""}`);
+  const chosen = ordinals ?? Array.from({ length: options.count }, (_, index) => first + index);
+  const specs = chosen.map((ordinal) => buildQuestionSpec({ profile, family, ordinal, band: options.band }));
+  const span = ordinals ? `n${options.count}-ord${ordinals[0]}` : `n${options.count}${first > 1 ? `-from${first}` : ""}`;
+  const runDir = path.join(factoryRoot(), "runs", `${family.id}.${specs[0].difficulty.band}.${span}.${factoryVersions.pipeline}${options.tag ? `.${options.tag}` : ""}`);
   assertRunWritable(runDir);
   const { index, documents, items } = historicalIndex();
   log(`profile ${profile.version}: ${profile.questions} questions; originality index ${index.shingles.size} shingles from ${items} items in ${documents} documents`);
 
-  const ctx: RunContext = { service, config, originality: index, siblingStems: [], siblings: [], profileVersion: profile.version, budget };
+  const approved = approvedScenarios(runDir);
+  const ctx: RunContext = {
+    service,
+    config,
+    originality: index,
+    siblingStems: [],
+    siblings: [],
+    usedTargets: [],
+    bankScenarios: [
+      ...bandItems.filter((item) => item.section === "sentence" && item.layout === "blank").map((item) => `${item.stem} ${item.choices.find((choice) => choice.correct)?.text ?? ""}`),
+      ...approved.sentences,
+    ],
+    bankPlans: approved.plans.filter((plan): plan is NonNullable<typeof plan> => !!plan),
+    batchScenarios: [],
+    batchPlans: [],
+    profileVersion: profile.version,
+    budget,
+  };
   const skipped: string[] = [];
   const outcomes = (
-    await mapLimit(specs, 3, async (spec) => {
+    await mapLimit(specs, ordinals ? 1 : 3, async (spec) => {
       if (budget.stopped) {
         skipped.push(spec.id);
         log(`${spec.id}: skipped, ${budget.stopped}`);
@@ -287,12 +396,13 @@ export async function factorySlice(options: SliceOptions) {
     if (outcome.record) writeFileSync(path.join(runDir, "candidates", `${outcome.record.id}.json`), json(outcome.record));
   }
   writeFileSync(path.join(runDir, "calls.jsonl"), callLog(outcomes));
+  const spend = sliceSpend(outcomes, prices);
   const summary = {
     family: family.id,
     band: specs[0].difficulty.band,
     requested: options.count,
-    metrics: sliceMetrics(outcomes, providerCalls?.() ?? null),
-    spend: sliceSpend(outcomes, prices),
+    metrics: sliceMetrics(outcomes, providerCalls?.() ?? null, spend.cost.usd),
+    spend,
     budget: { ...budget.report(), skipped },
     providerUsage: budget.usage,
     promptCache: config.promptCache ?? "5m",
@@ -307,7 +417,7 @@ export async function factorySlice(options: SliceOptions) {
       distractorDiagnosis: distractorDiagnosisVersion,
       skeletonPromptVersion,
       distractorPromptVersion: distractorPromptsFor(config.experiments ?? []).distractor,
-      distractorJudgePromptVersion: distractorPromptsFor(config.experiments ?? []).judge,
+      distractorJudgePromptVersion: distractorPromptsFor(config.experiments ?? [], config.distractorJudgeStyle).judge,
       skeletonGatePromptVersion: config.skeletonGate === false ? null : skeletonCheckPromptVersion,
       judgePromptVersion,
       acceptabilityPromptVersion,
@@ -322,7 +432,7 @@ export async function factorySlice(options: SliceOptions) {
 }
 
 /** Records one human decision on a stored candidate. EDIT takes a JSON file with the full edited candidate. */
-export function factoryReview(input: { runDir: string; candidateId: string; decision: string; reviewer: string; notes?: string; editFile?: string }) {
+export function factoryReview(input: { runDir: string; candidateId: string; decision: string; reviewer: string; notes?: string; editFile?: string; band?: string }) {
   if (!(reviewDecisions as readonly string[]).includes(input.decision)) throw new Error(`decision must be one of ${reviewDecisions.join(", ")}`);
   const file = path.join(input.runDir, "candidates", `${input.candidateId}.json`);
   if (!existsSync(file)) throw new Error(`No candidate ${input.candidateId} in ${input.runDir}`);
@@ -334,9 +444,33 @@ export function factoryReview(input: { runDir: string; candidateId: string; deci
       .filter((name) => name !== `${input.candidateId}.json`)
       .map((name) => JSON.parse(readFileSync(path.join(input.runDir, "candidates", name), "utf8")) as CandidateRecord)
       .map((other) => ({ id: other.id, stem: other.versions.at(-1)!.candidate.question.stem, options: other.versions.at(-1)!.candidate.question.options }));
-    edit = { candidate, validation: validateCandidate({ spec: record.spec, candidate, originality: historicalIndex().index, siblings }) };
+    edit = { candidate, validation: validateCandidate({ spec: record.spec, candidate, originality: historicalIndex().index, siblings, blueprints: record.generation?.skeleton?.distractorBlueprints }) };
   }
-  const next = applyReview(record, { decision: input.decision as ReviewDecision, reviewer: input.reviewer, notes: input.notes, at: new Date().toISOString(), edit });
+  const band = input.band && (["easy", "medium", "hard"] as const).includes(input.band as "easy" | "medium" | "hard") ? (input.band as "easy" | "medium" | "hard") : undefined;
+  if (input.band && !band) throw new Error("band must be easy, medium, or hard");
+  const next = applyReview(record, { decision: input.decision as ReviewDecision, reviewer: input.reviewer, notes: input.notes, at: new Date().toISOString(), edit, ...(band ? { band } : {}) });
   writeFileSync(file, json(next));
+  refreshProduction(input.runDir);
   return { id: next.id, status: next.status, versions: next.versions.length, reviews: next.reviews.length };
+}
+
+/** Fills banked counts after a human decision. Generation writes them as zero because review has not happened yet. */
+function refreshProduction(runDir: string) {
+  const summaryFile = path.join(runDir, "summary.json");
+  if (!existsSync(summaryFile)) return;
+  const summary = JSON.parse(readFileSync(summaryFile, "utf8")) as { metrics?: { production?: Record<string, unknown> } };
+  const production = summary.metrics?.production;
+  if (!production) return;
+  const records = readdirSync(path.join(runDir, "candidates"))
+    .filter((name) => name.endsWith(".json"))
+    .map((name) => JSON.parse(readFileSync(path.join(runDir, "candidates", name), "utf8")) as CandidateRecord);
+  const banks = bankedCounts(records);
+  const requested = Number(production.requested_count) || 0;
+  const stemPass = Number(production.total_stem_gate_pass) || 0;
+  Object.assign(production, banks, {
+    duplicate_target_lemmas: duplicateTargetLemmas(records),
+    hard_yield_of_requested: requested ? banks.banked_hard / requested : null,
+    hard_yield_of_stem_pass: stemPass ? banks.banked_hard / stemPass : null,
+  });
+  writeFileSync(summaryFile, json(summary));
 }

@@ -9,7 +9,7 @@ import { loadAIConfig, modelDefaults, parseModel, sameModel } from "./config";
 import { AIRequestError, GeminiProvider, geminiBody, type Transport } from "./gemini";
 import { OpenAICompatibleProvider } from "./openai-compatible";
 import { isBatchModel, OpenRouterBatchClient, OpenRouterProvider, openrouterMessageText, openrouterUsage, stripBatchSuffix } from "./openrouter";
-import { GatewayProvider } from "./gateway";
+import { GatewayProvider, gatewayWireIdentity } from "./gateway";
 import { extractJsonText, normalizeUnitScale } from "./service";
 import { loadPrices, priceFor } from "./prices";
 import { analyzerResponseSchema } from "./prompts/analyzer.v2";
@@ -227,11 +227,63 @@ describe("GatewayProvider", () => {
     expect(body.max_tokens).toBe(4096);
   });
 
+  it("disables reasoning when thinking is unset and still asks for strict JSON inside the token floor", async () => {
+    const seen: { body: string }[] = [];
+    const provider = new GatewayProvider({
+      apiKey: "gw-key",
+      transport: async (_url, init) => {
+        seen.push({ body: init.body });
+        return reply(200, { choices: [{ message: { content: '{"ok":true}' }, finish_reason: "stop" }], usage: { prompt_tokens: 10, completion_tokens: 4, total_tokens: 14 }, model: "anthropic/claude-haiku-5.5" });
+      },
+    });
+    await provider.generate({
+      model: "anthropic/claude-haiku-5.5",
+      parts: [{ text: "item" }],
+      jsonSchema: { type: "object", properties: { ok: { type: "boolean" } } },
+      maxOutputTokens: 3072,
+    });
+    const body = JSON.parse(seen[0].body);
+    expect(body.reasoning).toEqual({ effort: "none" });
+    expect(body.max_tokens).toBe(4096);
+    expect(body.response_format).toEqual({ type: "json_schema", json_schema: { name: "output", strict: true, schema: { type: "object", properties: { ok: { type: "boolean" } }, additionalProperties: false } } });
+    expect(openrouterMessageText({ content: "", reasoning: "" })).toBe("");
+  });
+
+  it("pins one gateway provider, keeps a reported reasoning count, and sends 8192 when asked", async () => {
+    const seen: { body: string }[] = [];
+    const provider = new GatewayProvider({
+      apiKey: "gw-key",
+      noTraining: true,
+      only: ["fireworks"],
+      transport: async (_url, init) => {
+        seen.push({ body: init.body });
+        return reply(200, {
+          choices: [{ message: { content: '{"ok":true}' }, finish_reason: "stop" }],
+          usage: { prompt_tokens: 10, completion_tokens: 4, total_tokens: 14, completion_tokens_details: { reasoning_tokens: 3 } },
+          model: "minimax/minimax-m3.1-flash",
+          provider: "fireworks",
+        });
+      },
+    });
+    const response = await provider.generate({ model: "minimax/minimax-m3.1-flash", parts: [{ text: "item" }], maxOutputTokens: 8192, thinking: "high" });
+    expect(response.usage).toEqual({ inputTokens: 10, outputTokens: 4, totalTokens: 14, reasoningTokens: 3 });
+    expect(response.servedProvider).toBe("fireworks");
+    expect(response.finishReason).toBe("STOP");
+    const body = JSON.parse(seen[0].body);
+    expect(body.max_tokens).toBe(8192);
+    expect(body.reasoning).toEqual({ effort: "high" });
+    expect(body.providerOptions.gateway.only).toEqual(["fireworks"]);
+    expect(openrouterUsage({ prompt_tokens: 8, completion_tokens: 2, total_tokens: 10 }).reasoningTokens).toBeUndefined();
+  });
+
   it("routes gateway: settings to the gateway key", () => {
     expect(parseModel("gateway:anthropic/claude-haiku-5.5")).toEqual({ provider: "gateway", model: "anthropic/claude-haiku-5.5" });
     const config = loadAIConfig({ AI_GATEWAY_API_KEY: "gw", GENERATOR_MODEL: "gateway:anthropic/claude-haiku-5.5" });
     expect(config.keys.gateway).toBe("gw");
     expect(config.gatewayNoTraining).toBe(true);
+    expect(config.plannerMaxOutputTokens).toBeUndefined();
+    expect(config.gatewayOnly).toBeUndefined();
+    expect(loadAIConfig({ FACTORY_PLANNER_MAX_OUTPUT_TOKENS: "8192", GATEWAY_ONLY: "fireworks" })).toMatchObject({ plannerMaxOutputTokens: 8192, gatewayOnly: ["fireworks"] });
     expect(config.distractorJudgeStyle).toBe("rubric");
     expect(loadAIConfig({ FACTORY_DISTRACTOR_JUDGE: "verdict" }).distractorJudgeStyle).toBe("verdict");
     expect(() => loadAIConfig({ FACTORY_DISTRACTOR_JUDGE: "vibes" })).toThrow(/FACTORY_DISTRACTOR_JUDGE/);
@@ -488,6 +540,30 @@ describe("structuredCall", () => {
     expect(repaired.calls[1].parts.at(-1)).toMatchObject({ text: expect.stringContaining("rejected") });
     const broken = fakeProvider(["not json"]);
     await expect(structuredCall(broken, "p", schema, { model: "m", parts: [{ text: "other" }] })).rejects.toBeInstanceOf(AIOutputError);
+  });
+
+  it("does not call the provider again when the same invalid JSON is already cached", async () => {
+    const provider = fakeProvider(["", ""]);
+    const request = { model: "m", parts: [{ text: "plan" }] };
+    await expect(structuredCall(provider, "plan.v1", schema, request)).rejects.toMatchObject({ cached: false });
+    await expect(structuredCall(provider, "plan.v1", schema, request)).rejects.toMatchObject({ cached: true });
+    expect(provider.calls).toHaveLength(2);
+  });
+
+  it("gives a new cache key when reasoning, model, schema, or prompt changes", () => {
+    const prompt = { model: "anthropic/claude-haiku-5.5", parts: [{ text: "Write the plan." }], maxOutputTokens: 3072, jsonSchema: { type: "object", properties: { ok: { type: "boolean" } } } };
+    const base = requestHash("gateway", "skeleton.v2", prompt, gatewayWireIdentity(prompt));
+    expect(base).not.toBe(requestHash("gateway", "skeleton.v2", prompt));
+    expect(base).not.toBe(requestHash("gateway", "skeleton.v2", { ...prompt, thinking: "low" }, gatewayWireIdentity({ ...prompt, thinking: "low" })));
+    expect(base).not.toBe(requestHash("gateway", "skeleton.v2", { ...prompt, model: "anthropic/claude-sonnet-5.5" }, gatewayWireIdentity({ ...prompt, model: "anthropic/claude-sonnet-5.5" })));
+    expect(base).not.toBe(requestHash("openrouter", "skeleton.v2", prompt, gatewayWireIdentity(prompt)));
+    expect(base).not.toBe(requestHash("gateway", "skeleton.v3", prompt, gatewayWireIdentity(prompt)));
+    expect(base).not.toBe(requestHash("gateway", "skeleton.v2", { ...prompt, parts: [{ text: "Write another plan." }] }, gatewayWireIdentity(prompt)));
+    const otherSchema = { type: "object", properties: { decision: { type: "string" } } };
+    expect(base).not.toBe(requestHash("gateway", "skeleton.v2", { ...prompt, jsonSchema: otherSchema }, gatewayWireIdentity({ ...prompt, jsonSchema: otherSchema })));
+    expect(gatewayWireIdentity(prompt)).toEqual({ reasoningEffort: "none", maxTokens: 4096 });
+    expect(gatewayWireIdentity({ ...prompt, thinking: "low", maxOutputTokens: 8192 })).toEqual({ reasoningEffort: "low", maxTokens: 8192 });
+    expect(requestHash("fake", "p", { model: "m", parts: [{ text: "q" }] })).toBe(requestHash("fake", "p", { model: "m", parts: [{ text: "q" }] }));
   });
 
   it("hashes images by content, not by bytes in the key", () => {

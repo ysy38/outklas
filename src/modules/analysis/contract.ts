@@ -119,6 +119,12 @@ export const blindSolution = z.object({
   answer: z.enum(optionLabels),
   confidence: unit,
   rationale: note,
+  /** Wording in the stem the choice rests on. The text is not checked, so a filled field is not a verified reason. */
+  stemEvidence: z.string().max(200).optional(),
+  /** Another option the solver finds as suitable as its own letter. Null means it named none. */
+  equallyDefensible: z.enum(optionLabels).nullable().optional(),
+  /** The solver cannot show the choice from the stem. */
+  uncertain: z.boolean().optional(),
 });
 export type BlindSolution = z.infer<typeof blindSolution>;
 

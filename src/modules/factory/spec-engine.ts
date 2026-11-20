@@ -2,7 +2,7 @@ import { optionLabels, type OptionLabel } from "@/modules/analysis/contract";
 import type { DnaReport } from "@/modules/analysis/dna";
 import { parseRef, type NodeRef } from "@/modules/knowledge/graph";
 import { knowledgeEdges, knowledgeNodes, knowledgeVersion } from "@/modules/knowledge/seed";
-import { connectorsFor, relationConnectors, type FamilyBlueprint } from "./families";
+import { concessiveMarkerBan, connectorsFor, relationConnectors, type FamilyBlueprint } from "./families";
 import { findFamily, type Evidence, type YdsExamProfile } from "./profile";
 import { questionSpec, type QuestionSpec } from "./spec";
 import { dnaVersion, factoryVersions } from "./versions";
@@ -77,13 +77,24 @@ export function buildQuestionSpec(input: { profile: YdsExamProfile; family: Fami
   const rest = optionLabels.filter((label) => label !== correctOption);
   const shift = (ordinal - 1) % family.distractors.length;
   const rotated = [...family.distractors.slice(shift), ...family.distractors.slice(0, shift)];
+  const relational = band === "hard" && ordinal % 2 === 0;
+  const concessionOpeners = connectorsFor(family.answerRelation, family.grammarPattern, family.excludedConnectors);
   const distractorPlan = rotated.map((slot, index) => ({
     option: rest[index] as OptionLabel,
     distractorType: slot.distractorType,
     expresses: slot.expresses,
-    connectors: connectorsFor(slot.expresses, family.grammarPattern, family.excludedConnectors),
+    connectors: [
+      ...new Set([
+        ...connectorsFor(slot.expresses, family.grammarPattern, family.excludedConnectors),
+        ...(relational && slot.expresses === "discourse_relation:contrast" ? concessionOpeners : []),
+      ]),
+    ].sort(),
     misconception: slot.misconception,
   }));
+  const banned = new Set<string>(concessiveMarkerBan);
+  const forbiddenInDistractors = [...relationConnectors(family.answerRelation).map(connectorSurface), ...family.relationMarkers]
+    .filter((marker) => !(relational && banned.has(marker)))
+    .sort();
   const misconception = family.distractors.find((slot) => slot.misconception)?.misconception ?? null;
   const misconceptionEvidence = misconception ? evidence.misconceptions.find((entry) => entry.ref === misconception) : undefined;
   const requiredKnowledge = [
@@ -113,7 +124,7 @@ export function buildQuestionSpec(input: { profile: YdsExamProfile; family: Fami
     targetMisconception: misconception,
     discourseRelation: family.answerRelation,
     grammarPattern: family.grammarPattern,
-    vocabularyConstraints: { register: "academic", cefrCeiling: band === "hard" ? "C1" : "B2", forbiddenInDistractors: [...relationConnectors(family.answerRelation).map(connectorSurface), ...family.relationMarkers].sort() },
+    vocabularyConstraints: { register: "academic", cefrCeiling: bandCefr[band], forbiddenInDistractors },
     distractorPlan,
     contextConstraints: {
       domain: contextDomains[(ordinal - 1) % contextDomains.length],

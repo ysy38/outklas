@@ -34,7 +34,14 @@ export function explanationUser(input: { spec: QuestionSpec; core: ItemCore; dsp
     "WRONG OPTION ROLES",
     ...dspecs.map((dspec) => `${dspec.option}: ${name(dspec.relationConstraint.targetRelation)}, fails by ${dspec.semanticConstraint.failureMode.replaceAll("_", " ")}${dspec.targetMisconception ? `, targets ${name(dspec.targetMisconception)}` : ""}`),
   ];
-  if (input.feedback.length) lines.push("", "YOUR PREVIOUS EXPLANATION WAS REJECTED", ...input.feedback.map((line) => `- ${line}`));
+  if (input.feedback.length) {
+    const notes = input.feedback.map((line) =>
+      line === "explanation_language"
+        ? "Rewrite the entire explanation in Turkish. The explanation must be written in natural Turkish from beginning to end. Do not write English explanatory sentences. English words may appear only when quoting the original question, answer choices, or a specific target lexical item that needs to be discussed. Preserve the original reasoning and do not change the question, options, or answer key."
+        : line,
+    );
+    lines.push("", "YOUR PREVIOUS EXPLANATION WAS REJECTED", ...notes.map((line) => `- ${line}`));
+  }
   return lines.join("\n");
 }
 

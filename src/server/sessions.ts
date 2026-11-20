@@ -6,12 +6,14 @@ import { asExam, blueprintFor, type ExamCode, type SectionId } from "@/modules/e
 import { estimateFromAccuracy, estimateNet, scoreSession, type ScoreItem } from "@/modules/exam/score";
 import { selectDiagnostic, selectItems, selectMock, studyPool, type PoolItem } from "@/modules/exam/select";
 import { canStartSimulator, hasProgram, simulatorLimit, tierFor, type CheckoutPlan, type PlanCode, type Tier } from "@/modules/billing/entitlement";
-import { nextMastery } from "@/modules/learning/mastery";
+import { diagnosisConfidence, errorUpdates, type Lesson } from "@/modules/content/lesson";
+import { initialMastery, nextMastery, skillUpdates, targetDifficulty, weightedMastery, type SkillRole } from "@/modules/learning/mastery";
 import { buildPlan, daysUntilExam, nextStreak, type DailyPlan } from "@/modules/learning/plan";
 import { nextReview } from "@/modules/learning/review";
 import {
   answers,
   choices,
+  errorMastery,
   events,
   getDb,
   itemSkills,
@@ -141,7 +143,8 @@ export async function createSession(input: {
             count: allowance,
             seenIds: input.profileId ? await seenIds(input.profileId) : [],
             preferredSections: ["cloze", "sentence"],
-            difficulty: 3,
+            difficulty: input.profileId ? await practiceDifficulty(input.profileId) : targetDifficulty(initialMastery()),
+            weakErrors: input.profileId ? await weakErrors(input.profileId) : [],
           });
     if (picked.length === 0) return { error: "Şu an çözebileceğin yeni soru kalmadı. Yeni sorular eklendikçe burada görünecek." };
     await recordEvent("daily_plan_started", input.profileId);
@@ -226,7 +229,7 @@ export async function loadPlayer(sessionId: string, profileId: string | null, gu
               correct: Boolean(answer.correct),
               explanation: item.explanation,
               correctChoiceId: correct?.id ?? "",
-              note: selected && !selected.correct ? selected.distractorType : null,
+              note: selected && !selected.correct ? selected.errorClass ?? selected.distractorType : null,
             }
           : null,
     };
@@ -267,10 +270,13 @@ export async function saveAnswer(input: {
   if (!choice || choice.itemId !== input.itemId || !membership[0]) return { error: "Cevabın kaydedilemedi. Sayfayı yenileyip tekrar dene." };
   if (session.mode === "practice" && existing[0]) return { error: "Bu soruyu zaten cevapladın." };
   const correct = choice.correct;
+  const recordedError = correct ? null : choice.errorClass;
+  const lessonRow = await db.select({ lesson: items.lesson }).from(items).where(eq(items.id, input.itemId)).limit(1);
+  const observed = diagnosisConfidence(lessonRow[0]?.lesson as Lesson | null, "ABCDE"[choice.position] ?? "", correct);
   if (existing[0]) {
     await db
       .update(answers)
-      .set({ choiceId: choice.id, correct, responseTimeMs: input.responseTimeMs, confidence: input.confidence ?? null })
+      .set({ choiceId: choice.id, correct, responseTimeMs: input.responseTimeMs, confidence: input.confidence ?? null, errorClass: recordedError, diagnosisConfidence: observed })
       .where(eq(answers.id, existing[0].id));
   } else {
     await db.insert(answers).values({
@@ -282,6 +288,8 @@ export async function saveAnswer(input: {
       correct,
       responseTimeMs: input.responseTimeMs,
       confidence: input.confidence ?? null,
+      errorClass: recordedError,
+      diagnosisConfidence: observed,
     });
   }
   await recordEvent("question_answered", input.profileId, { sessionId: input.sessionId, itemId: input.itemId, correct });
@@ -289,7 +297,7 @@ export async function saveAnswer(input: {
   const profileId = input.profileId;
   if (profileId) {
     await later(async () => {
-      await applyMastery(profileId, input.itemId, correct);
+      await applyMastery(profileId, input.itemId, correct, recordedError);
       if (!correct) await touchReview(profileId, "item", input.itemId, false);
     });
   }
@@ -305,25 +313,80 @@ export async function saveAnswer(input: {
       correct,
       explanation: itemRow?.explanation ?? "",
       correctChoiceId: correctChoice?.id ?? "",
-      note: correct ? null : choice.distractorType,
+      note: correct ? null : choice.errorClass ?? choice.distractorType,
     },
     section: itemRow?.section,
   };
 }
 
-async function applyMastery(profileId: string, itemId: string, correct: boolean) {
+async function practiceDifficulty(profileId: string): Promise<number> {
+  const db = await getDb();
+  const rows = await db.select().from(mastery).where(eq(mastery.profileId, profileId));
+  if (rows.length === 0) return targetDifficulty(initialMastery());
+  const mean = rows.reduce((sum, row) => sum + row.mastery, 0) / rows.length;
+  return targetDifficulty(mean);
+}
+
+async function weakErrors(profileId: string): Promise<string[]> {
+  const db = await getDb();
+  const rows = await db.select().from(errorMastery).where(eq(errorMastery.profileId, profileId));
+  return rows
+    .filter((row) => row.attempts > 0 && row.mastery < 55)
+    .sort((a, b) => a.mastery - b.mastery)
+    .slice(0, 3)
+    .map((row) => row.errorClass);
+}
+
+async function applyMastery(profileId: string, itemId: string, correct: boolean, chosenError: string | null) {
   const db = await getDb();
   const links = await db.select().from(itemSkills).where(eq(itemSkills.itemId, itemId));
   const itemRows = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
   const difficulty = itemRows[0]?.difficulty ?? 3;
-  for (const link of links) {
+  const choiceRows = await db.select({ errorClass: choices.errorClass }).from(choices).where(eq(choices.itemId, itemId));
+  for (const update of errorUpdates({ correct, chosen: chosenError, present: choiceRows.map((row) => row.errorClass ?? "") })) {
+    const current = await db
+      .select()
+      .from(errorMastery)
+      .where(and(eq(errorMastery.profileId, profileId), eq(errorMastery.errorClass, update.errorClass)))
+      .limit(1);
+    const previous = current[0]?.mastery ?? 50;
+    const next = Math.round(nextMastery(previous, update.correct, update.correct ? 2 : difficulty));
+    if (current[0]) {
+      await db
+        .update(errorMastery)
+        .set({
+          mastery: next,
+          attempts: current[0].attempts + 1,
+          correctAttempts: current[0].correctAttempts + (update.correct ? 1 : 0),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(errorMastery.profileId, profileId), eq(errorMastery.errorClass, update.errorClass)));
+    } else {
+      await db.insert(errorMastery).values({
+        profileId,
+        errorClass: update.errorClass,
+        mastery: next,
+        attempts: 1,
+        correctAttempts: update.correct ? 1 : 0,
+      });
+    }
+  }
+  const skillMoves = skillUpdates({
+    correct,
+    links: links.map((link) => ({
+      skillId: link.skillId,
+      weight: link.weight ?? 1,
+      role: (link.role === "secondary" ? "secondary" : "primary") as SkillRole,
+    })),
+  });
+  for (const link of skillMoves) {
     const current = await db
       .select()
       .from(mastery)
       .where(and(eq(mastery.profileId, profileId), eq(mastery.skillId, link.skillId)))
       .limit(1);
     const previous = current[0]?.mastery ?? 50;
-    const next = Math.round(nextMastery(previous, correct, difficulty));
+    const next = Math.round(weightedMastery(previous, correct, difficulty, link.weight));
     if (current[0]) {
       await db
         .update(mastery)
@@ -442,10 +505,12 @@ export async function submitSession(sessionId: string, profileId: string | null,
       .update(profiles)
       .set({ estimatedLow: estimate.low, estimatedHigh: estimate.high })
       .where(eq(profiles.id, profileId));
+    const answerRows = await db.select().from(answers).where(eq(answers.sessionId, sessionId));
     for (const item of loaded.items) {
       const scored = scoreItems.find((row) => row.slot === (item.slot ?? item.position + 1) && row.section === item.section);
       if (!scored || scored.correct == null) continue;
-      await applyMastery(profileId, item.id, scored.correct);
+      const answer = answerRows.find((row) => row.itemId === item.id);
+      await applyMastery(profileId, item.id, scored.correct, scored.correct ? null : answer?.errorClass ?? null);
     }
   }
   await recordEvent(loaded.session.mode === "diagnostic" ? "diagnostic_completed" : "simulator_completed", profileId, {
@@ -577,7 +642,7 @@ export async function claimGuestSessions(profileId: string) {
       }
       if (answer.correct) correct += 1;
       else wrong += 1;
-      await applyMastery(profileId, answer.itemId, answer.correct);
+      await applyMastery(profileId, answer.itemId, answer.correct, answer.correct ? null : answer.errorClass);
     }
   }
   if (correct + wrong > 0) {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ydsBlueprint, type SectionId } from "../exam/blueprint";
 import type { PoolItem } from "../exam/select";
-import { nextMastery } from "./mastery";
+import { nextMastery, skillLinkRows, skillUpdates, targetDifficulty, weightedMastery } from "./mastery";
 import { buildPlan, nextStreak } from "./plan";
 import { nextReview } from "./review";
 
@@ -14,6 +14,33 @@ describe("mastery", () => {
     expect(down).toBeLessThan(50);
     expect(50 - down).toBeLessThanOrEqual(12);
     expect(nextMastery(up, true, 3)).not.toBe(up);
+  });
+
+  it("treats an easy miss as stronger evidence than a hard miss, and a hard success as stronger than an easy one", () => {
+    const easyMiss = 50 - nextMastery(50, false, 1);
+    const hardMiss = 50 - nextMastery(50, false, 5);
+    expect(easyMiss).toBeGreaterThan(hardMiss);
+    const hardHit = nextMastery(50, true, 5) - 50;
+    const easyHit = nextMastery(50, true, 1) - 50;
+    expect(hardHit).toBeGreaterThan(easyHit);
+  });
+
+  it("scales a correct answer by skill weight and leaves a secondary skill untouched on a miss", () => {
+    const links = skillLinkRows("item", ["sentence-link", "restatement-shift"]);
+    expect(links.map((link) => link.role)).toEqual(["primary", "secondary"]);
+    const hit = skillUpdates({ correct: true, links });
+    expect(hit.map((link) => link.skillId)).toEqual(["sentence-link", "restatement-shift"]);
+    expect(weightedMastery(50, true, 4, 1)).toBe(nextMastery(50, true, 4));
+    expect(weightedMastery(50, true, 4, 0.4) - 50).toBeLessThan(nextMastery(50, true, 4) - 50);
+    const miss = skillUpdates({ correct: false, links });
+    expect(miss.map((link) => link.skillId)).toEqual(["sentence-link"]);
+    expect(weightedMastery(50, false, 4, 1)).toBeLessThan(50);
+  });
+
+  it("starts an unmeasured learner on medium and steps the band as mastery moves", () => {
+    expect(targetDifficulty(50)).toBe(3);
+    expect(targetDifficulty(30)).toBe(1);
+    expect(targetDifficulty(90)).toBe(5);
   });
 });
 
@@ -46,6 +73,7 @@ describe("plan", () => {
         stimulusId: null,
         difficulty: 3,
         skillIds: [],
+        errorClasses: [],
       })),
     );
     const mastery = ydsBlueprint.bands.map((band, index) => ({
@@ -69,6 +97,36 @@ describe("plan", () => {
     expect(plan.totalMinutes).toBeGreaterThan(0);
     expect(plan.skipSections.length).toBeGreaterThan(0);
     expect(plan.blocks.some((block) => block.kind === "question" && plan.skipSections.includes(block.section))).toBe(false);
+  });
+
+  it("gives a weak section the easier item and a strong section the harder one", () => {
+    const item = (id: string, section: SectionId, difficulty: number, slot: number): PoolItem => ({
+      id,
+      slot,
+      section,
+      stimulusId: null,
+      difficulty,
+      skillIds: [],
+      errorClasses: [],
+    });
+    const weak = buildPlan({
+      minutes: 10,
+      mastery: [{ section: "sentence", mastery: 20 }],
+      dueQuestionIds: [],
+      dueVocabIds: [],
+      pool: [item("hard", "sentence", 4, 1), item("easy", "sentence", 1, 2)],
+      seenIds: [],
+    });
+    const rising = buildPlan({
+      minutes: 10,
+      mastery: [{ section: "sentence", mastery: 70 }],
+      dueQuestionIds: [],
+      dueVocabIds: [],
+      pool: [item("hard", "sentence", 4, 1), item("easy", "sentence", 1, 2)],
+      seenIds: [],
+    });
+    expect(weak.blocks.find((block) => block.kind === "question")?.id).toBe("easy");
+    expect(rising.blocks.find((block) => block.kind === "question")?.id).toBe("hard");
   });
 
   it("keeps a streak only across consecutive days", () => {

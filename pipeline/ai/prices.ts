@@ -18,7 +18,7 @@ export type PriceTable = z.infer<typeof priceTable>;
 export type Prices = { table: PriceTable; source: string };
 
 /** Tokens per `provider:model`, as the provider reported them. */
-export type TokenRow = { calls: number; inputTokens: number; outputTokens: number; cacheWriteTokens?: number; cacheWrite1hTokens?: number; cacheReadTokens?: number };
+export type TokenRow = { calls: number; inputTokens: number; outputTokens: number; cacheWriteTokens?: number; cacheWrite1hTokens?: number; cacheReadTokens?: number; reasoningTokens?: number };
 export type TokenUsage = Record<string, TokenRow>;
 
 export const emptyRow = (): TokenRow => ({ calls: 0, inputTokens: 0, outputTokens: 0 });
@@ -27,7 +27,7 @@ export function addTokens(row: TokenRow, usage: Usage, calls = 1): TokenRow {
   row.calls += calls;
   row.inputTokens += usage.inputTokens;
   row.outputTokens += usage.outputTokens;
-  for (const key of ["cacheWriteTokens", "cacheWrite1hTokens", "cacheReadTokens"] as const) if (usage[key]) row[key] = (row[key] ?? 0) + usage[key]!;
+  for (const key of ["cacheWriteTokens", "cacheWrite1hTokens", "cacheReadTokens", "reasoningTokens"] as const) if (usage[key] != null) row[key] = (row[key] ?? 0) + usage[key]!;
   return row;
 }
 

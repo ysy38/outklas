@@ -9,7 +9,7 @@ const hash = z.string().regex(/^[a-f0-9]{64}$/);
 const version = z.string().min(1);
 
 export const stageAttempt = z.object({
-  stage: z.enum(["skeleton", "distractor", "explanation"]),
+  stage: z.enum(["skeleton", "distractorPlan", "distractor", "explanation"]),
   option: z.enum(optionLabels).nullable(),
   attempt: z.number().int().min(1),
   model: z.string().min(1),
@@ -37,6 +37,8 @@ export const provenance = z.object({
   generatorPromptVersion: version,
   distractorPromptVersion: version,
   distractorJudgePromptVersion: version,
+  /** Whether the distractor-judge prompt showed the intended correct option. Absent on records built before this was recorded. */
+  distractorJudgeKey: z.enum(["shown", "hidden"]).optional(),
   judgePromptVersion: version,
   blindSolvePromptVersion: version,
   acceptabilityPromptVersion: version,

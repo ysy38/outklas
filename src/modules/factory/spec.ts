@@ -7,7 +7,7 @@ const refs = z.array(nodeRef).max(12);
 const wordRange = z.object({ min: z.number().int().min(1), max: z.number().int().min(1) });
 
 export const difficultyBands = ["easy", "medium", "hard"] as const;
-export const cefrLevels = ["B1", "B2", "C1"] as const;
+export const cefrLevels = ["B1", "B2", "C1", "C2"] as const;
 
 export const distractorSlot = z.object({
   option: z.enum(optionLabels),

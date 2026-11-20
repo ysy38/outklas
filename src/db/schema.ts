@@ -35,6 +35,7 @@ export const items = pgTable("items", {
   difficulty: integer("difficulty").notNull(),
   status: text("status").notNull().default("draft"),
   stimulusId: text("stimulus_id"),
+  lesson: jsonb("lesson"),
 });
 
 export const choices = pgTable("choices", {
@@ -44,6 +45,7 @@ export const choices = pgTable("choices", {
   body: text("body").notNull(),
   correct: boolean("correct").notNull(),
   distractorType: text("distractor_type"),
+  errorClass: text("error_class"),
 });
 
 export const skills = pgTable("skills", {
@@ -57,6 +59,10 @@ export const itemSkills = pgTable(
   {
     itemId: text("item_id").notNull(),
     skillId: text("skill_id").notNull(),
+    /** How much this item measures the skill. 1 is a full observation. */
+    weight: real("weight").notNull().default(1),
+    /** primary receives a miss. secondary receives only a correct answer. */
+    role: text("role").notNull().default("primary"),
   },
   (table) => [primaryKey({ columns: [table.itemId, table.skillId] })],
 );
@@ -121,6 +127,9 @@ export const answers = pgTable("answers", {
   correct: boolean("correct"),
   responseTimeMs: integer("response_time_ms").notNull().default(0),
   confidence: text("confidence"),
+  errorClass: text("error_class"),
+  /** How sure the option diagnosis is. Below 1: choosing the option is not proof the learner holds the error. */
+  diagnosisConfidence: real("diagnosis_confidence"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -136,6 +145,19 @@ export const mastery = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [primaryKey({ columns: [table.profileId, table.skillId] })],
+);
+
+export const errorMastery = pgTable(
+  "error_mastery",
+  {
+    profileId: uuid("profile_id").notNull(),
+    errorClass: text("error_class").notNull(),
+    mastery: integer("mastery").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    correctAttempts: integer("correct_attempts").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.profileId, table.errorClass] })],
 );
 
 export const reviews = pgTable("reviews", {

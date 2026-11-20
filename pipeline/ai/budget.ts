@@ -89,7 +89,7 @@ export class SpendBudget {
 
   /** Wraps a provider so that each real request is checked first and its usage recorded per `provider:model`. */
   meter(provider: AIProvider): AIProvider {
-    return {
+    const metered: AIProvider = {
       name: provider.name,
       generate: async (request) => {
         this.beforeCall();
@@ -107,6 +107,8 @@ export class SpendBudget {
         return response;
       },
     };
+    if (provider.wireIdentity) metered.wireIdentity = (request) => provider.wireIdentity!(request);
+    return metered;
   }
 
   report() {

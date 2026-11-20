@@ -4,6 +4,8 @@ import { parseRef, type NodeRef } from "@/modules/knowledge/graph";
 import { mainClauseFrames, type MainClauseFrame } from "./context";
 import { diagnoseSlot, distractorDiagnosis, diagnosisCoverage } from "./diagnosis";
 import type { ExperimentSet } from "./experiments";
+import { slotForBlueprint } from "./families";
+import { assignedStrategy, type DistractorBlueprint, type RelationFamily } from "./skeleton";
 import type { DistractorSlot, QuestionSpec } from "./spec";
 import { defaultFactoryThresholds, type FactoryThresholds } from "./thresholds";
 import { factoryVersions } from "./versions";
@@ -187,6 +189,11 @@ export type DistractorSpec = z.infer<typeof distractorSpec>;
 
 const slug = (value: NodeRef) => parseRef(value).slug;
 
+/** The item plan chooses the family. The ordinal rotation remains only when no plan was supplied. */
+export function slotForFamily(slot: DistractorSlot, family: RelationFamily): DistractorSlot {
+  return slotForBlueprint(slot, { relationFamily: family, connectorStrategy: "natural" });
+}
+
 export function failureModeFor(slot: Pick<DistractorSlot, "distractorType" | "expresses">): FailureMode {
   const mode = (slot.expresses && relationFailure[slug(slot.expresses)]) || typeFailure[slug(slot.distractorType)];
   if (!mode) throw new Error(`No failure mode for ${slot.distractorType} expressing ${slot.expresses ?? "nothing"}`);
@@ -195,27 +202,35 @@ export function failureModeFor(slot: Pick<DistractorSlot, "distractorType" | "ex
 
 /**
  * Turns the spec's distractor plan into one DistractorSpec per wrong option. Deterministic: the same QuestionSpec
- * (and, under the second-round experiments, the same main-clause frame) always gives the same specs. Fails when two
- * options would use the same mechanism. Without options the result is the baseline contract.
+ * (and, under the second-round experiments, the same main-clause frame) always gives the same specs. Without a joint
+ * plan, two options may not share a mechanism. A joint plan may give two options the same family when their propositions differ.
  */
-export function buildDistractorSpecs(spec: QuestionSpec, thresholds: FactoryThresholds = defaultFactoryThresholds, options: { experiments?: ExperimentSet; frame?: MainClauseFrame } = {}): DistractorSpec[] {
+export function buildDistractorSpecs(spec: QuestionSpec, thresholds: FactoryThresholds = defaultFactoryThresholds, options: { experiments?: ExperimentSet; frame?: MainClauseFrame; blueprints?: DistractorBlueprint[] } = {}): DistractorSpec[] {
   const experiments = options.experiments ?? [];
   const frame = experiments.includes("compatibility") ? (options.frame ?? null) : null;
-  const roles = spec.distractorPlan.map((slot) => `${slug(slot.distractorType)}:${slot.expresses ? slug(slot.expresses) : "none"}`);
-  const duplicate = roles.find((role, i) => roles.indexOf(role) !== i);
+  const planned = options.blueprints ?? [];
+  const nearMissOptions = new Set(planned.filter((blueprint) => blueprint.relationFamily === "near_concession").map((blueprint) => blueprint.option));
+  const slots = spec.distractorPlan.map((slot) => {
+    const blueprint = planned.find((entry) => entry.option === slot.option);
+    return slotForBlueprint(slot, blueprint);
+  });
+  const baseRoles = slots.map((slot) => (nearMissOptions.has(slot.option) ? "near_concession:contrast" : `${slug(slot.distractorType)}:${slot.expresses ? slug(slot.expresses) : "none"}`));
+  const roles = baseRoles.map((role, index) => (planned.length > 0 && baseRoles.filter((item) => item === role).length > 1 ? `${role}_${slots[index].option.toLowerCase()}` : role));
+  const duplicate = roles.find((role, index) => roles.indexOf(role) !== index);
   if (duplicate) throw new Error(`Distractor plan repeats the mechanism ${duplicate}; every wrong option needs its own.`);
-  const typeCount = (type: NodeRef) => spec.distractorPlan.filter((slot) => slot.distractorType === type).length;
+  const typeCount = (type: NodeRef) => slots.filter((slot) => slot.distractorType === type).length;
   const capitalised = spec.contextConstraints.blankPosition === "start";
 
-  return spec.distractorPlan.map((slot, index) => {
+  return slots.map((slot, index) => {
     if (slot.connectors.length === 0) throw new Error(`Slot ${slot.option} has no connectors to open with.`);
     const form = formTypes.has(slug(slot.distractorType));
     const repeated = typeCount(slot.distractorType) > 1;
     if (repeated && !slot.expresses) throw new Error(`${slot.distractorType} repeats without a distinct relation.`);
-    const failureMode = failureModeFor(slot);
+    const nearMiss = nearMissOptions.has(slot.option) || (planned.length === 0 && assignedStrategy(spec) === "relational_inference" && slot.expresses === "discourse_relation:contrast");
+    const failureMode = nearMiss ? "no_broken_expectation" : failureModeFor(slot);
     const revised = revisedEventRelation[failureMode];
     const diagnosis = diagnosisCoverage[spec.questionType]
-      ? diagnoseSlot({ questionType: spec.questionType, correctRelation: spec.discourseRelation, expresses: slot.expresses, distractorType: slot.distractorType, failureMode, misconception: slot.misconception })
+      ? diagnoseSlot({ questionType: spec.questionType, correctRelation: spec.discourseRelation, expresses: slot.expresses, distractorType: slot.distractorType, failureMode: nearMiss ? "no_real_opposition" : failureMode, misconception: slot.misconception })
       : null;
     return distractorSpec.parse({
       version: factoryVersions.distractorSpec,
@@ -245,7 +260,7 @@ export function buildDistractorSpecs(spec: QuestionSpec, thresholds: FactoryThre
         correctRelation: spec.discourseRelation,
         targetRelation: slot.expresses,
         connectors: slot.connectors,
-        mustNotExpress: spec.discourseRelation ? [spec.discourseRelation] : [],
+        mustNotExpress: nearMiss ? [] : spec.discourseRelation ? [spec.discourseRelation] : [],
       },
       semanticConstraint: { failureMode, onTopic: true, wholeSentenceMustFail: true },
       plausibilityConstraint: { scenario: "realistic_in_context", worldKnowledge: "must_not_eliminate_alone", unusualContent: "needs_contextual_justification" },

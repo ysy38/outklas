@@ -40,7 +40,7 @@ export const generationTransitions: Record<GenerationState, readonly GenerationS
   EXPLANATION_FAILED: [],
   ITEM_VALIDATED: ["JUDGED"],
   ITEM_REJECTED: [],
-  JUDGED: ["HUMAN_REVIEW", "REJECTED"],
+  JUDGED: ["HUMAN_REVIEW", "APPROVED", "REJECTED"],
   HUMAN_REVIEW: ["HUMAN_REVIEW", "APPROVED", "REJECTED"],
   APPROVED: [],
   REJECTED: [],
@@ -48,7 +48,7 @@ export const generationTransitions: Record<GenerationState, readonly GenerationS
 
 export const terminalStates = generationStates.filter((state) => generationTransitions[state].length === 0);
 
-export type AttemptStage = "skeleton" | "distractor" | "explanation";
+export type AttemptStage = "skeleton" | "distractorPlan" | "distractor" | "explanation";
 
 /** One model call of one stage, with what the checks said about it. Written to provenance. */
 export type StageAttempt = {
@@ -68,10 +68,10 @@ export type StageAttempt = {
   rejectionReason: string | null;
 };
 
-export const costStages = ["skeleton", "skeletonGate", "distractor", "distractorJudge", "explanation", "finalJudge"] as const;
+export const costStages = ["skeleton", "skeletonGate", "distractorPlan", "planReview", "distractor", "distractorJudge", "explanation", "finalJudge"] as const;
 export type CostStage = (typeof costStages)[number];
 /** Tokens count fresh provider calls only; a local cache hit costs nothing. Cache tokens are the provider's prompt cache. */
-export type StageCost = { calls: number; cachedCalls: number; freshLatencyMs: number; inputTokens: number; outputTokens: number; cacheWriteTokens?: number; cacheReadTokens?: number };
+export type StageCost = { calls: number; cachedCalls: number; freshLatencyMs: number; inputTokens: number; outputTokens: number; cacheWriteTokens?: number; cacheReadTokens?: number; reasoningTokens?: number };
 
 /** One model call of an item; `attempt` above 1 is a regeneration of that stage (and option). */
 export type CallRecord = {
@@ -91,10 +91,22 @@ export type CallRecord = {
   cacheWriteTokens: number;
   cacheReadTokens: number;
   error: string | null;
+  /** Set only when the provider reported a separate reasoning-token count. */
+  reasoningTokens?: number;
+  finishReason?: string;
+  servedProvider?: string;
 };
 export type ItemCost = StageCost & { byStage: Partial<Record<CostStage, StageCost>>; log?: CallRecord[] };
 
-export type AcceptedDistractor = { option: OptionLabel; text: string; decision: Exclude<DistractorDecisionKind, "REGENERATE">; attempts: number };
+/** Internal quality note for one wrong option. It is not copied into the learner-facing lesson. */
+export type DistractorAudit = {
+  distractor_type: string;
+  intended_misconception: string | null;
+  why_it_looks_plausible: string;
+  decisive_failure_reason: string;
+};
+
+export type AcceptedDistractor = { option: OptionLabel; text: string; decision: Exclude<DistractorDecisionKind, "REGENERATE">; attempts: number; audit?: DistractorAudit };
 
 export type GenerationTrace = {
   version: typeof factoryVersions.generation;

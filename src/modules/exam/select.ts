@@ -7,6 +7,7 @@ export type PoolItem = {
   stimulusId: string | null;
   difficulty: number;
   skillIds: string[];
+  errorClasses: string[];
 };
 
 function bySlot(items: PoolItem[]): PoolItem[] {
@@ -81,6 +82,7 @@ export type SelectRequest = {
   seenIds: string[];
   preferredSections: SectionId[];
   difficulty: number;
+  weakErrors?: string[];
 };
 
 export function selectItems(request: SelectRequest): PoolItem[] {
@@ -88,10 +90,16 @@ export function selectItems(request: SelectRequest): PoolItem[] {
   const fresh = request.pool.filter((item) => !seen.has(item.id));
   const source = fresh.length >= request.count ? fresh : request.pool;
   const preferred = new Set(request.preferredSections);
+  const weak = new Set(request.weakErrors ?? []);
   const ranked = [...source].sort((a, b) => {
     const aPref = preferred.has(a.section) ? 0 : 1;
     const bPref = preferred.has(b.section) ? 0 : 1;
     if (aPref !== bPref) return aPref - bPref;
+    if (weak.size > 0) {
+      const aHit = a.errorClasses.some((error) => weak.has(error)) ? 0 : 1;
+      const bHit = b.errorClasses.some((error) => weak.has(error)) ? 0 : 1;
+      if (aHit !== bHit) return aHit - bHit;
+    }
     const aDiff = Math.abs(a.difficulty - request.difficulty);
     const bDiff = Math.abs(b.difficulty - request.difficulty);
     if (aDiff !== bDiff) return aDiff - bDiff;

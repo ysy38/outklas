@@ -6,11 +6,16 @@ import type { ReconstructedQuestion } from "@/modules/analysis/surface";
 import type { NodeRef } from "@/modules/knowledge/graph";
 import { completedSentences, generatedQuestionCandidate, type GeneratedQuestionCandidate } from "./candidate";
 import { connectorsFor, familyBlueprints } from "./families";
-import { judgeDecision, judgeReport, type JudgeReport, type OptionAcceptability } from "./judge";
+import { distractorDecision, reportFromVerdict } from "./distractor";
+import type { DistractorSpec } from "./distractor-spec";
+import { judgeDecision, judgeReport, planReviewConcerns, type JudgeReport, type OptionAcceptability } from "./judge";
+import { claimGrounds, concessionAlignment, declineJustified, inferenceReward, reasonLicensed, undemonstratedExempt } from "./plan-logic";
+import { skeletonGateDecision } from "./skeleton";
+import { defaultFactoryThresholds } from "./thresholds";
 import { buildDistractorSpecs } from "./distractor-spec";
 import { buildExamProfile, consistentMisconception, evidenceLevel, familyConcept } from "./profile";
 import { generatorJudgeIndependent, provenance } from "./provenance";
-import { applyReview, initialStatus, type CandidateRecord } from "./review";
+import { applyReview, engineAdmission, initialStatus, type CandidateRecord } from "./review";
 import { buildQuestionSpec, pickTarget } from "./spec-engine";
 import { questionSpec } from "./spec";
 import { leadingConnector, originalityIndex, validateCandidate } from "./validator";
@@ -266,6 +271,81 @@ describe("candidate validator", () => {
     expect(result.issues.map((issue) => issue.code)).toContain("length_clue");
     expect(result.status).toBe("pass");
   });
+
+  it("checks a relational joint plan with the same connector menu as generation", () => {
+    const item = buildQuestionSpec({ profile, family, ordinal: 308, band: "hard" });
+    const planned = [
+      { option: "A" as const, relationFamily: "near_concession", connectorStrategy: "natural" },
+      { option: "B" as const, relationFamily: "condition", connectorStrategy: "natural" },
+      { option: "D" as const, relationFamily: "time", connectorStrategy: "natural" },
+      { option: "E" as const, relationFamily: "contrast", connectorStrategy: "natural" },
+    ];
+    const candidate = good({
+      question: {
+        stem: "----, the hut's food stores were still full at the inspection.",
+        options: {
+          A: "Although earlier parties had used up the hut's food stores before the crew arrived",
+          B: "As long as the trail crew reached the upper hut every single week",
+          C: "Even though a rockslide had blocked the only track to the upper hut",
+          D: "As soon as the trail crew had cleared the track for the season",
+          E: "Whereas the upper hut's food supplies had been running low for weeks by then",
+        },
+      },
+      correctOption: "C",
+      explanation: "Doğru cevap C. 'even though' beklentinin tersine bir sonucu anlatır. A yakındaki sınırı karşıtlık gibi kurar, B koşul bildirir, D zaman sırası kurar, E karşılaştırır.",
+      distractorRationales: [
+        { option: "A", distractorType: "distractor_type:wrong_discourse_relation", misconception: "misconception:concession_vs_contrast", whyPlausible: "Yakın bir sınır gibi durur.", whyWrong: "Beklenmedik sonuç ilişkisi kurulmaz." },
+        { option: "B", distractorType: "distractor_type:wrong_discourse_relation", misconception: null, whyPlausible: "Koşul akıcı durur.", whyWrong: "Haftalık erişim denetim anını koşullamaz." },
+        { option: "D", distractorType: "distractor_type:logical_incompatibility", misconception: null, whyPlausible: "Zaman sırası kurar.", whyWrong: "Denetim anı bu sırayı gerektirmez." },
+        { option: "E", distractorType: "distractor_type:wrong_discourse_relation", misconception: "misconception:concession_vs_contrast", whyPlausible: "Karşıtlık var gibi görünür.", whyWrong: "Yalnızca karşılaştırma vardır." },
+      ],
+      metadata: { connectorByOption: { A: "although", B: "as long as", C: "even though", D: "as soon as", E: "whereas" }, selfRatedDifficulty: "medium" },
+    });
+    const mismatches = (blueprints?: { option: "A" | "B" | "D" | "E"; relationFamily: string; connectorStrategy: string }[], next = candidate) =>
+      validateCandidate({ spec: item, candidate: next, blueprints }).issues.filter((issue) => issue.code === "distractor_connector_mismatch");
+
+    expect(mismatches().map((issue) => issue.option)).toEqual(["A", "B", "D", "E"]);
+    expect(mismatches(planned)).toEqual([]);
+    expect(validateCandidate({ spec: item, candidate, blueprints: planned }).issues.map((issue) => issue.code)).not.toContain("sole_concessive_clue");
+
+    const wrongFamily = planned.map((entry) => (entry.option === "B" ? { ...entry, relationFamily: "cause" } : entry));
+    expect(mismatches(wrongFamily).map((issue) => issue.detail)).toEqual(["connector:as_long_as ∉ discourse_relation:cause"]);
+
+    const because = good({
+      ...candidate,
+      question: { ...candidate.question, options: { ...candidate.question.options, B: "Because the trail crew reached the upper hut every single week" } },
+      metadata: { ...candidate.metadata, connectorByOption: { ...candidate.metadata.connectorByOption, B: "because" } },
+    });
+    expect(mismatches(planned, because).map((issue) => issue.detail)).toEqual(["connector:because ∉ discourse_relation:condition"]);
+
+    expect(mismatches(planned.map((entry) => ({ ...entry, connectorStrategy: "free" }))).map((issue) => issue.option)).toEqual(["A", "B", "D", "E"]);
+    expect(mismatches(planned.map((entry) => ({ ...entry, relationFamily: "made_up" }))).map((issue) => issue.option)).toEqual(["A", "B", "D", "E"]);
+
+    const whereas = good({
+      ...candidate,
+      question: { ...candidate.question, options: { ...candidate.question.options, A: "Whereas earlier parties had used up the hut's food stores before the crew arrived" } },
+      metadata: { ...candidate.metadata, connectorByOption: { ...candidate.metadata.connectorByOption, A: "whereas" } },
+    });
+    const repeated = validateCandidate({ spec: item, candidate: whereas, blueprints: planned });
+    expect(repeated.issues.filter((issue) => issue.code === "distractor_connector_mismatch")).toEqual([]);
+    expect(repeated.issues.map((issue) => issue.code)).toContain("sole_concessive_clue");
+    expect(repeated.issues.map((issue) => issue.code)).not.toContain("connector_repeated");
+    const doubled = good({
+      ...candidate,
+      question: { ...candidate.question, options: { ...candidate.question.options, A: "Although earlier parties had used the stores even though the crew had not arrived" } },
+    });
+    expect(validateCandidate({ spec: item, candidate: doubled, blueprints: planned }).issues.filter((issue) => issue.code === "connector_repeated").map((issue) => issue.option)).toEqual(["A"]);
+
+    const lexical = buildQuestionSpec({ profile, family, ordinal: 1, band: "hard" });
+    const lexicalPlan = [{ option: "B" as const, relationFamily: "cause", connectorStrategy: "natural" }];
+    expect(validateCandidate({ spec: lexical, candidate: good(), blueprints: lexicalPlan }).issues.filter((issue) => issue.code === "distractor_connector_mismatch")).toEqual([]);
+
+    const causePlan = [{ option: "B" as const, relationFamily: "cause", connectorStrategy: "natural" }];
+    const becauseOnContrast = withOption("B", "because most forest trees depend on deep roots to collect underground water");
+    const easy = buildQuestionSpec({ profile, family, ordinal: 1, band: "easy" });
+    expect(validateCandidate({ spec, candidate: becauseOnContrast, blueprints: causePlan }).issues.filter((issue) => issue.code === "distractor_connector_mismatch").map((issue) => issue.option)).toEqual(["B"]);
+    expect(validateCandidate({ spec: easy, candidate: becauseOnContrast, blueprints: causePlan }).issues.filter((issue) => issue.code === "distractor_connector_mismatch").map((issue) => issue.option)).toEqual(["B"]);
+  });
 });
 
 const report = (patch: Partial<JudgeReport> = {}): JudgeReport =>
@@ -290,12 +370,60 @@ describe("judge decision", () => {
   const decide = (patch: Partial<JudgeReport> = {}, blindAnswer: "A" | "B" = "A", acceptability = onlyKey()) =>
     judgeDecision({ spec, validation, judge: { blindAnswer, blindConfidence: 0.9, acceptability, report: report(patch) } });
 
-  it("rejects a wrong option that reads as a sensible sentence on its own, and a key that does not", () => {
-    expect(decide({}, "A", onlyKey({ D: 0.8 }))).toMatchObject({ verdict: "REJECT", acceptableOptions: ["A", "D"] });
-    expect(decide({}, "A", onlyKey({ D: 0.8 })).failures).toContain("acceptable_distractor_D");
-    expect(decide({}, "A", onlyKey({ D: 0.3 }))).toMatchObject({ verdict: "REVIEW", concerns: expect.arrayContaining(["acceptable_distractor_D"]) });
+  it("keeps a standalone natural sentence out of the second-answer reject, and still rejects a key that does not read", () => {
+    const natural = onlyKey({ D: 0.8 });
+    natural.sentences = natural.sentences.map((entry) => (entry.option === "D" ? { ...entry, relationCoherent: true } : entry));
+    const result = decide({}, "A", natural);
+    expect(result).toMatchObject({ verdict: "APPROVE", acceptableOptions: ["A", "D"], relationCoherentOptions: ["D"], reasoningStatus: "unverified" });
+    expect(result.failures.some((failure) => failure.startsWith("acceptable_distractor_"))).toBe(false);
+    expect(decide({}, "A", onlyKey({ D: 0.3 })).verdict).toBe("APPROVE");
     expect(decide({}, "A", onlyKey({ A: -0.9 })).failures).toContain("key_unacceptable");
     expect(decide({}, "A", { sentences: onlyKey().sentences.slice(0, 4).concat(onlyKey().sentences[0]) }).failures).toContain("acceptability_incomplete");
+  });
+
+  it("does not treat a correct letter as verified reasoning", () => {
+    const fields = { blindAnswer: "A" as const, blindConfidence: 0.9, acceptability: onlyKey(), report: report() };
+    const missing = judgeDecision({ spec, validation, judge: { ...fields, blindEvidence: "" } });
+    expect(missing.reasoningStatus).toBe("unverified");
+    expect(missing.verdict).toBe("REVIEW");
+    expect(missing.failures).not.toContain("blind_evidence_missing");
+    expect(missing.concerns).toContain("blind_evidence_missing");
+    const unsure = judgeDecision({ spec, validation, judge: { ...fields, blindEvidence: "thin roots", blindUncertain: true } });
+    expect(unsure.verdict).toBe("REVIEW");
+    expect(unsure.concerns).toContain("blind_low_confidence");
+    expect(unsure.failures).toEqual([]);
+    expect(unsure.reasoningStatus).toBe("unverified");
+    const named = judgeDecision({ spec, validation, judge: { ...fields, blindEvidence: "thin roots", blindAlternative: "D" } });
+    expect(named.failures).toContain("second_defensible_D");
+    expect(named.reasoningStatus).toBe("unverified");
+    const namedUnsure = judgeDecision({ spec, validation, judge: { ...fields, blindConfidence: 0.4, blindEvidence: "thin roots", blindUncertain: true, blindAlternative: "D" } });
+    expect(namedUnsure.failures.some((failure) => failure.startsWith("second_defensible_"))).toBe(false);
+    expect(namedUnsure.concerns).toContain("blind_second_uncertain_D");
+  });
+
+  it("shows plan-review concerns without treating them as verified errors", () => {
+    const fields = { blindAnswer: "A" as const, blindConfidence: 0.9, acceptability: onlyKey(), report: report() };
+    const missing = judgeDecision({ spec, validation, judge: { ...fields, planConcerns: ["review_missing"] } });
+    expect(missing.verdict).toBe("REVIEW");
+    expect(missing.failures).not.toContain("review_missing");
+    expect(missing.concerns).toContain("review_missing");
+    expect(engineAdmission({ validation, judge: missing }).failure).toBe("unresolved_review");
+    const low = judgeDecision({ spec, validation, judge: { ...fields, planConcerns: ["planned_second_answer", "low_confidence"] } });
+    expect(low.verdict).toBe("REVIEW");
+    expect(low.failures).not.toContain("planned_second_answer");
+    expect(low.concerns).toEqual(expect.arrayContaining(["planned_second_answer", "low_confidence"]));
+    const ground = judgeDecision({ spec, validation, judge: { ...fields, planConcerns: ["plan_ground_unanchored", "plan_ground_uncertain"] } });
+    expect(ground.failures).not.toContain("plan_ground_unanchored");
+    expect(ground.concerns).toEqual(expect.arrayContaining(["plan_ground_unanchored", "plan_ground_uncertain"]));
+  });
+
+  it("reads plan concerns from the attempt that reviewed the plans", () => {
+    expect(planReviewConcerns([
+      { stage: "skeleton", judge: { concerns: ["other_continuations_open", "low_confidence"] } },
+      { stage: "distractorPlan", judge: { concerns: ["review_missing", "low_confidence"] } },
+    ])).toEqual(["review_missing", "low_confidence"]);
+    expect(planReviewConcerns([{ stage: "skeleton", judge: { concerns: ["planned_second_answer", "low_confidence", "other_continuations_open"] } }])).toEqual(["planned_second_answer", "low_confidence"]);
+    expect(planReviewConcerns([{ stage: "skeleton", judge: { concerns: ["low_confidence"] } }])).toEqual([]);
   });
 
   it("approves only when the model and every rule agree", () => {
@@ -308,6 +436,84 @@ describe("judge decision", () => {
     expect(decide({ alternativeDefensibleOptions: ["B"] }).failures).toContain("second_defensible_B");
   });
 
+  it("rejects the contradictory packet and leaves the unused fields out of the verdict", () => {
+    const hard = { ...spec, difficulty: { ...spec.difficulty, band: "hard" as const, cefr: "C1" as const } };
+    const rejected = {
+      ...validation,
+      status: "reject" as const,
+      critical: validation.critical + 1,
+      issues: [...validation.issues, { code: "sole_concessive_clue", severity: "critical" as const, option: "A" as const }],
+    };
+    const acceptability = onlyKey({ A: -0.8, C: 0.8 });
+    const packet = {
+      blindAnswer: "C" as const,
+      blindConfidence: 0.55,
+      blindEvidence: "can still be read",
+      blindUncertain: true,
+      blindAlternative: "B" as const,
+      acceptability,
+      report: report({ verdict: "REVIEW", estimatedDifficulty: "medium" }),
+    };
+    const review = judgeDecision({ spec: hard, validation: rejected, judge: packet });
+    expect(review.verdict).toBe("REJECT");
+    expect(review.modelVerdict).toBe("REVIEW");
+    expect(review.blindAgrees).toBe(false);
+    expect(review.failures).toEqual(expect.arrayContaining(["validator_rejected", "blind_answer_C", "key_unacceptable"]));
+    expect(review.failures.some((failure) => failure.startsWith("second_defensible_"))).toBe(false);
+    expect(review.concerns).not.toContain("blind_low_confidence");
+    expect(review.concerns).not.toContain("blind_second_uncertain_B");
+    expect(review.concerns).toContain("difficulty_medium");
+    expect(review.relationCoherentOptions).toEqual([]);
+    expect(review.acceptableOptions).toEqual(["C"]);
+    expect(engineAdmission({ validation: rejected, judge: review })).toMatchObject({ state: "REJECTED", status: "validator_rejected" });
+
+    const approvedModel = judgeDecision({ spec: hard, validation, judge: { ...packet, report: report({ verdict: "APPROVE", estimatedDifficulty: "medium" }) } });
+    expect(approvedModel.modelVerdict).toBe("APPROVE");
+    expect(approvedModel.verdict).toBe("REJECT");
+    expect(approvedModel.failures).toEqual(expect.arrayContaining(["blind_answer_C", "key_unacceptable"]));
+    expect(approvedModel.failures).not.toContain("validator_rejected");
+    expect(engineAdmission({ validation, judge: approvedModel })).toMatchObject({ state: "REJECTED", status: "judge_rejected" });
+
+    const omitted = judgeDecision({ spec, validation, judge: { blindAnswer: "A", blindConfidence: 0.9, acceptability: onlyKey(), report: report() } });
+    expect(omitted.relationCoherentOptions).toEqual([]);
+    expect(omitted.failures).toEqual([]);
+    expect(omitted.verdict).toBe("APPROVE");
+
+    const incoherentKey = onlyKey();
+    incoherentKey.sentences = incoherentKey.sentences.map((entry) => (entry.option === "A" ? { ...entry, relationCoherent: false } : entry));
+    const incoherent = judgeDecision({ spec, validation, judge: { blindAnswer: "A", blindConfidence: 0.9, acceptability: incoherentKey, report: report() } });
+    expect(incoherent.failures).toContain("key_relation_incoherent");
+    expect(incoherent.verdict).toBe("REJECT");
+    expect(incoherent.qualityScore).toBeGreaterThan(0.85);
+  });
+
+  it("rejects only an explicit incoherent key relation", () => {
+    const high = report();
+    const falseKey = onlyKey();
+    falseKey.sentences = falseKey.sentences.map((entry) => (entry.option === "A" ? { ...entry, relationCoherent: false } : entry));
+    const rejected = judgeDecision({ spec, validation, judge: { blindAnswer: "A", blindConfidence: 0.9, acceptability: falseKey, report: high } });
+    expect(rejected.verdict).toBe("REJECT");
+    expect(rejected.failures).toContain("key_relation_incoherent");
+    expect(rejected.modelVerdict).toBe("APPROVE");
+
+    const trueKey = onlyKey();
+    trueKey.sentences = trueKey.sentences.map((entry) => (entry.option === "A" ? { ...entry, relationCoherent: true } : entry));
+    const kept = judgeDecision({ spec, validation, judge: { blindAnswer: "A", blindConfidence: 0.9, acceptability: trueKey, report: high } });
+    expect(kept.verdict).toBe("APPROVE");
+    expect(kept.failures).not.toContain("key_relation_incoherent");
+    expect(kept.relationCoherentOptions).toContain("A");
+
+    const missing = judgeDecision({ spec, validation, judge: { blindAnswer: "A", blindConfidence: 0.9, acceptability: onlyKey(), report: high } });
+    expect(missing.verdict).toBe("APPROVE");
+    expect(missing.failures).not.toContain("key_relation_incoherent");
+
+    const distractor = onlyKey({ D: 0.8 });
+    distractor.sentences = distractor.sentences.map((entry) => (entry.option === "D" ? { ...entry, relationCoherent: false } : entry));
+    const wrongOnly = judgeDecision({ spec, validation, judge: { blindAnswer: "A", blindConfidence: 0.9, acceptability: distractor, report: high } });
+    expect(wrongOnly.verdict).toBe("APPROVE");
+    expect(wrongOnly.failures).not.toContain("key_relation_incoherent");
+  });
+
   it("rejects critical failures even with a high weighted score", () => {
     const result = decide({ scores: { ...report().scores, ambiguityRisk: 0.7 } });
     expect(result.verdict).toBe("REJECT");
@@ -318,6 +524,74 @@ describe("judge decision", () => {
     expect(decide({ verdict: "REJECT" }).verdict).toBe("REJECT");
     expect(decide({ scores: { ...report().scores, distractorQuality: 0.6 } }).verdict).toBe("REVIEW");
     expect(decide({ estimatedDifficulty: "hard" }).verdict).toBe("REVIEW");
+  });
+
+  it("keeps a band mismatch as a review", () => {
+    const hard = { ...spec, difficulty: { ...spec.difficulty, band: "hard" as const, cefr: "C1" as const } };
+    const result = judgeDecision({ spec: hard, validation, judge: { blindAnswer: "A", blindConfidence: 0.9, acceptability: onlyKey(), report: report({ estimatedDifficulty: "medium", verdict: "APPROVE" }) } });
+    expect(result.verdict).toBe("REVIEW");
+    expect(result.failures).not.toContain("difficulty_medium");
+    expect(result.concerns).toContain("difficulty_medium");
+  });
+
+  const warned = (codes: { code: string; severity: "warn" | "critical" }[]) => {
+    const issues = codes.map((issue) => ({ code: issue.code, severity: issue.severity }));
+    const critical = issues.filter((issue) => issue.severity === "critical").length;
+    return { ...validation, status: critical ? ("reject" as const) : ("pass" as const), critical, warnings: issues.length - critical, issues };
+  };
+  const admit = (codes: { code: string; severity: "warn" | "critical" }[], patch: Partial<JudgeReport> = {}) => {
+    const checked = warned(codes);
+    const decision = judgeDecision({ spec, validation: checked, judge: { blindAnswer: "A", blindConfidence: 0.9, acceptability: onlyKey(), report: report(patch) } });
+    return { checked, decision, admission: engineAdmission({ validation: checked, judge: decision }) };
+  };
+
+  it("lets a length miss through when every other check passes, and keeps the warning on the record", () => {
+    const { checked, decision, admission } = admit([{ code: "length_out_of_range", severity: "warn" }, { code: "length_out_of_range", severity: "warn" }]);
+    expect(checked.issues.map((issue) => issue.code)).toEqual(["length_out_of_range", "length_out_of_range"]);
+    expect(checked.warnings).toBe(2);
+    expect(decision.concerns).not.toContain("validator_warnings");
+    expect(decision.verdict).toBe("APPROVE");
+    expect(admission).toMatchObject({ status: "approved", state: "APPROVED", failure: null });
+  });
+
+  it("still blocks a length miss that sits beside a length clue", () => {
+    const { decision, admission } = admit([
+      { code: "length_out_of_range", severity: "warn" },
+      { code: "length_clue", severity: "warn" },
+    ]);
+    expect(decision.concerns).toContain("validator_warnings");
+    expect(decision.verdict).toBe("REVIEW");
+    expect(admission).toMatchObject({ status: "judge_rejected", failure: "unresolved_review" });
+  });
+
+  it("still rejects a length miss that sits beside a far-out length", () => {
+    const { decision, admission } = admit([
+      { code: "length_out_of_range", severity: "warn" },
+      { code: "length_far_out", severity: "critical" },
+    ]);
+    expect(decision.failures).toContain("validator_rejected");
+    expect(decision.verdict).toBe("REJECT");
+    expect(admission).toMatchObject({ status: "validator_rejected", failure: "final_validator" });
+  });
+
+  it("still rejects a second answer and a grammar failure beside a length miss", () => {
+    const second = admit([{ code: "length_out_of_range", severity: "warn" }], { alternativeDefensibleOptions: ["B"] });
+    expect(second.decision.failures).toContain("second_defensible_B");
+    expect(second.admission.state).toBe("REJECTED");
+    const grammar = admit([{ code: "length_out_of_range", severity: "warn" }], { scores: { ...report().scores, grammar: 0.5 } });
+    expect(grammar.decision.failures).toContain("grammar_low");
+    expect(grammar.decision.verdict).toBe("REJECT");
+  });
+
+  it("does not turn a Sonnet medium item into a hard admission", () => {
+    const hard = { ...spec, difficulty: { ...spec.difficulty, band: "hard" as const, cefr: "C1" as const } };
+    const checked = warned([{ code: "length_out_of_range", severity: "warn" }]);
+    const reportMedium = report({ estimatedDifficulty: "medium", verdict: "APPROVE" });
+    const decision = judgeDecision({ spec: hard, validation: checked, judge: { blindAnswer: "A", blindConfidence: 0.9, acceptability: onlyKey(), report: reportMedium } });
+    expect(reportMedium.estimatedDifficulty).toBe("medium");
+    expect(decision.concerns).toEqual(["difficulty_medium"]);
+    expect(decision.verdict).toBe("REVIEW");
+    expect(engineAdmission({ validation: checked, judge: decision }).state).toBe("APPROVED");
   });
 });
 
@@ -423,10 +697,27 @@ describe("human review", () => {
   };
   const at = "2026-10-08T13:00:00.000Z";
 
-  it("queues only validator-clean, judge-unrejected candidates", () => {
-    expect(record.status).toBe("pending_review");
+  it("records the approved band apart from the judge estimate and the explanation estimate", () => {
+    const candidate = good();
+    candidate.metadata.judgeEstimatedBand = "medium";
+    candidate.metadata.selfRatedDifficulty = "easy";
+    const stamped: CandidateRecord = { ...record, versions: [{ ...record.versions[0], candidate }] };
+    const approved = applyReview(stamped, { decision: "APPROVE", reviewer: "mora", at, band: "hard" });
+    const metadata = approved.versions[0].candidate.metadata;
+    expect(metadata.approvedBand).toBe("hard");
+    expect(metadata.judgeEstimatedBand).toBe("medium");
+    expect(metadata.selfRatedDifficulty).toBe("easy");
+    const plain = applyReview(stamped, { decision: "APPROVE", reviewer: "mora", at });
+    expect(plain.versions[0].candidate.metadata.approvedBand).toBeUndefined();
+    expect(plain.versions[0].candidate.metadata.judgeEstimatedBand).toBe("medium");
+  });
+
+  it("admits a clean item and quarantines an unresolved review", () => {
+    expect(record.status).toBe("approved");
     expect(initialStatus({ ...validation, status: "reject" }, null)).toBe("validator_rejected");
-    expect(initialStatus(validation, { ...judge, verdict: "REJECT" })).toBe("judge_rejected");
+    expect(initialStatus(validation, { ...judge, verdict: "REJECT", failures: ["second_defensible_C"] })).toBe("judge_rejected");
+    expect(initialStatus(validation, { ...judge, verdict: "REVIEW", concerns: ["semantic_gray"] })).toBe("judge_rejected");
+    expect(initialStatus(validation, { ...judge, verdict: "REVIEW", concerns: ["difficulty_medium"] })).toBe("approved");
   });
 
   it("EDIT appends a version and keeps the generator's original", () => {
@@ -455,5 +746,75 @@ describe("human review", () => {
     const next = applyReview(record, { decision: "REJECT", reviewer: "mora", notes: "weak trap", at });
     expect(next).toMatchObject({ status: "rejected", versions: record.versions });
     expect(next.reviews[0]).toMatchObject({ decision: "REJECT", appliesToVersion: 1, notes: "weak trap" });
+  });
+});
+
+describe("pilot 12 plan failures stay three separate classes", () => {
+  const slot = { grammarConstraint: { mustBeGrammatical: true }, requiredProperties: ["coherent_clause"] } as DistractorSpec;
+  const threshold = defaultFactoryThresholds.distractorAcceptability;
+
+  it("342 is an outside evidence demand, not a failed concession direction", () => {
+    const stem = "----, the published record of that season's flood peaks was more complete than the record for the decade before.";
+    expect(stem).toContain("more complete than the record");
+    expect(reasonLicensed("external_assumption")).toBe(false);
+    expect(reasonLicensed("root_supported")).toBe(true);
+    expect(declineJustified(1)).toBe(false);
+    expect(declineJustified(0)).toBe(true);
+    expect(concessionAlignment({ obstacleSupportsOutcome: false, planTreatsObstacleAsConcession: true })).toBe("aligned");
+  });
+
+  it("344 keeps a second answer even when the clause is faithful to the plan", () => {
+    expect(reasonLicensed("not_entailed")).toBe(false);
+    const decision = distractorDecision({
+      dspec: slot,
+      report: reportFromVerdict({
+        verdict: "second_answer",
+        sure: true,
+        reason: "A detector is hardware whereas a pipeline is data processing, making this cause-and-effect sentence entirely plausible and defensible.",
+        planFidelity: "faithful",
+      }),
+    });
+    expect(decision.decision).toBe("REGENERATE");
+    expect(decision.failures).toContain("competent_candidate_could_select");
+    expect(decision.failures).not.toContain("plan_fidelity");
+  });
+
+  it("346 reverses the concession when the obstacle supports the outcome", () => {
+    expect(concessionAlignment({ obstacleSupportsOutcome: true, planTreatsObstacleAsConcession: true })).toBe("reversed");
+    expect(concessionAlignment({ obstacleSupportsOutcome: false, planTreatsObstacleAsConcession: true })).toBe("aligned");
+    const gate = skeletonGateDecision(
+      {
+        reasons: ["In archaeology, waterlogged anoxic conditions preserve organic materials rather than destroying them."],
+        grammatical: true,
+        natural: 0.9,
+        keyTrue: false,
+        targetRelation: 0.2,
+        keyAmbiguous: 0.1,
+        confidence: 0.9,
+        clauseCarriesClash: true,
+      },
+      threshold,
+      { band: "hard", sentence: "Although the lowest layer of the site had remained waterlogged for centuries", strategy: "relational_inference" },
+    );
+    expect(gate.decision).toBe("REGENERATE");
+    expect(gate.failures).toEqual(expect.arrayContaining(["key_not_true", "key_relation_weak"]));
+  });
+
+  it("does not collapse the three grounds into one licensed class", () => {
+    expect(claimGrounds.filter(reasonLicensed)).toEqual(["root_supported", "root_entailable"]);
+  });
+
+  it("does not treat a proposition status as a distractor verdict", () => {
+    expect(undemonstratedExempt("not_entailed")).toBe(true);
+    expect(undemonstratedExempt("restatement")).toBe(false);
+    expect(undemonstratedExempt(undefined)).toBe(false);
+    expect(inferenceReward("not_entailed", "invalid_inference")).toBe("eligible");
+    expect(inferenceReward("restatement", "invalid_inference")).toBe("withheld");
+    expect(inferenceReward("entailed", "invalid_inference")).toBe("withheld");
+    expect(inferenceReward("not_entailed", "none")).toBe("undetermined");
+    expect(inferenceReward("contradicted", "invalid_inference")).toBe("undetermined");
+    expect(inferenceReward("external_assumption", "invalid_inference")).toBe("undetermined");
+    expect(inferenceReward("undetermined", "invalid_inference")).toBe("undetermined");
+    expect(reasonLicensed("not_entailed")).toBe(false);
   });
 });

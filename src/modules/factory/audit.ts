@@ -127,9 +127,9 @@ const cheap = (entry: Pick<OptionAudit, "eliminatedBy" | "clue" | "natural" | "i
  * - defective: the blind solve misses the key, the key does not read as true or natural, or a wrong option is defensible;
  * - null (not calibrated): the blind solve agrees only with low confidence, so validity itself is not established;
  * - easy: the answer is found without the target relation, or at least three wrong options fall to superficial cues;
- * - hard: every wrong option is functional and another option shares the key's relation, so the candidate must
- *   discriminate content within one relation; nothing else is evidence of a subtle distinction, so without it the
- *   item stays medium (conservative);
+ * - hard: a construction label only. Every wrong option is functional and another option shares the key's relation.
+ *   It does not measure language. Requested band carries the CEFR load (easy B1 plain clause, medium B2, hard C1).
+ *   Without a shared relation the item stays medium (conservative);
  * - medium: a valid item that needs the context and the target relation.
  */
 export function calibratedBand(evidence: CalibrationEvidence): { band: CalibratedBand | null; reason: string } {

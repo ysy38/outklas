@@ -2,7 +2,7 @@ import { z } from "zod";
 import { optionLabels, type OptionLabel } from "@/modules/analysis/contract";
 import { generatedQuestionCandidate, type GeneratedQuestionCandidate } from "./candidate";
 import type { AcceptedDistractor } from "./generation";
-import type { QuestionSkeleton } from "./skeleton";
+import { type QuestionSkeleton, type SkeletonCheckReport } from "./skeleton";
 import { connectorSurface } from "./spec-engine";
 import type { QuestionSpec } from "./spec";
 import { leadingConnector } from "./validator";
@@ -37,8 +37,13 @@ const surfaceOf = (option: string) => {
   return found ? connectorSurface(found) : "";
 };
 
+/** The three gate fields, copied as the accepted report left them. */
+export function gateEvidence(report: SkeletonCheckReport): { embedding: string; preciseTerm: string; clauseCarriesClash: boolean } {
+  return { embedding: report.embedding ?? "", preciseTerm: report.preciseTerm ?? "", clauseCarriesClash: report.clauseCarriesClash === true };
+}
+
 /** The complete candidate the final validator and judge see. Every taxonomy field comes from the spec. */
-export function assembleCandidate(spec: QuestionSpec, core: ItemCore, explanation: ItemExplanation): GeneratedQuestionCandidate {
+export function assembleCandidate(spec: QuestionSpec, core: ItemCore, explanation: ItemExplanation, gate?: SkeletonCheckReport | null): GeneratedQuestionCandidate {
   const plan = new Map(spec.distractorPlan.map((slot) => [slot.option, slot]));
   return generatedQuestionCandidate.parse({
     question: { stem: core.stem, options: core.options },
@@ -54,6 +59,7 @@ export function assembleCandidate(spec: QuestionSpec, core: ItemCore, explanatio
     metadata: {
       connectorByOption: Object.fromEntries(optionLabels.map((label) => [label, surfaceOf(core.options[label])])),
       selfRatedDifficulty: explanation.estimatedDifficulty,
+      ...(gate ? { gate: gateEvidence(gate) } : {}),
     },
   });
 }

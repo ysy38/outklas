@@ -9,8 +9,14 @@ import { dna } from "./stages/dna";
 import { dnaSkeleton } from "./stages/dna-skeleton";
 import { examSlice } from "./stages/exam-slice";
 import { factoryAudit, factoryBlindScore, factoryBlindSheet, factoryCompare, type VariantInput } from "./stages/benchmark";
+import { planBankImport } from "./stages/bank-plan";
 import { factoryJudgeCalibrate, mergeCalibration } from "./stages/calibrate";
+import { restatementJudge, restatementSmoke } from "./stages/restatement";
 import { factoryProfile, factoryReview, factorySlice, historicalIndex } from "./stages/factory";
+import { itemFactoryBenchmark, itemFactoryPlan } from "./stages/item-factory";
+import { itemFactoryCoreSmoke, itemFactoryPrecheck } from "./stages/item-precheck";
+import { itemFactoryCognitivePilot, itemFactoryCognitiveTrap, itemFactoryQualityJudgeReplay, itemFactoryQualityRepair, itemFactoryTaxonomyLive } from "./stages/cognitive-trap";
+import { taxonomyLiveOutputDir } from "@/modules/factory/item-model/taxonomy-live";
 import { factoryRescore } from "./stages/rescore";
 import { loadPrices } from "./ai/prices";
 import { cleanup, reconstructStage, segmentStage, validateStage } from "./stages/extraction";
@@ -85,7 +91,8 @@ async function main() {
   }
   if (name === "factory-review") {
     const edit = option("edit", "");
-    console.log(JSON.stringify(factoryReview({ runDir: option("run", ""), candidateId: option("candidate", ""), decision: option("decision", ""), reviewer: option("reviewer", ""), notes: option("notes", ""), editFile: edit || undefined }), null, 2));
+    const approvedBand = option("approved-band", "");
+    console.log(JSON.stringify(factoryReview({ runDir: option("run", ""), candidateId: option("candidate", ""), decision: option("decision", ""), reviewer: option("reviewer", ""), notes: option("notes", ""), editFile: edit || undefined, ...(approvedBand ? { band: approvedBand } : {}) }), null, 2));
     return;
   }
   if (name === "factory-audit") {
@@ -116,6 +123,89 @@ async function main() {
   }
   if (name === "factory-blind-score") {
     console.log(JSON.stringify(factoryBlindScore({ dir: option("dir", "") }), null, 2));
+    return;
+  }
+  if (name === "factory-bank-plan") {
+    const result = planBankImport({
+      blindDir: option("dir", ".data/analysis/_factory/blind-review/2026-11-05-gateway-20x2"),
+      out: option("out", ".data/analysis/_factory/bank-import/2026-11-06"),
+    });
+    console.log(JSON.stringify({ out: option("out", ".data/analysis/_factory/bank-import/2026-11-06"), ...result.counts, writes: result.writes }, null, 2));
+    return;
+  }
+  if (name === "factory-item-plan") {
+    console.log(JSON.stringify(itemFactoryPlan(), null, 2));
+    return;
+  }
+  if (name === "factory-item-benchmark") {
+    console.log(JSON.stringify(itemFactoryBenchmark(option("authorize", "")), null, 2));
+    return;
+  }
+  if (name === "factory-item-core-smoke") {
+    const via = option("via", "");
+    if (via !== "openrouter") throw new Error("--via openrouter is required");
+    const result = await itemFactoryCoreSmoke(option("authorize", ""), option("out", ".data/analysis/_factory/item-core-smoke/openrouter-v1"));
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+  if (name === "factory-taxonomy-live") {
+    const via = option("via", "");
+    if (via !== "openrouter") throw new Error("--via openrouter is required");
+    const result = await itemFactoryTaxonomyLive(option("authorize", ""), option("out", taxonomyLiveOutputDir));
+    console.log(JSON.stringify({ started: result.started, executed: result.executed, lock: result.lock, reason: result.reason, providerCalls: result.providerCalls, costUsd: result.costUsd, maxCalls: result.maxCalls, maxCostUsd: result.maxCostUsd, estimatedUsd: result.estimatedUsd }, null, 2));
+    return;
+  }
+  if (name === "factory-quality-repair") {
+    const via = option("via", "");
+    if (via !== "openrouter") throw new Error("--via openrouter is required");
+    const result = await itemFactoryQualityRepair(option("authorize", ""), option("out", ".data/analysis/_factory/cognitive-trap/quality-v1"));
+    console.log(JSON.stringify({ started: result.started, executed: result.executed, lock: result.lock, reason: result.reason, providerCalls: result.providerCalls, costUsd: result.costUsd, maxCalls: result.maxCalls, maxCostUsd: result.maxCostUsd, estimatedUsd: result.estimatedUsd }, null, 2));
+    return;
+  }
+  if (name === "factory-quality-judge-replay") {
+    const via = option("via", "");
+    if (via !== "openrouter") throw new Error("--via openrouter is required");
+    const result = await itemFactoryQualityJudgeReplay(option("authorize", ""), option("out", ".data/analysis/_factory/cognitive-trap/quality-judge-replay-v1"));
+    console.log(JSON.stringify({ started: result.started, executed: result.executed, lock: result.lock, reason: result.reason, providerCalls: result.providerCalls, costUsd: result.costUsd, maxCalls: result.maxCalls, maxCostUsd: result.maxCostUsd, estimatedUsd: result.estimatedUsd, writerCalls: result.writerCalls, studentBankWrites: result.studentBankWrites, editorApproved: result.editorApproved, records: result.records.map((record) => ({ id: record.id, factoryVerdict: record.factoryVerdict, editorialRemaining: record.editorialRemaining, blindAnswer: record.judge?.blindAnswer ?? null, modelVerdict: record.judge?.modelVerdict ?? null, ruled: record.ruled?.verdict ?? null })) }, null, 2));
+    return;
+  }
+  if (name === "factory-cognitive-trap-pilot") {
+    const via = option("via", "");
+    if (via !== "openrouter") throw new Error("--via openrouter is required");
+    const result = await itemFactoryCognitivePilot(option("authorize", ""), option("out", ".data/analysis/_factory/cognitive-trap/pilot-v1"));
+    console.log(JSON.stringify({ started: result.started, executed: result.executed, lock: result.lock, reason: result.reason, providerCalls: result.providerCalls, costUsd: result.costUsd, maxCalls: result.maxCalls, maxCostUsd: result.maxCostUsd, estimatedUsd: result.estimatedUsd }, null, 2));
+    return;
+  }
+  if (name === "factory-cognitive-trap") {
+    const via = option("via", "");
+    if (via !== "openrouter") throw new Error("--via openrouter is required");
+    const result = await itemFactoryCognitiveTrap(option("authorize", ""), option("out", ".data/analysis/_factory/cognitive-trap/openrouter-v1"));
+    console.log(JSON.stringify({ started: result.started, executed: result.executed, lock: result.lock, reason: result.reason, providerCalls: result.providerCalls, costUsd: result.costUsd, records: result.records.length, decision: result.decision }, null, 2));
+    return;
+  }
+  if (name === "factory-item-precheck") {
+    const via = option("via", "anthropic");
+    if (via !== "anthropic" && via !== "openrouter") throw new Error("--via must be anthropic or openrouter");
+    const result = await itemFactoryPrecheck(option("authorize", ""), option("out", via === "openrouter" ? ".data/analysis/_factory/item-precheck/openrouter-v1" : ".data/analysis/_factory/item-precheck/v1"), via);
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+  if (name === "factory-restatement") {
+    const result = await restatementSmoke({
+      count: Number.parseInt(option("count", "10"), 10),
+      out: option("out", ".data/analysis/_factory/runs/restatement-smoke-v1"),
+      log: (message) => console.log(`  ${message}`),
+    });
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+  if (name === "factory-restatement-judge") {
+    const result = await restatementJudge({
+      dir: option("dir", ".data/analysis/_factory/runs/restatement-smoke-v1b"),
+      model: option("model", "") || undefined,
+      log: (message) => console.log(`  ${message}`),
+    });
+    console.log(JSON.stringify({ model: result.model, judged: result.judged, keep: result.keep, revise: result.revise, costUsd: result.costUsd }, null, 2));
     return;
   }
   if (name === "factory-judge-calibrate") {
@@ -152,7 +242,7 @@ async function main() {
   const order = aliases[name] ?? [name];
   for (const stageName of order) {
     const stage = stages[stageName];
-    if (!stage) throw new Error(`Unknown stage "${stageName}". Stages: ${[...Object.keys(stages), ...Object.keys(aliases), "smoke", "corpus", "profile", "factory", "factory-review", "factory-audit", "factory-compare", "factory-blind", "factory-blind-score", "factory-rescore", "factory-judge-calibrate"].join(", ")}`);
+    if (!stage) throw new Error(`Unknown stage "${stageName}". Stages: ${[...Object.keys(stages), ...Object.keys(aliases), "smoke", "corpus", "profile", "factory", "factory-review", "factory-audit", "factory-compare", "factory-blind", "factory-blind-score", "factory-rescore", "factory-judge-calibrate", "factory-item-plan", "factory-item-benchmark", "factory-item-precheck", "factory-item-core-smoke", "factory-cognitive-trap", "factory-cognitive-trap-pilot", "factory-quality-repair", "factory-quality-judge-replay", "factory-taxonomy-live"].join(", ")}`);
     console.log(`▸ ${stageName} (${document.slug})`);
     const result = await stage(context);
     if (result) console.log(`  ${result.cached ? "cached" : "done"} · input ${result.manifest.inputHash.slice(0, 12)} · output ${result.manifest.outputHash.slice(0, 12)}`, JSON.stringify(result.manifest.stats));

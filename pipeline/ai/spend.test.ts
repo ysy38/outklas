@@ -54,6 +54,13 @@ describe("spend budget", () => {
     expect(() => loadSpendLimits({ FACTORY_MAX_TOKENS: "1.5" })).toThrow(/whole number/);
   });
 
+  it("keeps a provider wire identity, so the cache key still sees the reasoning effort", () => {
+    const provider = fake();
+    provider.wireIdentity = () => ({ reasoningEffort: "none", maxTokens: 4096 });
+    const metered = new SpendBudget({ maxCalls: 2 }, null).meter(provider);
+    expect(metered.wireIdentity?.(request)).toEqual({ reasoningEffort: "none", maxTokens: 4096 });
+  });
+
   it("stops before the request that would exceed the call limit and keeps refusing", async () => {
     const provider = fake();
     const budget = new SpendBudget({ maxCalls: 2 }, null);
