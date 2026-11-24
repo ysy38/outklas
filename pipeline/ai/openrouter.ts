@@ -1,5 +1,10 @@
 import { postJson, type HttpOptions, type HttpResponse } from "./http";
 import type { PromptCacheMode } from "./anthropic";
+import {
+  resolveOpenRouterReasoning,
+  selectOpenRouterReasoningProfile,
+  type OpenRouterReasoningProfile,
+} from "./openrouter-reasoning";
 import type { AIProvider, ModelRequest, ModelResponse, Usage } from "./types";
 
 const retryable = new Set([408, 429, 500, 502, 503, 504]);
@@ -58,6 +63,11 @@ export type OpenRouterOptions = HttpOptions & {
   title?: string;
   /** Overrides postJson's POST-only transport for batch GET/POST. */
   http?: OpenRouterHttp;
+  /**
+   * Opt-in model → profile map for an isolated experiment. Production omits this, so every model
+   * stays on existing `{ exclude: true }`. Unsupported profiles throw; nothing is substituted.
+   */
+  reasoningProfiles?: Record<string, OpenRouterReasoningProfile>;
 };
 
 export const isBatchModel = (model: string) => model.endsWith(":batch");
@@ -103,6 +113,16 @@ export class OpenRouterProvider implements AIProvider {
     if (!options.apiKey) throw new Error("OPENROUTER_API_KEY is not set (put it in .env.local).");
   }
 
+  private resolvedReasoning(request: ModelRequest) {
+    const profile = selectOpenRouterReasoningProfile({
+      model: request.model,
+      requestProfile: request.reasoningProfile,
+      experimentProfiles: this.options.reasoningProfiles,
+    });
+    return resolveOpenRouterReasoning({ model: request.model, profile });
+  }
+
+
   private baseUrl() {
     return (this.options.baseUrl ?? "https://openrouter.ai/api/v1").replace(/\/$/, "");
   }
@@ -126,6 +146,7 @@ export class OpenRouterProvider implements AIProvider {
       if (!("text" in part)) throw new Error("openrouter provider does not take images in the factory path");
       return part.text;
     });
+    const resolved = this.resolvedReasoning(request);
     const body = (await postJson({
       url: `${this.baseUrl()}/chat/completions`,
       headers: this.headers(),
@@ -133,9 +154,9 @@ export class OpenRouterProvider implements AIProvider {
         model: request.model,
         messages: [...(request.system ? [systemMessage(request.system, this.options.promptCache ?? "5m")] : []), { role: "user", content: text.join("\n\n") }],
         temperature: request.temperature ?? 0,
-        // Reasoning models otherwise spend the whole budget on hidden chain-of-thought and return empty content.
+        // Combined budget. Production default is existing: reasoning: { exclude: true }. That hides text; it does not disable reasoning.
         max_tokens: Math.max(request.maxOutputTokens ?? 0, this.options.minOutputTokens ?? 4096),
-        reasoning: { exclude: true },
+        ...(resolved.reasoning ? { reasoning: resolved.reasoning } : {}),
         ...(request.jsonSchema
           ? { response_format: { type: "json_schema", json_schema: { name: "output", strict: true, schema: request.jsonSchema } } }
           : {}),
@@ -153,11 +174,15 @@ export class OpenRouterProvider implements AIProvider {
       options: this.options,
     })) as ChatBody;
     const choice = body.choices?.[0];
+    const contentText = (choice?.message?.content ?? "").replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+    const reasoningText = (choice?.message?.reasoning ?? choice?.message?.reasoning_content ?? "").trim();
     return {
       text: openrouterMessageText(choice?.message),
       model: body.model ?? request.model,
       finishReason: choice?.finish_reason?.toUpperCase(),
       usage: openrouterUsage(body.usage),
+      contentText,
+      reasoningText,
     };
   }
 

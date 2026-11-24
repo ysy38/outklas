@@ -14,6 +14,8 @@ import { distractorUser, judgeUser } from "./ai/prompts/item-model.v1";
 import { misreadingOptionsPromptVersion, misreadingOptionsSystem, misreadingOptionsUser, misreadingPromptVersion, misreadingSystem, misreadingUser } from "./ai/prompts/cognitive-trap.v1";
 import { selectMisreadingMechanisms } from "@/modules/factory/item-model/misreading-mechanisms";
 import type { AIProvider, ModelResponse } from "./ai/types";
+import { qualityAuthoringSystem } from "./ai/prompts/quality-authoring.v1";
+import { qualityAuthoringTrapAuthorization, qualityAuthoringTrapEnabled } from "@/modules/factory/item-model/quality-authoring";
 import { executeCognitiveTrap } from "./stages/cognitive-trap";
 import { itemFactoryBenchmark } from "./stages/item-factory";
 import { loadOfficialComparisonCorpus, openrouterPrecheckModels } from "./stages/item-precheck";
@@ -179,7 +181,14 @@ describe("cognitive trap comparison", () => {
         outDir: out,
         cacheSalt: `cognitive-trap-test-${Date.now()}`,
         officialTexts: loadOfficialComparisonCorpus() ?? [],
+        qualityAuthoring: { authorization: qualityAuthoringTrapAuthorization, situationBrief: "actors, events, and required relations" },
       });
+      expect(qualityAuthoringTrapEnabled).toBe(false);
+      expect(run.qualityAuthoringPath).toBe("off");
+      expect(run.records.every((record) => record.qualityAuthoring === undefined)).toBe(true);
+      expect(calls.some((call) => qualityAuthoringSystem.startsWith(call) || call.startsWith("You write one YDS"))).toBe(false);
+      expect(calls.filter((call) => call.startsWith("MISREADING PATHS"))).toHaveLength(6);
+      expect(calls.filter((call) => call.startsWith("MISREADING OPTIONS"))).toHaveLength(6);
       expect(run.started).toBe(true);
       expect(run.studentBankWrites).toBe(0);
       expect(run.qualityProven).toBe(false);

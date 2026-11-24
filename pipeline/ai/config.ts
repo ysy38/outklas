@@ -27,6 +27,32 @@ export const modelDefaults: Record<ModelRole, string> = {
   explanation: "anthropic:claude-haiku-5-5",
 };
 
+/**
+ * Independent Cognitive Trap Factory roles. These do not replace modelDefaults and are not
+ * wired into loadAIConfig. Production stays on modelDefaults / qualityFirstFrozenModels until
+ * a completed writer comparison and a human switch decision.
+ */
+export const architectureV2RoleSettings = {
+  misreadingPlannerModel: "openrouter:anthropic/claude-haiku-5.5",
+  distractorWriterModel: "openrouter:anthropic/claude-haiku-5.5",
+  blindJudgeModel: "openrouter:anthropic/claude-sonnet-5.5",
+  repairModel: "openrouter:anthropic/claude-haiku-5.5",
+} as const;
+
+/** First-round Writer bake-off ids. Missing catalog rows are not substituted. */
+export const architectureV2WriterBakeoffCandidates = [
+  "openrouter:anthropic/claude-haiku-5.5",
+  "openrouter:deepseek/deepseek-v3.2",
+  "openrouter:google/gemini-4-hydrogen",
+  "openrouter:google/gemini-4-argon",
+] as const;
+
+/** Optional second-stage Writer ids. Neon stays here; it is not in the first comparison. */
+export const architectureV2WriterBakeoffStage2 = [
+  "openrouter:google/gemini-4-neon",
+  "openrouter:anthropic/claude-sonnet-5.5",
+] as const;
+
 /** Non-ÖSYM health probes. Order: requested Pro preview, then working Flash defaults. */
 export const smokeModels = [
   "gemini-3.1-pro-preview",

@@ -21,8 +21,12 @@ import {
   qualityFirstPilotForbiddenDirs,
   qualityFirstPilotLiveAuthorized,
   qualityFirstPilotOutputDir,
+  qualityFirstPilotPreflightFile,
+  qualityFirstPilotPreparedCeilingUsd,
   qualityFirstPilotSpendCapUsd,
+  qualityFirstTrEnPreviousKey,
   scoreQualityFirstItem,
+  verifyQualityFirstPreflight,
 } from "@/modules/factory/item-model/quality-first-pilot";
 import { misreadingOptionsOutput } from "./ai/prompts/cognitive-trap.v1";
 import { loadPrices } from "./ai/prices";
@@ -170,6 +174,12 @@ describe("quality-first production pilot preparation", () => {
       expect(score.source_key_meaning_equivalence).toBe("unverified");
       expect(Object.values(score).every((value) => value !== ("pass" as string))).toBe(true);
     }
+    const trEn = entries.find((entry) => entry.item.id === qualityFirstTrEnPreviousKey.itemId)!;
+    expect(sourceSentence(trEn.item)).toBe(qualityFirstTrEnPreviousKey.source);
+    expect(trEn.item.core.correctAnswer).toBe("No complaints have been forwarded to the prosecutor's office; only two official records were read aloud at the hearing.");
+    const trEnGate = qualityFirstKeyGate(trEn.item);
+    expect(trEnGate.keyHash).not.toBe(qualityFirstTrEnPreviousKey.keyHash);
+    expect(trEnGate.sourceHash).toBe(qualityFirstKeyGate({ ...trEn.item, core: { ...trEn.item.core, correctAnswer: qualityFirstTrEnPreviousKey.key } }).sourceHash);
     const copied = qualityFirstItems()[0]!;
     const blocked = qualityFirstKeyGate({ ...copied.item, core: { ...copied.item.core, correctAnswer: sourceSentence(copied.item) } });
     expect(blocked.proceed).toBe(false);
@@ -177,7 +187,7 @@ describe("quality-first production pilot preparation", () => {
 
   it("computes separated production and recovery ceilings and refuses live", async () => {
     expect(prices).not.toBeNull();
-    expect(qualityFirstPilotLiveAuthorized).toBe(false);
+    expect(qualityFirstPilotLiveAuthorized).toBe(true);
     expect(qualityFirstFrozenModels.writer).toBe("openrouter:anthropic/claude-haiku-5.5");
     expect(qualityFirstFrozenModels.judge).toBe("openrouter:anthropic/claude-sonnet-5.5");
     const estimate = qualityCostEstimate(prices!, qualityFirstItems().length);
@@ -185,6 +195,7 @@ describe("quality-first production pilot preparation", () => {
     expect(graph).toEqual({ writerCalls: 8, judgeCalls: 4, maxCalls: 12 });
     expect(estimate).not.toBeNull();
     expect(estimate!).toBeGreaterThan(0);
+    expect(Math.abs(estimate! - qualityFirstPilotPreparedCeilingUsd)).toBeLessThan(1e-9);
     expect(estimate!).toBeLessThanOrEqual(qualityFirstPilotSpendCapUsd);
     const recovery = conservativeRecoveryCeiling(prices, []);
     expect(recovery.separateFromProduction).toBe(true);
@@ -213,21 +224,23 @@ describe("quality-first production pilot preparation", () => {
     expect(frozen.started).toBe(false);
     expect(frozen.reason).toMatch(/earlier experiment records stay unchanged/);
 
-    const prepared = await itemFactoryQualityFirstPilot(qualityFirstPilotAuthorization);
-    expect(prepared.started).toBe(false);
-    expect(prepared.executed).toBe(false);
-    expect(prepared.ready).toBe(true);
-    expect(prepared.providerCalls).toBe(0);
-    expect(prepared.recoveryMode).toBe("off");
-    expect(prepared.recoveryCostUsd).toBe(0);
-    expect(prepared.estimatedUsd).toBe(estimate);
-    expect(prepared.maxCalls).toBe(12);
-    expect(prepared.maxCostUsd).toBeLessThanOrEqual(qualityFirstPilotSpendCapUsd);
-    expect(prepared.reason).toMatch(/live call is not authorized/);
-
-    const plan = JSON.parse(readFileSync(path.join(qualityFirstPilotOutputDir, "plan.json"), "utf8")) as ReturnType<typeof qualityFirstPilotPlan>;
-    expect(plan.livePilotDecision).toBe("not_ready");
+    const plan = qualityFirstPilotPlan(prices, loadOfficialComparisonCorpus() ?? []);
+    expect(plan.ready_for_live).toBe(true);
+    expect(plan.liveAuthorized).toBe(true);
     expect(plan.preparationComplete).toBe(true);
+    expect(plan.keyHistory[qualityFirstTrEnPreviousKey.itemId]?.previous.key).toBe(qualityFirstTrEnPreviousKey.key);
+    expect(plan.keyHistory[qualityFirstTrEnPreviousKey.itemId]?.previous.keyHash).toBe(qualityFirstTrEnPreviousKey.keyHash);
+    expect(plan.keyHistory[qualityFirstTrEnPreviousKey.itemId]?.currentKeyHash).not.toBe(qualityFirstTrEnPreviousKey.keyHash);
+    expect(plan.keyHistory[qualityFirstTrEnPreviousKey.itemId]?.sourceUnchanged).toBe(true);
+    expect(plan.assessment.gates.every((gate) => gate.meaningProven === false)).toBe(true);
+    const preflight = JSON.parse(readFileSync(path.join(qualityFirstPilotOutputDir, qualityFirstPilotPreflightFile), "utf8")) as { ready_for_live: boolean; executed: boolean; providerCalls: number; waitingAuthorization: boolean; meaningProven: false; assessment: { gates: { id: string; sourceHash: string; keyHash: string }[] }; items: { id: string; source: string; key: string }[] };
+    expect(preflight.ready_for_live).toBe(true);
+    expect(preflight.executed).toBe(false);
+    expect(preflight.providerCalls).toBe(0);
+    expect(preflight.waitingAuthorization).toBe(true);
+    expect(preflight.meaningProven).toBe(false);
+    expect(verifyQualityFirstPreflight(preflight)).toEqual({ ok: true, reason: null });
+    expect(verifyQualityFirstPreflight({ ...preflight, assessment: { gates: preflight.assessment.gates.map((gate) => ({ ...gate, keyHash: "deadbeefdead" })) } }).ok).toBe(false);
     expect(plan.productionBudget.separateFromRecovery).toBe(true);
     expect(plan.recoveryBudget.separateFromProduction).toBe(true);
     expect(plan.recoveryBudget.active).toBe(false);

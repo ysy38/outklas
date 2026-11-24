@@ -31,6 +31,11 @@ export type ModelRequest = {
   maxOutputTokens?: number;
   /** Gemini 3+ thinking depth (thinkingConfig.thinkingLevel); other providers ignore it. Unset sends nothing. */
   thinking?: ThinkingLevel;
+  /**
+   * OpenRouter-only. Unset keeps the provider default (existing: exclude=true on OpenRouter).
+   * `disabled` is documented effort none. `existing` is exclude=true and is not a disable switch.
+   */
+  reasoningProfile?: "disabled" | "low" | "default" | "existing";
   /** Part of the cache key only, never sent: lets a second benchmark seed make fresh calls for an identical request. */
   cacheSalt?: string;
 };
@@ -50,7 +55,17 @@ export type Usage = {
   reasoningTokens?: number;
 };
 
-export type ModelResponse = { text: string; model: string; usage: Usage; finishReason?: string; servedProvider?: string };
+export type ModelResponse = {
+  text: string;
+  model: string;
+  usage: Usage;
+  finishReason?: string;
+  servedProvider?: string;
+  /** Visible message.content after think-tag strip. Empty when the model spent the turn on hidden reasoning. */
+  contentText?: string;
+  /** Hidden reasoning text when the provider returns it. Never used to infer a token count. */
+  reasoningText?: string;
+};
 
 /** Transport only: no prompts, no roles. Adding OpenAI or Claude means adding one of these. */
 export interface AIProvider {

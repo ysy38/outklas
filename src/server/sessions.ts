@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { after } from "next/server";
-import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { brand } from "@/brand";
 import { asExam, blueprintFor, type ExamCode, type SectionId } from "@/modules/exam/blueprint";
 import { estimateFromAccuracy, estimateNet, scoreSession, type ScoreItem } from "@/modules/exam/score";
@@ -8,7 +8,7 @@ import { selectDiagnostic, selectItems, selectMock, studyPool, type PoolItem } f
 import { canStartSimulator, hasProgram, simulatorLimit, tierFor, type CheckoutPlan, type PlanCode, type Tier } from "@/modules/billing/entitlement";
 import { diagnosisConfidence, errorUpdates, type Lesson } from "@/modules/content/lesson";
 import { initialMastery, nextMastery, skillUpdates, targetDifficulty, weightedMastery, type SkillRole } from "@/modules/learning/mastery";
-import { buildPlan, daysUntilExam, nextStreak, type DailyPlan } from "@/modules/learning/plan";
+import { buildPlan, daysUntilExam, mergePreservedPlan, nextStreak, rankWeakErrorClasses, shouldRefreshDailyPlan, type DailyPlan } from "@/modules/learning/plan";
 import { nextReview } from "@/modules/learning/review";
 import {
   answers,
@@ -230,6 +230,7 @@ export async function loadPlayer(sessionId: string, profileId: string | null, gu
               explanation: item.explanation,
               correctChoiceId: correct?.id ?? "",
               note: selected && !selected.correct ? selected.errorClass ?? selected.distractorType : null,
+              lesson: (item.lesson as Lesson | null) ?? null,
             }
           : null,
     };
@@ -314,6 +315,7 @@ export async function saveAnswer(input: {
       explanation: itemRow?.explanation ?? "",
       correctChoiceId: correctChoice?.id ?? "",
       note: correct ? null : choice.errorClass ?? choice.distractorType,
+      lesson: (lessonRow[0]?.lesson as Lesson | null) ?? null,
     },
     section: itemRow?.section,
   };
@@ -330,11 +332,7 @@ async function practiceDifficulty(profileId: string): Promise<number> {
 async function weakErrors(profileId: string): Promise<string[]> {
   const db = await getDb();
   const rows = await db.select().from(errorMastery).where(eq(errorMastery.profileId, profileId));
-  return rows
-    .filter((row) => row.attempts > 0 && row.mastery < 55)
-    .sort((a, b) => a.mastery - b.mastery)
-    .slice(0, 3)
-    .map((row) => row.errorClass);
+  return rankWeakErrorClasses(rows);
 }
 
 async function applyMastery(profileId: string, itemId: string, correct: boolean, chosenError: string | null) {
@@ -540,11 +538,31 @@ export async function ensureDailyPlan(profileId: string, dailyMinutes: number, t
     .from(plans)
     .where(and(eq(plans.profileId, profileId), eq(plans.planDate, planDate)))
     .limit(1);
-  if (existing[0]) return existing[0].payload as DailyPlan;
+  const cached = existing[0]?.payload as DailyPlan | undefined;
+  const todayDiagnostic = await db
+    .select({ submittedAt: sessions.submittedAt })
+    .from(sessions)
+    .where(
+      and(
+        eq(sessions.profileId, profileId),
+        eq(sessions.mode, "diagnostic"),
+        eq(sessions.status, "submitted"),
+        gte(sessions.submittedAt, startOfToday()),
+      ),
+    )
+    .orderBy(desc(sessions.submittedAt))
+    .limit(1);
+  const refresh =
+    Boolean(cached) &&
+    shouldRefreshDailyPlan({ generatedAt: cached?.generatedAt, diagnosticSubmittedAt: todayDiagnostic[0]?.submittedAt ?? null });
+  if (cached && !refresh) return cached;
   const exam = await examFor(profileId);
   const pool = studyPool(await publishedPool());
-  const masteryRows = await db.select().from(mastery).where(eq(mastery.profileId, profileId));
-  const due = await db.select().from(reviews).where(and(eq(reviews.profileId, profileId), sql`${reviews.dueAt} <= now()`));
+  const [masteryRows, errorRows, due] = await Promise.all([
+    db.select().from(mastery).where(eq(mastery.profileId, profileId)),
+    db.select().from(errorMastery).where(eq(errorMastery.profileId, profileId)),
+    db.select().from(reviews).where(and(eq(reviews.profileId, profileId), sql`${reviews.dueAt} <= now()`)),
+  ]);
   const skillRows = await db.select().from(skills);
   const parents = new Map(skillRows.map((skill) => [skill.id, skill.parentId]));
   const sectionOf = (skillId: string): SectionId | null => {
@@ -566,7 +584,8 @@ export async function ensureDailyPlan(profileId: string, dailyMinutes: number, t
     current.count += 1;
     sectionMastery.set(section, current);
   }
-  const plan = buildPlan({
+  const weak = rankWeakErrorClasses(errorRows);
+  const built = buildPlan({
     minutes: dailyMinutes || 30,
     mastery: [...sectionMastery.entries()].map(([section, value]) => ({ section, mastery: value.total / value.count })),
     dueQuestionIds: due.filter((row) => row.targetType === "item").map((row) => row.targetId),
@@ -575,9 +594,31 @@ export async function ensureDailyPlan(profileId: string, dailyMinutes: number, t
     seenIds: await seenIds(profileId),
     targetSection: targetScore != null && targetScore >= (exam === "ydt" ? 60 : 80) ? "reading" : undefined,
     daysToExam: daysUntilExam(examDate),
+    weakErrors: weak,
   });
-  await db.insert(plans).values({ id: randomUUID(), profileId, planDate, payload: plan });
-  return plan;
+  const stamped: DailyPlan = {
+    ...built,
+    generatedAt: new Date().toISOString(),
+    ...(weak.length > 0 ? { weakErrors: weak } : {}),
+  };
+  let payload = stamped;
+  if (cached && refresh) {
+    const previousIds = cached.blocks.filter((block) => block.kind === "question").map((block) => block.id);
+    const answered =
+      previousIds.length === 0
+        ? []
+        : await db
+            .select({ itemId: answers.itemId })
+            .from(answers)
+            .where(and(eq(answers.profileId, profileId), inArray(answers.itemId, previousIds)));
+    payload = mergePreservedPlan(cached, stamped, answered.map((row) => row.itemId));
+  }
+  if (existing[0]) {
+    await db.update(plans).set({ payload }).where(and(eq(plans.profileId, profileId), eq(plans.planDate, planDate)));
+  } else {
+    await db.insert(plans).values({ id: randomUUID(), profileId, planDate, payload });
+  }
+  return payload;
 }
 
 const accessDays: Record<CheckoutPlan, number> = brand.accessDays;

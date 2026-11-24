@@ -3,8 +3,9 @@ import { estimateCost, type Prices } from "../ai/prices";
 import { repairModel, repairOutputSchema, repairSystem, repairUser, type RepairTask } from "./contract";
 
 /**
- * OpenRouterProvider.generate sends `reasoning: { exclude: true }`.
- * That omits reasoning text from the message. It does not stop reasoning, and this provider does not send `effort`.
+ * OpenRouterProvider.generate default (existing profile) sends `reasoning: { exclude: true }`.
+ * That omits reasoning text from the message. It does not stop reasoning, and production/Recovery/bake-off
+ * do not pass reasoningProfiles, so they do not send `effort`. Isolated v6 Writer experiments may.
  * GatewayProvider can send `effort: "none"`. The repair pilot did not use that provider.
  * max_tokens is one pool: completion_tokens include reasoning_tokens. There is no separate visible-output budget.
  * json_schema is attached when the request carries jsonSchema. It does not reserve visible tokens.

@@ -179,7 +179,7 @@ export function discourseConnectorSwap(left: string, right: string): boolean {
   return marked(left).join(" ") === marked(right).join(" ") && contentTokens(left).join(" ") !== contentTokens(right).join(" ");
 }
 
-/** One inserted, deleted, or substituted word. A full clause rewrite is not this. */
+/** One inserted, deleted, or substituted word. A full clause rewrite is not this. Selector may still keep a one-word edit when assessMeaningIntegrity fails. */
 export function surfaceEdit(key: string, candidate: string): boolean {
   const left = contentTokens(key);
   const right = contentTokens(candidate);

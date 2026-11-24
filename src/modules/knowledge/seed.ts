@@ -431,6 +431,7 @@ export const legacyMap: LegacyMapping[] = [
   map("skill", "connectors", "domain:discourse", "related"),
   map("skill", "cloze-context", "cognitive_skill:context_integration", "broader"),
   map("skill", "sentence-link", "cognitive_skill:logical_relationship", "broader"),
+  map("skill", "sentence-link", "skill:coherence", "broader"),
   map("skill", "translation-en-tr", "question_type:translation_en_tr"),
   map("skill", "translation-tr-en", "question_type:translation_tr_en"),
   map("skill", "detail", "skill:detail"),

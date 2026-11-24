@@ -36,13 +36,18 @@ import {
   qualityFirstPilotMaxProviderCalls,
   qualityFirstPilotMaxWriterCalls,
   qualityFirstPilotOutputDir,
+  qualityFirstPilotPreflightFile,
+  qualityFirstPilotPreparedCeilingUsd,
   qualityFirstPilotSpendCapUsd,
+  verifyQualityFirstPreflight,
   qualityFirstPilotWriterCallsPerItem,
   qualityFirstPilotJudgeCallsPerItem,
   qualityFirstPilotRetry,
+  qualityFirstTrEnPreviousKey,
 } from "@/modules/factory/item-model/quality-first-pilot";
 import { assessTaxonomyLive, taxonomyLiveAuthorization, taxonomyLiveForbiddenDirs, taxonomyLiveItems, taxonomyLiveOutputDir } from "@/modules/factory/item-model/taxonomy-live";
 import { screenExamSurface } from "@/modules/factory/item-model/gold";
+import { linkMisreadingCandidates, type LinkingRow } from "@/modules/factory/item-model/candidate-lifecycle";
 import { contentVersion, describeDroppedDistractors, selectCognitiveDistractors, type DroppedDistractor } from "@/modules/factory/item-model/distractor-strategy";
 import { assessTargetLanguage } from "@/modules/factory/item-model/option-language";
 import { assessProposition, propositionHoldsQuality, qualityAfterJudge, type PropositionGuard } from "@/modules/factory/item-model/proposition-guard";
@@ -69,16 +74,38 @@ import {
   judgeSystem,
   judgeUser,
 } from "../ai/prompts/item-model.v1";
+import { factoryRootCauseFixEnabled, independentGroundedMechanisms, selectIndependentPlansV1 } from "@/modules/factory/item-model/root-cause-fix";
+import {
+  applyQualityAuthoringTrapArm,
+  qualityAuthoringTrapAuthorized,
+  type QualityAuthoringTrapRequest,
+  type SemanticStandingReport,
+} from "@/modules/factory/item-model/quality-authoring";
+import {
+  qualityAuthoringOutput,
+  qualityAuthoringPromptVersion,
+  qualityAuthoringResponseSchema,
+  qualityAuthoringSystem,
+  qualityAuthoringUser,
+} from "../ai/prompts/quality-authoring.v1";
 import {
   misreadingOptionsOutput,
+  misreadingOptionsOutputForPlanCount,
   misreadingOptionsPromptVersion,
+  misreadingOptionsPromptVersionV6,
   misreadingOptionsResponseSchema,
+  misreadingOptionsResponseSchemaForPlanCount,
   misreadingOptionsSystem,
+  misreadingOptionsSystemV6,
   misreadingOptionsUser,
   misreadingOutput,
   misreadingOutputFor,
+  misreadingOutputForIndependent,
+  misreadingOutputIndependentParse,
   misreadingPromptVersion,
+  misreadingPromptVersionV6,
   misreadingSystem,
+  misreadingSystemV6,
   misreadingUser,
 } from "../ai/prompts/cognitive-trap.v1";
 import { responseSchema } from "../ai/prompts/schema";
@@ -141,6 +168,8 @@ export type TrapArm = {
   secondAnswerOptions: OptionLabel[];
   acceptableOptions: OptionLabel[];
   droppedDistractors: DroppedDistractor[];
+  /** Exact studentMisreading join. Absent on frozen Quality-First v1 records. */
+  linking?: LinkingRow[];
   qualityDecision: "pending" | "fail" | "needs_revision";
   qualityReasons: string[];
   propositionGuards: { label: OptionLabel; text: string; guard: PropositionGuard }[];
@@ -166,6 +195,14 @@ export type TrapComparison = {
   arms: { A: TrapArm; B: TrapArm };
   /** Separate from qualityDecision. Absent only before the item is committed. */
   recovery?: RecoveryAttachment;
+  /** Present only when the default-off Quality Authoring arm actually ran. */
+  qualityAuthoring?: {
+    structurallyComplete: boolean;
+    editoriallyAccepted: false;
+    studentBankWrites: 0;
+    keyStanding: SemanticStandingReport | null;
+    optionStandings: { planId: string; vsSource: SemanticStandingReport; vsKey: SemanticStandingReport }[];
+  };
 };
 
 export type TrapRun = {
@@ -192,6 +229,7 @@ export type TrapRun = {
   recoveryMode: RecoveryMode;
   recoveryProviderCalls: number;
   recoveryCostUsd: number;
+  qualityAuthoringPath: "off" | "authorized";
 };
 
 const pendingDecision = recommendIntegration({ winners: [], editorialPasses: 0 });
@@ -221,6 +259,7 @@ function refused(lock: TrapRun["lock"], reason: string | null): TrapRun {
     recoveryMode: "off",
     recoveryProviderCalls: 0,
     recoveryCostUsd: 0,
+    qualityAuthoringPath: "off",
   };
 }
 
@@ -243,6 +282,7 @@ function emptyArm(method: "A" | "B"): TrapArm {
     secondAnswerOptions: [],
     acceptableOptions: [],
     droppedDistractors: [],
+    linking: [],
     qualityDecision: "pending",
     qualityReasons: [],
     propositionGuards: [],
@@ -286,7 +326,7 @@ function modelOf(item: TrapItem) {
 }
 
 function readingsOf(value: unknown): { kept: TrapArm["readings"]; relations: string[]; meaningMap: TrapArm["meaningMap"]; failures: string[] } {
-  const parsed = misreadingOutput.safeParse(value);
+  const parsed = factoryRootCauseFixEnabled ? misreadingOutputIndependentParse.safeParse(value) : misreadingOutput.safeParse(value);
   if (!parsed.success) return { kept: [], relations: [], meaningMap: null, failures: ["misreading_schema"] };
   const seen = new Set<string>();
   const kept: TrapArm["readings"] = [];
@@ -308,7 +348,7 @@ function readingsOf(value: unknown): { kept: TrapArm["readings"]; relations: str
       mechanismIsNotProof: true,
     });
   }
-  const failures = kept.length < 4 ? ["fewer_than_four_misreadings"] : [];
+  const failures = !factoryRootCauseFixEnabled && kept.length < 4 ? ["fewer_than_four_misreadings"] : [];
   return { kept, relations: parsed.data.preservedRelations, meaningMap: parsed.data.meaningMap, failures };
 }
 
@@ -426,6 +466,8 @@ export async function executeCognitiveTrap(input: {
   profile?: "comparison" | "quality";
   /** Default off. dry_run classifies after quality. active uses the attached recovery path under separate caps. */
   recovery?: RecoveryRequest & { provider?: AIProvider | null; allowLiveOpenRouter?: boolean };
+  /** Default off. Requires qualityAuthoringTrapEnabled and qualityAuthoringTrapAuthorization. */
+  qualityAuthoring?: QualityAuthoringTrapRequest;
 }): Promise<TrapRun> {
   if (input.authorization !== trapAuthorization) return refused("authorization", "cognitive trap authorization required");
   if (input.models.generator !== openrouterPrecheckModels.generator || input.models.judge !== openrouterPrecheckModels.judge) return refused("authorization", "writer and judge stay on the precheck rail");
@@ -433,6 +475,7 @@ export async function executeCognitiveTrap(input: {
   const officialTexts = input.officialTexts ?? [];
   if (!officialTexts.length) return refused("corpus", "official comparison corpus is not loaded");
   if (!input.prices) return refused("budget", "prices are required");
+  const qualityAuthoringOn = qualityAuthoringTrapAuthorized(input.qualityAuthoring);
   const gated = selectEligible(input.items ?? trapItems());
   const screened: TrapItem[] = [];
   const dropped = gated.dropped.map((row) => ({ id: row.id, failures: row.failures }));
@@ -573,6 +616,57 @@ export async function executeCognitiveTrap(input: {
       recordPropositionGuard(comparison.arms.A, sentence, key, aSelected.selected);
     }
 
+    if (qualityAuthoringOn) {
+      const brief = input.qualityAuthoring?.situationBrief?.trim() ?? "";
+      if (!brief) {
+        comparison.arms.B.status = "fail";
+        comparison.arms.B.failures.push("quality_authoring_brief_missing");
+        await commit();
+        continue;
+      }
+      const authored = await oneCall(providerFor(input.models.generator), qualityAuthoringPromptVersion, qualityAuthoringOutput, {
+        model: writer.model,
+        system: qualityAuthoringSystem,
+        user: qualityAuthoringUser({
+          questionType: item.questionType,
+          direction: item.direction === "en_tr" || item.direction === "tr_en" ? item.direction : "none",
+          situationBrief: brief,
+        }),
+        jsonSchema: qualityAuthoringResponseSchema,
+        maxOutputTokens: 1600,
+        cacheSalt: `${salt}:B-quality-authoring`,
+      });
+      if (!authored.ran) {
+        stopped = true;
+        comparison.arms.B.failures.push(authored.error);
+        await commit();
+        continue;
+      }
+      const bound = applyQualityAuthoringTrapArm(authored.value, officialTexts);
+      comparison.qualityAuthoring = {
+        structurallyComplete: bound.structurallyComplete,
+        editoriallyAccepted: false,
+        studentBankWrites: 0,
+        keyStanding: bound.keyStanding,
+        optionStandings: bound.optionStandings,
+      };
+      if (bound.keyStanding?.standing === "fail") {
+        comparison.arms.B.status = "fail";
+        comparison.arms.B.failures.push("shown_semantic_difference");
+      } else if (bound.structurallyComplete && bound.kept.length === 4) {
+        if (bound.authored) {
+          comparison.source = bound.authored.source;
+          comparison.key = bound.authored.key;
+        }
+        bCandidates = bound.kept;
+        finishArm(comparison.arms.B, bound.kept, bound.authored?.key ?? key, index + 2);
+        holdLanguage(comparison.arms.B, item);
+      } else {
+        comparison.arms.B.status = "fail";
+        comparison.arms.B.failures.push("quality_authoring_incomplete");
+      }
+      if (authored.error) comparison.arms.B.failures.push(authored.error);
+    } else {
     const support = selectMisreadingMechanisms(sentence, item.questionType);
     comparison.arms.B.selectedMechanisms = support.mechanisms.map((item) => item.id);
     comparison.arms.B.supportableMisreadings = support.supportableMisreadings;
@@ -583,10 +677,17 @@ export async function executeCognitiveTrap(input: {
       await commit();
       continue;
     }
-    const readSchema = misreadingOutputFor(support.mechanisms.map((item) => item.id));
-    const bRead = await oneCall(providerFor(input.models.generator), misreadingPromptVersion, readSchema, {
+    if (factoryRootCauseFixEnabled && independentGroundedMechanisms(support.mechanisms.map((row) => row.id), sentence).provenIndependentCount < 4) {
+      comparison.arms.B.status = "fail";
+      comparison.arms.B.failures.push("source_insufficient_traps");
+      await commit();
+      continue;
+    }
+    const mechanismIds = support.mechanisms.map((row) => row.id);
+    const readSchema = factoryRootCauseFixEnabled ? misreadingOutputForIndependent(mechanismIds) : misreadingOutputFor(mechanismIds);
+    const bRead = await oneCall(providerFor(input.models.generator), factoryRootCauseFixEnabled ? misreadingPromptVersionV6 : misreadingPromptVersion, readSchema, {
       model: writer.model,
-      system: misreadingSystem,
+      system: factoryRootCauseFixEnabled ? misreadingSystemV6 : misreadingSystem,
       user: misreadingUser(sentence, key, support.mechanisms),
       jsonSchema: responseSchema(readSchema),
       maxOutputTokens: 1600,
@@ -604,12 +705,30 @@ export async function executeCognitiveTrap(input: {
     comparison.arms.B.preservedRelations = readings.relations;
     comparison.arms.B.failures.push(...readings.failures);
     if (bRead.error) comparison.arms.B.failures.push(bRead.error);
-    if (readings.failures.length === 0 && readings.kept.length >= 4) {
-      const bCall = await oneCall(providerFor(input.models.generator), misreadingOptionsPromptVersion, misreadingOptionsOutput(model.errorMechanisms), {
+    const selectedPlans = factoryRootCauseFixEnabled ? selectIndependentPlansV1(readings.kept, sentence) : null;
+    const canWriteOptions = factoryRootCauseFixEnabled
+      ? readings.failures.length === 0 && selectedPlans?.status === "ok"
+      : readings.failures.length === 0 && readings.kept.length >= 4;
+    if (factoryRootCauseFixEnabled && selectedPlans && selectedPlans.status !== "ok") {
+      comparison.arms.B.status = "fail";
+      comparison.arms.B.failures.push("source_insufficient_traps");
+    }
+    const optionReadings = selectedPlans?.status === "ok"
+      ? selectedPlans.plans.flatMap((plan) => {
+          const found = readings.kept.find((reading) => reading.studentMisreading === plan.expectedStudentMisreading);
+          return found ? [found] : [];
+        })
+      : readings.kept;
+    if (canWriteOptions) {
+      const optionCount = selectedPlans?.plans.length ?? readings.kept.length;
+      const optionsSchema = factoryRootCauseFixEnabled
+        ? misreadingOptionsOutputForPlanCount(model.errorMechanisms, optionCount)
+        : misreadingOptionsOutput(model.errorMechanisms);
+      const bCall = await oneCall(providerFor(input.models.generator), factoryRootCauseFixEnabled ? misreadingOptionsPromptVersionV6 : misreadingOptionsPromptVersion, optionsSchema, {
         model: writer.model,
-        system: misreadingOptionsSystem,
-        user: misreadingOptionsUser(model, sentence, key, readings.kept.map((reading) => reading.studentMisreading), support.mechanisms, item.source.kind === "translation" ? item.source.targetLanguage : null),
-        jsonSchema: misreadingOptionsResponseSchema(model.errorMechanisms),
+        system: factoryRootCauseFixEnabled ? misreadingOptionsSystemV6 : misreadingOptionsSystem,
+        user: misreadingOptionsUser(model, sentence, key, optionReadings.map((reading) => reading.studentMisreading), support.mechanisms, item.source.kind === "translation" ? item.source.targetLanguage : null),
+        jsonSchema: factoryRootCauseFixEnabled ? misreadingOptionsResponseSchemaForPlanCount(model.errorMechanisms, optionCount) : misreadingOptionsResponseSchema(model.errorMechanisms),
         maxOutputTokens: 1600,
         cacheSalt: `${salt}:B-options`,
       });
@@ -622,26 +741,11 @@ export async function executeCognitiveTrap(input: {
       const parsed = bCall.value && typeof bCall.value === "object" && "candidates" in bCall.value && Array.isArray((bCall.value as { candidates?: unknown }).candidates)
         ? (bCall.value as { candidates: { candidateText: string; errorMechanism: string; shiftTarget: string; semanticRisk: "none" | "second_answer" | "off_construct" | "ungrammatical"; studentMisreading: string }[] }).candidates
         : [];
-      const linked = {
-        candidates: parsed.flatMap((candidate) => {
-          const reading = readings.kept.find((entry) => entry.studentMisreading === candidate.studentMisreading);
-          if (!reading) return [];
-          return [{
-            ...candidate,
-            whyPlausible: reading.temptingEvidence,
-            whyInferior: reading.whyIncorrect,
-            sourceEvidence: reading.temptingEvidence.slice(0, 200),
-            temptingEvidence: reading.temptingEvidence,
-            actualSemanticDifference: reading.actualSemanticDifference,
-            whyIncorrect: reading.whyIncorrect,
-            misreadingMechanism: reading.misreadingMechanism,
-            additionalMechanisms: reading.additionalMechanisms,
-          }];
-        }),
-      };
-      const bSplit = acceptDistractorPool(linked, model.errorMechanisms);
+      const linking = linkMisreadingCandidates({ readings: optionReadings, candidates: parsed, parseError: bCall.error });
+      comparison.arms.B.linking = linking.rows;
+      const bSplit = acceptDistractorPool({ candidates: linking.linked }, model.errorMechanisms);
       const cognitive = bSplit.accepted.flatMap((candidate) => {
-        const source = linked.candidates.find((entry) => entry.candidateText === candidate.candidateText);
+        const source = linking.linked.find((entry) => entry.candidateText === candidate.candidateText);
         if (!source) return [];
         return [{
           ...candidate,
@@ -654,7 +758,7 @@ export async function executeCognitiveTrap(input: {
         }];
       });
       const bSelected = selectCognitiveDistractors({ candidates: cognitive, keyText: key, sourceText: sentence, allowedMechanisms: model.errorMechanisms });
-      comparison.arms.B.droppedDistractors = describeDroppedDistractors([...bSplit.rejected, ...bSelected.removed, ...bSelected.rejected], versions);
+      comparison.arms.B.droppedDistractors = describeDroppedDistractors([...linking.dropped, ...bSplit.rejected, ...bSelected.removed, ...bSelected.rejected], versions);
       if (bSelected.removed.some((entry) => entry.reason === "surface_edit")) comparison.arms.B.failures.push("surface_edit_removed");
       if (bSelected.removed.some((entry) => entry.reason === "second_answer")) comparison.arms.B.failures.push("second_answer_removed");
       if (bCall.error) comparison.arms.B.failures.push(bCall.error);
@@ -662,8 +766,9 @@ export async function executeCognitiveTrap(input: {
       finishArm(comparison.arms.B, bSelected.selected, key, index + 2);
       holdLanguage(comparison.arms.B, item);
     } else comparison.arms.B.status = "fail";
+    }
 
-    if (quality && comparison.arms.B.status === "five_options" && comparison.arms.B.options && comparison.arms.B.qualityDecision === "pending") {
+    if (quality && !qualityAuthoringOn && comparison.arms.B.status === "five_options" && comparison.arms.B.options && comparison.arms.B.qualityDecision === "pending") {
       const gate = assessWholeSet({ source: sentence, key, options: comparison.arms.B.options, correct: comparison.arms.B.keyLetter ?? "A" });
       comparison.arms.B.decisionRisks = gate.risks;
       if (gate.decision === "fail") {
@@ -714,6 +819,7 @@ export async function executeCognitiveTrap(input: {
     recoveryMode: input.recovery?.mode ?? "off",
     recoveryProviderCalls: spentRecoveryCalls,
     recoveryCostUsd: Number(spentRecoveryCostUsd.toFixed(8)),
+    qualityAuthoringPath: qualityAuthoringOn ? "authorized" : "off",
   };
   if (input.outDir) {
     mkdirSync(input.outDir, { recursive: true });
@@ -939,12 +1045,18 @@ export function qualityFirstPilotPlan(prices: Prices | null, officialTexts: read
   const graph = qualityCallGraph(items.length);
   const estimate = prices ? qualityCostEstimate(prices, items.length) : null;
   const productionCap = Math.min(estimate ?? qualityFirstPilotSpendCapUsd, qualityFirstPilotSpendCapUsd);
-  const budgetFits = estimate !== null && estimate <= qualityFirstPilotSpendCapUsd;
+  const budgetFits = estimate !== null && Math.abs(estimate - qualityFirstPilotPreparedCeilingUsd) < 1e-9 && estimate <= qualityFirstPilotSpendCapUsd;
+  const readyForLive = assessment.ready && budgetFits && assessment.gates.every((gate) => !gate.meaningProven);
+  const trEn = items.find((entry) => entry.item.id === qualityFirstTrEnPreviousKey.itemId);
   return {
     version: qualityFirstPilotAuthorization,
     liveAuthorized: qualityFirstPilotLiveAuthorized,
-    livePilotDecision: "not_ready" as const,
-    livePilotReason: "this round is preparation; live API calls are not authorized",
+    ready_for_live: readyForLive,
+    waitingAuthorization: true as const,
+    livePilotDecision: readyForLive ? ("waiting_authorization" as const) : ("not_ready" as const),
+    livePilotReason: readyForLive
+      ? "preflight passed; live API requires a separate authorization"
+      : "this round is preparation; live API calls are not authorized",
     preparationComplete: assessment.ready && budgetFits,
     callOrder: qualityFirstActualCallOrder,
     frozen: qualityFirstFrozenModels,
@@ -983,6 +1095,14 @@ export function qualityFirstPilotPlan(prices: Prices | null, officialTexts: read
       active: false,
     },
     metrics: qualityFirstMetricsPlaceholder,
+    keyHistory: {
+      [qualityFirstTrEnPreviousKey.itemId]: {
+        previous: qualityFirstTrEnPreviousKey,
+        currentKey: trEn?.item.core.correctAnswer ?? null,
+        currentKeyHash: trEn ? contentVersion(trEn.item.core.correctAnswer) : null,
+        sourceUnchanged: trEn ? sourceSentence(trEn.item) === qualityFirstTrEnPreviousKey.source : false,
+      },
+    },
     assessment,
     items: items.map((entry) => ({
       id: entry.item.id,
@@ -1000,9 +1120,37 @@ export function qualityFirstPilotPlan(prices: Prices | null, officialTexts: read
   };
 }
 
+export function qualityFirstLiveMetrics(run: TrapRun) {
+  const denominator = 4;
+  const structural = run.records.filter((record) => record.arms.B.status === "five_options").length;
+  const reviewable = run.records.filter((record) => record.arms.B.status === "five_options" && record.arms.B.qualityDecision !== "fail").length;
+  const evidence = run.records.flatMap((record) => record.recovery?.diagnosticEvidence ?? []);
+  const shown = evidence.filter((item) => item.issueCode !== "no_detected_issue");
+  const optionConfirmed = shown.filter((item) => item.scope === "option" && item.verificationStatus === "confirmed");
+  const eligible = run.records.flatMap((record) => (record.recovery ? qualityFirstRepairCandidates(record.recovery) : []));
+  const costPerReviewableItem = reviewable === 0 || run.costUsd === null ? null : run.costUsd / reviewable;
+  return {
+    firstPassYield: reviewable / denominator,
+    structuralCompletion: structural / denominator,
+    diagnosticCoverage: shown.length === 0 ? null : optionConfirmed.length / shown.length,
+    recoveryEligibility: eligible.length,
+    recoveryYield: "not_measured" as const,
+    costPerReviewableItem,
+    reviewableCount: reviewable,
+    structuralCount: structural,
+    shownDefectCount: shown.length,
+    optionConfirmedCount: optionConfirmed.length,
+    meaningProven: false as const,
+    qualityProven: false as const,
+    observedDifficulty: null,
+    studentBankWrites: 0 as const,
+    humanApproval: "closed" as const,
+  };
+}
+
 /**
  * Four-item quality-first production pilot on Cognitive Trap First.
- * This round writes a plan and refuses the provider. A later token plus the live flag would start it.
+ * The live token starts one provider run. A completed summary is not run again.
  */
 export async function itemFactoryQualityFirstPilot(authorization: string, outDir = qualityFirstPilotOutputDir): Promise<TrapRun> {
   if (authorization !== qualityFirstPilotAuthorization) return refused("authorization", "quality-first production authorization required");
@@ -1023,21 +1171,45 @@ export async function itemFactoryQualityFirstPilot(authorization: string, outDir
   const estimate = qualityCostEstimate(prices, items.length);
   const graph = qualityCallGraph(items.length);
   if (estimate === null || estimate > qualityFirstPilotSpendCapUsd) return refused("budget", "the quality-first estimate does not fit under the $0.25 cap");
+  if (Math.abs(estimate - qualityFirstPilotPreparedCeilingUsd) > 1e-9) return refused("budget", `the quality-first estimate ${estimate} is not the prepared ceiling ${qualityFirstPilotPreparedCeilingUsd}`);
   if (graph.writerCalls > qualityFirstPilotMaxWriterCalls || graph.judgeCalls > qualityFirstPilotMaxJudgeCalls || graph.maxCalls > qualityFirstPilotMaxProviderCalls) {
     return refused("budget", "the quality-first call graph exceeds 8 writer, 4 judge, or 12 provider calls");
   }
+  const preflightPath = path.join(outDir, qualityFirstPilotPreflightFile);
+  if (!existsSync(preflightPath)) return refused("output", "quality-first preflight record is missing");
+  const preflightCheck = verifyQualityFirstPreflight(JSON.parse(readFileSync(preflightPath, "utf8")) as Parameters<typeof verifyQualityFirstPreflight>[0]);
+  if (!preflightCheck.ok) return refused("output", preflightCheck.reason ?? "hash_mismatch");
   mkdirSync(outDir, { recursive: true });
-  writeFileSync(path.join(outDir, "plan.json"), `${JSON.stringify(qualityFirstPilotPlan(prices, officialTexts), null, 2)}\n`);
-  const base: TrapRun = {
-    ...refused("authorization", "quality-first production live call is not authorized"),
-    ready: true,
-    estimatedUsd: estimate,
-    maxCalls: graph.maxCalls,
-    maxCostUsd: Math.min(estimate, qualityFirstPilotSpendCapUsd),
-    costAssumption,
-    recoveryMode: "off",
-  };
-  if (!qualityFirstPilotLiveAuthorized) return base;
+  const plan = qualityFirstPilotPlan(prices, officialTexts);
+  writeFileSync(path.join(outDir, "plan.json"), `${JSON.stringify(plan, null, 2)}\n`);
+  if (!qualityFirstPilotLiveAuthorized) {
+    writeFileSync(
+      path.join(outDir, qualityFirstPilotPreflightFile),
+      `${JSON.stringify({
+        ...plan,
+        executed: false,
+        started: false,
+        providerCalls: 0,
+        costUsd: null,
+        studentBankWrites: 0,
+        recoveryMode: "dry_run",
+        recoveryActive: false,
+        humanApproval: "closed",
+        meaningProven: false,
+        waitingAuthorization: true,
+        ready_for_live: plan.ready_for_live,
+      }, null, 2)}\n`,
+    );
+    return {
+      ...refused("authorization", "quality-first production live call is not authorized"),
+      ready: true,
+      estimatedUsd: estimate,
+      maxCalls: graph.maxCalls,
+      maxCostUsd: Math.min(estimate, qualityFirstPilotSpendCapUsd),
+      costAssumption,
+      recoveryMode: "off",
+    };
+  }
   const models = { ...openrouterPrecheckModels };
   const config = loadAIConfig();
   const missing = [parseModel(models.generator, config.provider).provider, parseModel(models.judge, config.provider).provider].find((name) => !config.keys[name]);
@@ -1057,7 +1229,7 @@ export async function itemFactoryQualityFirstPilot(authorization: string, outDir
     items,
     profile: "quality",
     cacheSalt: qualityFirstPilotAuthorization,
-    recovery: { mode: "off" },
+    recovery: { mode: "dry_run" },
     limits: { maxCalls: graph.maxCalls, maxCostUsd: Math.min(estimate, qualityFirstPilotSpendCapUsd), maxRegenerations: qualityFirstPilotRetry },
     providerFor: (setting) => {
       const parsed = parseModel(setting, config.provider);
@@ -1070,8 +1242,18 @@ export async function itemFactoryQualityFirstPilot(authorization: string, outDir
   });
   produced.records = produced.records.map((record) => ({
     ...record,
+    observedDifficulty: null,
     recovery: qualityFirstPilotDryRun(record, produced.costUsd),
   }));
+  produced.recoveryMode = "dry_run";
+  produced.qualityProven = false;
+  const metrics = qualityFirstLiveMetrics(produced);
+  if (outDir) {
+    mkdirSync(outDir, { recursive: true });
+    writeFileSync(path.join(outDir, "summary.json"), `${JSON.stringify({ ...produced, records: produced.records.length, metrics }, null, 2)}\n`);
+    for (const record of produced.records) writeFileSync(path.join(outDir, `${record.id}.json`), `${JSON.stringify(record, null, 2)}\n`);
+    writeFileSync(path.join(outDir, "metrics.json"), `${JSON.stringify(metrics, null, 2)}\n`);
+  }
   return produced;
 }
 

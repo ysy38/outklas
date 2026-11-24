@@ -84,9 +84,12 @@ describe("quality production repair", () => {
       cognitive("The clinic would have missed the morning delivery even if the drivers had left the depot before dawn.", "polarity_reversal", "The clinic would have missed the delivery anyway."),
       cognitive("The drivers will leave the depot before dawn tomorrow, so the clinic will not miss the morning delivery.", "tense_shift", "The departure is in the future."),
     ];
-    const pool = selectCognitiveDistractors({ candidates: drafts, keyText: depotKey, allowedMechanisms: restatementModel.errorMechanisms });
-    expect(pool.removed.map((entry) => entry.reason)).toContain("surface_edit");
-    expect(pool.status).toBe("insufficient");
+    const synonym = cognitive("The clinic would not have missed the morning delivery if the drivers had left the depot before sunrise.", "tense_shift", "Dawn is retold as sunrise.");
+    const pool = selectCognitiveDistractors({ candidates: [...drafts, synonym], keyText: depotKey, allowedMechanisms: restatementModel.errorMechanisms });
+    expect(pool.removed.find((entry) => entry.candidate.candidateText === synonym.candidateText)?.reason).toBe("surface_edit");
+    expect(pool.removed.find((entry) => entry.candidate.candidateText === drafts[3]!.candidateText)?.reason).toBe("surface_edit");
+    expect(pool.selected.map((entry) => entry.candidateText)).toContain(drafts[2]!.candidateText);
+    expect(pool.status).toBe("selected");
     const repeated = selectCognitiveDistractors({
       candidates: [
         drafts[0]!,
@@ -230,6 +233,7 @@ describe("quality production repair", () => {
     expect(blocked.options?.A).toContain("if the inspectors had finished");
   });
 
+  // Timeout is cache-directory I/O, not a quality-gate assertion.
   it("keeps shown differences, overlap, and a cut response from becoming an approval", () => {
     const quality = ".data/analysis/_factory/cognitive-trap/quality-v1";
     const saved = (id: string) => JSON.parse(readFileSync(`${quality}/${id}.json`, "utf8")) as {
@@ -311,5 +315,5 @@ describe("quality production repair", () => {
     expect(summary.retry).toBe(0);
     expect(summary.benchmarkStarted).toBe(false);
     expect(optionLabels).toHaveLength(5);
-  }, 15000);
+  }, 60000);
 });

@@ -13,16 +13,30 @@ import { taxonomyLiveItems } from "./taxonomy-live";
 
 /** Separate from quality-repair-pilot-v1 and semantic-taxonomy-live-v1. Live stays closed until this token and the live flag are both set. */
 export const qualityFirstPilotAuthorization = "quality-first-production-pilot-v1";
-/** This prompt is preparation. Flipping the token alone must not start a provider. */
-export const qualityFirstPilotLiveAuthorized = false;
+/** This live prompt authorizes one production run. A completed summary.json still blocks a second run. */
+export const qualityFirstPilotLiveAuthorized = true;
 export const qualityFirstPilotOutputDir = ".data/analysis/_factory/cognitive-trap/quality-first-pilot-v1";
 export const qualityFirstPilotSpendCapUsd = 0.25;
+export const qualityFirstPilotPreparedCeilingUsd = 0.233124;
 export const qualityFirstPilotRetry = 0;
 export const qualityFirstPilotWriterCallsPerItem = 2;
 export const qualityFirstPilotJudgeCallsPerItem = 1;
 export const qualityFirstPilotMaxWriterCalls = 8;
 export const qualityFirstPilotMaxJudgeCalls = 4;
 export const qualityFirstPilotMaxProviderCalls = 12;
+export const qualityFirstPilotPreflightFile = "preflight.json";
+
+const qualityFirstTrEnPreviousKeyText = "None of the complaints was forwarded to the prosecutor's office; only two minutes were read out at the hearing.";
+const qualityFirstTrEnSource = "Hiçbir şikâyet savcılığa iletilmiş değil; yalnızca iki tutanak duruşmada okundu.";
+
+/** Frozen prep-v1 TR→EN key. The current item uses a later wording; this text is not the live key. */
+export const qualityFirstTrEnPreviousKey = {
+  version: "prep-v1" as const,
+  itemId: "quality-first-translation-tr_en" as const,
+  source: qualityFirstTrEnSource,
+  key: qualityFirstTrEnPreviousKeyText,
+  keyHash: contentVersion(qualityFirstTrEnPreviousKeyText),
+};
 
 export const qualityFirstPilotForbiddenDirs = [
   ".data/analysis/_factory/cognitive-trap/openrouter-v1",
@@ -35,6 +49,42 @@ export const qualityFirstPilotForbiddenDirs = [
   ".data/analysis/_factory/cognitive-trap/active-recovery-live-smoke-v1",
   ".data/analysis/_factory/cognitive-trap/active-recovery-live-smoke-replay-v1",
   ".data/analysis/_factory/editorial-gold/v1",
+  ".data/analysis/_factory/cognitive-trap/yield-optimization-v1",
+  ".data/analysis/_factory/cognitive-trap/candidate-retention-v1",
+  ".data/analysis/_factory/cognitive-trap/recovered-candidate-audit-v1",
+  ".data/analysis/_factory/cognitive-trap/architecture-v2",
+  ".data/analysis/_factory/cognitive-trap/writer-bakeoff-v1",
+  ".data/analysis/_factory/cognitive-trap/writer-bakeoff-smoke-v1",
+  ".data/analysis/_factory/cognitive-trap/writer-bakeoff-compare-v1",
+  ".data/analysis/_factory/cognitive-trap/writer-bakeoff-editorial-v1",
+  ".data/analysis/_factory/cognitive-trap/root-cause-audit-v1",
+  ".data/analysis/_factory/cognitive-trap/root-cause-fix-acceptance-v1",
+  ".data/analysis/_factory/cognitive-trap/factory-v6-controlled-live-pilot-v1",
+  ".data/analysis/_factory/cognitive-trap/factory-v6-writer-challenge-v1",
+  ".data/analysis/_factory/cognitive-trap/writer-reasoning-root-cause-v1",
+  ".data/analysis/_factory/cognitive-trap/model-reasoning-config-v1",
+  ".data/analysis/_factory/cognitive-trap/factory-v6-writer-comparison-v1",
+  ".data/analysis/_factory/cognitive-trap/semantic-failure-editorial-v1",
+  ".data/analysis/_factory/cognitive-trap/blind-editorial-handoff-v1",
+  ".data/analysis/_factory/cognitive-trap/blind-editorial-findings-v1",
+  ".data/analysis/_factory/cognitive-trap/independent-forensic-audit-v1",
+  ".data/analysis/_factory/cognitive-trap/audit-rebuttal-v1",
+  ".data/analysis/_factory/cognitive-trap/quality-authoring-v1",
+  ".data/analysis/_factory/cognitive-trap/quality-authoring-live-pilot-v1",
+  ".data/analysis/_factory/cognitive-trap/quality-authoring-codesign-restatement-v1",
+  ".data/analysis/_factory/cognitive-trap/generation-quality-experiment-v1",
+  ".data/analysis/_factory/cognitive-trap/restatement-hard-quality-editorial-v1",
+  ".data/analysis/_factory/cognitive-trap/restatement-hard-c1-naturalness-v1",
+  ".data/analysis/_factory/cognitive-trap/restatement-hard-blind-validation-v1",
+  ".data/analysis/_factory/cognitive-trap/restatement-hard-benchmark-5-v1",
+  ".data/analysis/_factory/cognitive-trap/restatement-hard-source-feasibility-v1",
+  ".data/analysis/_factory/cognitive-trap/restatement-hard-plan-to-wording-v1",
+  ".data/analysis/_factory/cognitive-trap/restatement-semantic-validity-v1",
+  ".data/analysis/_factory/cognitive-trap/restatement-semantic-acceptance-v1",
+  ".data/analysis/_factory/cognitive-trap/restatement-hard-stage-a-planning-v1",
+  ".data/analysis/_factory/cognitive-trap/restatement-hard-four-relation-brief-v1",
+  ".data/analysis/_factory/cognitive-trap/restatement-hard-plan-pool-v1",
+  ".data/analysis/_factory/cognitive-trap/restatement-hard-stage-0-source-key-v1",
 ] as const;
 
 export const qualityFirstFrozenModels = {
@@ -58,6 +108,7 @@ export const qualityFirstActualCallOrder = [
   "skip_arm_A",
   "writer_B-read",
   "writer_B-options_candidates_min4_max6",
+  "linkMisreadingCandidates_exact_studentMisreading_records_unmatched",
   "selectCognitiveDistractors_keeps_passing_options_stores_dropped_full_text",
   "finishArm_five_options",
   "holdLanguage",
@@ -118,8 +169,8 @@ export function qualityFirstItems(): QualityFirstEntry[] {
   const platesKey = "The two earliest negatives would have remained printable, provided the conservators had completed the sealing of the glass plates prior to the rise in humidity.";
   const faculty = "The faculty hired an outside auditor so that the department would not value its own equipment, because last year's figures had been prepared by the same staff.";
   const facultyKey = "Fakülte, geçen yılki rakamları aynı kadronun hazırlamış olması nedeniyle, bölümün kendi donanımını değerlememesi için dışarıdan bir denetçi tuttu.";
-  const complaints = "Hiçbir şikâyet savcılığa iletilmiş değil; yalnızca iki tutanak duruşmada okundu.";
-  const complaintsKey = "None of the complaints was forwarded to the prosecutor's office; only two minutes were read out at the hearing.";
+  const complaints = qualityFirstTrEnSource;
+  const complaintsKey = "No complaints have been forwarded to the prosecutor's office; only two official records were read aloud at the hearing.";
   return [
     {
       designTarget: "medium",
@@ -232,23 +283,23 @@ export function qualityFirstItems(): QualityFirstEntry[] {
       questionType: "translation",
       direction: "tr_en",
       cognitiveTraps: ["QUANTITY_SCOPE", "NEGATION_SCOPE", "FOCUS_SCOPE"],
-      cognitiveDemand: "Keep the universal negative on complaints forwarded to the prosecutor, the exclusive two minutes read at the hearing, and both events as passive.",
+      cognitiveDemand: "Keep the universal negative on complaints forwarded to the prosecutor, the exclusive two official records read at the hearing, and both events as passive.",
       meaningMap: {
         preserved: [
-          "none of the complaints was forwarded to the prosecutor's office",
-          "only two minutes were read out at the hearing",
+          "no complaints have been forwarded to the prosecutor's office",
+          "only two official records were read aloud at the hearing",
           "both clauses are passive",
         ],
         relations: ["universal negative quantity", "exclusive quantity", "negation", "passive"],
       },
-      priorStructuralDifference: "Not the drafts/board second-reading frame, and not every agent acting on their own item before an event with only two items moving. This one is a passive universal negative on complaints and a passive exclusive pair of minutes, with no distributive kendi/own action.",
+      priorStructuralDifference: "Not the drafts/board second-reading frame, and not every agent acting on their own item before an event with only two items moving. This one is a passive universal negative on complaints and a passive exclusive pair of official records, with no distributive kendi/own action.",
       observedDifficulty: null,
       item: {
         id: "quality-first-translation-tr_en",
         questionType: "translation",
         direction: "tr_en",
         designTarget: "medium",
-        preservedRelations: ["no complaint was forwarded to the prosecutor", "only two minutes were read at the hearing", "both events are passive"],
+        preservedRelations: ["no complaint was forwarded to the prosecutor", "only two official records were read at the hearing", "both events are passive"],
         source: {
           kind: "translation",
           sourceSentence: complaints,
@@ -341,6 +392,28 @@ export function qualityFirstKeyGate(item: TrapItem): QualityFirstKeyGate {
     approvesTarget: false,
     observedDifficulty: null,
   };
+}
+
+export type QualityFirstPreflightSnapshot = {
+  assessment?: { gates?: { id: string; sourceHash: string; keyHash: string }[] };
+  items?: { id: string; source: string; key: string }[];
+};
+
+/** Stops live if the stored preflight hashes or texts no longer match the four frozen items. */
+export function verifyQualityFirstPreflight(preflight: QualityFirstPreflightSnapshot): { ok: boolean; reason: string | null } {
+  const entries = qualityFirstItems();
+  if (!preflight.assessment?.gates?.length || !preflight.items?.length) return { ok: false, reason: "preflight_missing_hashes" };
+  for (const entry of entries) {
+    const sentence = sourceSentence(entry.item);
+    const key = entry.item.core.correctAnswer;
+    const gate = preflight.assessment.gates.find((item) => item.id === entry.item.id);
+    if (!gate) return { ok: false, reason: `preflight_missing_gate:${entry.item.id}` };
+    if (gate.sourceHash !== contentVersion(sentence) || gate.keyHash !== contentVersion(key)) return { ok: false, reason: `hash_mismatch:${entry.item.id}` };
+    const stored = preflight.items.find((item) => item.id === entry.item.id);
+    if (!stored) return { ok: false, reason: `preflight_missing_item:${entry.item.id}` };
+    if (stored.source !== sentence || stored.key !== key) return { ok: false, reason: `text_mismatch:${entry.item.id}` };
+  }
+  return { ok: true, reason: null };
 }
 
 export const qualityFirstCriteria: QualityFirstCriterion[] = [

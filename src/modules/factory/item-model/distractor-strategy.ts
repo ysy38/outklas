@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { DistractorCandidate, DistractorStrategy } from "./contract";
+import { assessMeaningIntegrity } from "./core";
 import { discourseConnectorSwap, surfaceEdit } from "./cognitive-trap";
 import { incompleteOption, sameProposition } from "./misreading-mechanisms";
 import { selectDistractors, type PoolSelection } from "./pool";
@@ -52,7 +53,7 @@ export function selectCognitiveDistractors(input: { candidates: (DistractorCandi
             ? "incomplete_option"
             : discourseConnectorSwap(input.keyText, candidate.candidateText)
               ? "discourse_unresolved"
-              : surfaceEdit(input.keyText, candidate.candidateText)
+              : surfaceEdit(input.keyText, candidate.candidateText) && !shownMeaningDifference(input.keyText, candidate.candidateText, input.sourceText)
                 ? "surface_edit"
                 : null;
     if (reason) removed.push({ candidate, reason });
@@ -100,4 +101,13 @@ export function describeDroppedDistractors(
 function sameMisreading(left: string, right: string): boolean {
   const normalize = (text: string) => text.toLocaleLowerCase("en-US").replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
   return normalize(left).length > 0 && normalize(left) === normalize(right);
+}
+
+/**
+ * Quantity, polarity, or another listed wording shift. Unverified near copies stay dropped.
+ * A fail here is not a semantic pass and does not raise meaningProven.
+ */
+function shownMeaningDifference(keyText: string, candidateText: string, sourceText?: string): boolean {
+  if (assessMeaningIntegrity(keyText, candidateText).status === "fail") return true;
+  return Boolean(sourceText && assessMeaningIntegrity(sourceText, candidateText).status === "fail");
 }

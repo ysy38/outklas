@@ -1,0 +1,75 @@
+{
+  "source": "https://openrouter.ai/api/v1/models",
+  "fetched": "2026-11-20",
+  "unit": "USD per million tokens = listed per-token price × 1e6",
+  "note": "First comparison uses hydrogen, not neon. Catalog listing of structured_outputs or reasoning is not a live JSON-schema proof. Honor stays unverified. deepseek/deepseek-v3.2-exp is a different id and was not substituted.",
+  "models": {
+    "anthropic/claude-haiku-5.5": {
+      "openrouterSetting": "openrouter:anthropic/claude-haiku-5.5",
+      "contextLength": 1000000,
+      "maxCompletionTokens": 128000,
+      "in": 0.1,
+      "out": 0.5,
+      "cacheRead": 0.01,
+      "cacheWrite": 0.125,
+      "cacheWrite1h": 0.2,
+      "supportedParameters": ["include_reasoning", "max_completion_tokens", "max_tokens", "reasoning", "reasoning_effort", "response_format", "stop", "structured_outputs", "tool_choice", "tools", "verbosity"],
+      "jsonSchemaHonor": "unverified",
+      "reasoningOnWire": "openrouter_exclude_true"
+    },
+    "google/gemini-4-argon": {
+      "openrouterSetting": "openrouter:google/gemini-4-argon",
+      "contextLength": 1048576,
+      "maxCompletionTokens": 943718,
+      "in": 2.0,
+      "out": 10.0,
+      "cacheRead": 0.1,
+      "cacheWrite": 0.1875,
+      "internalReasoningEqualsCompletion": true,
+      "supportedParameters": ["include_reasoning", "max_tokens", "reasoning", "reasoning_effort", "response_format", "seed", "stop", "structured_outputs", "temperature", "tool_choice", "tools", "top_p"],
+      "jsonSchemaHonor": "unverified",
+      "reasoningOnWire": "openrouter_exclude_true"
+    },
+    "google/gemini-4-hydrogen": {
+      "openrouterSetting": "openrouter:google/gemini-4-hydrogen",
+      "round": "first",
+      "contextLength": 1048576,
+      "maxCompletionTokens": 943718,
+      "in": 1.5,
+      "out": 7.5,
+      "cacheRead": 0.075,
+      "cacheWrite": 0.083333,
+      "internalReasoningEqualsCompletion": true,
+      "supportedParameters": ["include_reasoning", "max_tokens", "reasoning", "reasoning_effort", "response_format", "seed", "stop", "structured_outputs", "temperature", "tool_choice", "tools", "top_p"],
+      "jsonSchemaHonor": "unverified",
+      "reasoningOnWire": "openrouter_exclude_true",
+      "topProviderModerated": false
+    },
+    "google/gemini-4-neon": {
+      "openrouterSetting": "openrouter:google/gemini-4-neon",
+      "round": "stage2",
+      "contextLength": 1048576,
+      "maxCompletionTokens": 943718,
+      "in": 3.0,
+      "out": 15.0,
+      "cacheRead": 0.15,
+      "cacheWrite": 0.083333,
+      "internalReasoningEqualsCompletion": true,
+      "supportedParameters": ["include_reasoning", "max_tokens", "reasoning", "reasoning_effort", "response_format", "seed", "stop", "structured_outputs", "temperature", "tool_choice", "tools", "top_p"],
+      "jsonSchemaHonor": "unverified",
+      "reasoningOnWire": "openrouter_exclude_true"
+    },
+    "deepseek/deepseek-v3.2": {
+      "openrouterSetting": "openrouter:deepseek/deepseek-v3.2",
+      "contextLength": 163840,
+      "maxCompletionTokens": 147456,
+      "in": 0.26,
+      "out": 0.38,
+      "cacheRead": 0.13,
+      "supportedParameters": ["frequency_penalty", "include_reasoning", "logit_bias", "logprobs", "max_tokens", "min_p", "presence_penalty", "reasoning", "repetition_penalty", "response_format", "seed", "stop", "structured_outputs", "temperature", "tool_choice", "tools", "top_k", "top_logprobs", "top_p"],
+      "jsonSchemaHonor": "unverified",
+      "reasoningOnWire": "openrouter_exclude_true",
+      "notSubstituted": ["deepseek/deepseek-v3.2-exp", "deepseek/deepseek-v4.1-flash"]
+    }
+  }
+}

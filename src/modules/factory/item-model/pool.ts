@@ -55,7 +55,10 @@ export function selectDistractors(input: { candidates: DistractorCandidate[]; ke
     if (selected.length < required) selected.push(candidate);
     else rejected.push({ candidate, reason: "pool_surplus" });
   }
-  if (selected.length < required) return { status: "insufficient", selected: [], rejected, invalidity: "recorded_for_editorial_review" };
+  if (selected.length < required) {
+    for (const candidate of selected) rejected.push({ candidate, reason: "insufficient_pool" });
+    return { status: "insufficient", selected: [], rejected, invalidity: "recorded_for_editorial_review" };
+  }
   return { status: "selected", selected, rejected, invalidity: "recorded_for_editorial_review" };
 }
 

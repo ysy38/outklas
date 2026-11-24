@@ -10,12 +10,19 @@ import { dnaSkeleton } from "./stages/dna-skeleton";
 import { examSlice } from "./stages/exam-slice";
 import { factoryAudit, factoryBlindScore, factoryBlindSheet, factoryCompare, type VariantInput } from "./stages/benchmark";
 import { planBankImport } from "./stages/bank-plan";
+import { loadBankImportSources, runBankImport } from "./stages/bank-import";
+import type { BankWriter } from "@/modules/factory/bank-import";
 import { factoryJudgeCalibrate, mergeCalibration } from "./stages/calibrate";
 import { restatementJudge, restatementSmoke } from "./stages/restatement";
 import { factoryProfile, factoryReview, factorySlice, historicalIndex } from "./stages/factory";
 import { itemFactoryBenchmark, itemFactoryPlan } from "./stages/item-factory";
 import { itemFactoryCoreSmoke, itemFactoryPrecheck } from "./stages/item-precheck";
-import { itemFactoryCognitivePilot, itemFactoryCognitiveTrap, itemFactoryQualityJudgeReplay, itemFactoryQualityRepair, itemFactoryTaxonomyLive } from "./stages/cognitive-trap";
+import { itemFactoryCognitivePilot, itemFactoryCognitiveTrap, itemFactoryQualityFirstPilot, itemFactoryQualityJudgeReplay, itemFactoryQualityRepair, itemFactoryTaxonomyLive } from "./stages/cognitive-trap";
+import { qualityFirstPilotOutputDir } from "@/modules/factory/item-model/quality-first-pilot";
+import { writerBakeoffSmokeAuthorization, writerBakeoffSmokeOutputDir } from "@/modules/factory/item-model/writer-bakeoff-smoke";
+import { writerBakeoffCompareAuthorization, writerBakeoffCompareOutputDir } from "@/modules/factory/item-model/writer-bakeoff-compare";
+import { runWriterBakeoffTechnicalSmoke } from "./stages/writer-bakeoff-smoke";
+import { runWriterBakeoffRemainingFive } from "./stages/writer-bakeoff-compare";
 import { taxonomyLiveOutputDir } from "@/modules/factory/item-model/taxonomy-live";
 import { factoryRescore } from "./stages/rescore";
 import { loadPrices } from "./ai/prices";
@@ -133,6 +140,40 @@ async function main() {
     console.log(JSON.stringify({ out: option("out", ".data/analysis/_factory/bank-import/2026-11-06"), ...result.counts, writes: result.writes }, null, 2));
     return;
   }
+  if (name === "factory-bank-import") {
+    const apply = process.argv.includes("--apply");
+    const confirmStudentBank = process.argv.includes("--confirm-student-bank");
+    const out = option("out", ".data/analysis/_factory/bank-import/latest");
+    const runDir = option("run", "");
+    const sources = loadBankImportSources({ runDir: runDir || undefined, runsRoot: option("runs", ".data/analysis/_factory/runs") });
+    let writer: BankWriter | undefined;
+    if (apply && confirmStudentBank) {
+      const { getDb, items, choices, itemSkills, eq } = await import("@/db/client");
+      const db = await getDb();
+      writer = {
+        async hasItem(id: string) {
+          const rows = await db.select({ id: items.id }).from(items).where(eq(items.id, id)).limit(1);
+          return rows.length > 0;
+        },
+        async write(payload) {
+          await db.transaction(async (tx) => {
+            await tx.insert(items).values(payload.item);
+            await tx.insert(choices).values(payload.choices);
+            await tx.insert(itemSkills).values(payload.skills);
+          });
+        },
+      };
+    }
+    const result = await runBankImport({
+      sources,
+      mode: apply ? "apply" : "dry-run",
+      confirmStudentBank,
+      writer,
+      out,
+    });
+    console.log(JSON.stringify({ out, mode: result.mode, writes: result.writes, eligible: result.eligible, skipped: result.skipped, blocked: result.blocked, pendingHumanApprovals: result.pendingHumanApprovals.length, qualityHolds: result.qualityHolds.length }, null, 2));
+    return;
+  }
   if (name === "factory-item-plan") {
     console.log(JSON.stringify(itemFactoryPlan(), null, 2));
     return;
@@ -153,6 +194,51 @@ async function main() {
     if (via !== "openrouter") throw new Error("--via openrouter is required");
     const result = await itemFactoryTaxonomyLive(option("authorize", ""), option("out", taxonomyLiveOutputDir));
     console.log(JSON.stringify({ started: result.started, executed: result.executed, lock: result.lock, reason: result.reason, providerCalls: result.providerCalls, costUsd: result.costUsd, maxCalls: result.maxCalls, maxCostUsd: result.maxCostUsd, estimatedUsd: result.estimatedUsd }, null, 2));
+    return;
+  }
+  if (name === "factory-writer-bakeoff-smoke") {
+    const via = option("via", "");
+    if (via !== "openrouter") throw new Error("--via openrouter is required");
+    const result = await runWriterBakeoffTechnicalSmoke(option("authorize", ""), option("out", writerBakeoffSmokeOutputDir));
+    console.log(JSON.stringify({
+      started: result.started,
+      executed: "executed" in result ? result.executed : false,
+      lock: "lock" in result ? result.lock : null,
+      reason: "reason" in result ? result.reason : null,
+      providerCalls: result.providerCalls,
+      studentBankWrites: result.studentBankWrites,
+      bakeoffStarted: "bakeoffStarted" in result ? result.bakeoffStarted : false,
+      smokeCeilingUsd: "smokeCeilingUsd" in result ? result.smokeCeilingUsd : null,
+      actualUsd: "actualUsd" in result ? result.actualUsd : null,
+      authorization: writerBakeoffSmokeAuthorization,
+    }, null, 2));
+    return;
+  }
+  if (name === "factory-writer-bakeoff-compare") {
+    const via = option("via", "");
+    if (via !== "openrouter") throw new Error("--via openrouter is required");
+    const result = await runWriterBakeoffRemainingFive(option("authorize", ""), option("out", writerBakeoffCompareOutputDir));
+    console.log(JSON.stringify({
+      started: result.started,
+      executed: "executed" in result ? result.executed : false,
+      lock: "lock" in result ? result.lock : null,
+      reason: "reason" in result ? result.reason : null,
+      providerCalls: result.providerCalls,
+      studentBankWrites: result.studentBankWrites,
+      remainingTwentyCeilingUsd: "remainingTwentyCeilingUsd" in result ? result.remainingTwentyCeilingUsd : null,
+      recordedSmokeUsd: "recordedSmokeUsd" in result ? result.recordedSmokeUsd : null,
+      remainingActualUsd: "remainingActualUsd" in result ? result.remainingActualUsd : null,
+      totalBakeoffUsd: "totalBakeoffUsd" in result ? result.totalBakeoffUsd : null,
+      platesRegenerated: "platesRegenerated" in result ? result.platesRegenerated : false,
+      authorization: writerBakeoffCompareAuthorization,
+    }, null, 2));
+    return;
+  }
+  if (name === "factory-quality-first-pilot") {
+    const via = option("via", "");
+    if (via !== "openrouter") throw new Error("--via openrouter is required");
+    const result = await itemFactoryQualityFirstPilot(option("authorize", ""), option("out", qualityFirstPilotOutputDir));
+    console.log(JSON.stringify({ started: result.started, executed: result.executed, lock: result.lock, reason: result.reason, providerCalls: result.providerCalls, costUsd: result.costUsd, maxCalls: result.maxCalls, maxCostUsd: result.maxCostUsd, estimatedUsd: result.estimatedUsd, recoveryMode: result.recoveryMode, recoveryCostUsd: result.recoveryCostUsd, studentBankWrites: result.studentBankWrites, qualityProven: result.qualityProven, ids: result.records.map((record) => record.id) }, null, 2));
     return;
   }
   if (name === "factory-quality-repair") {
@@ -242,7 +328,7 @@ async function main() {
   const order = aliases[name] ?? [name];
   for (const stageName of order) {
     const stage = stages[stageName];
-    if (!stage) throw new Error(`Unknown stage "${stageName}". Stages: ${[...Object.keys(stages), ...Object.keys(aliases), "smoke", "corpus", "profile", "factory", "factory-review", "factory-audit", "factory-compare", "factory-blind", "factory-blind-score", "factory-rescore", "factory-judge-calibrate", "factory-item-plan", "factory-item-benchmark", "factory-item-precheck", "factory-item-core-smoke", "factory-cognitive-trap", "factory-cognitive-trap-pilot", "factory-quality-repair", "factory-quality-judge-replay", "factory-taxonomy-live"].join(", ")}`);
+    if (!stage) throw new Error(`Unknown stage "${stageName}". Stages: ${[...Object.keys(stages), ...Object.keys(aliases), "smoke", "corpus", "profile", "factory", "factory-review", "factory-audit", "factory-compare", "factory-blind", "factory-blind-score", "factory-rescore", "factory-judge-calibrate", "factory-bank-plan", "factory-bank-import", "factory-item-plan", "factory-item-benchmark", "factory-item-precheck", "factory-item-core-smoke", "factory-cognitive-trap", "factory-cognitive-trap-pilot", "factory-quality-repair", "factory-quality-judge-replay", "factory-taxonomy-live"].join(", ")}`);
     console.log(`▸ ${stageName} (${document.slug})`);
     const result = await stage(context);
     if (result) console.log(`  ${result.cached ? "cached" : "done"} · input ${result.manifest.inputHash.slice(0, 12)} · output ${result.manifest.outputHash.slice(0, 12)}`, JSON.stringify(result.manifest.stats));

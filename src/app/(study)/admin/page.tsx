@@ -13,8 +13,15 @@ export default async function AdminPage() {
   const rows = await db.select().from(items).orderBy(asc(items.slot));
   return (
     <section>
-      <h1 className="text-4xl">Maddeler</h1>
-      <p className="mt-2 text-sm text-muted">Yayın kapısı: doğru şık, açıklama, beceri, zorluk ve çeldirici tipi.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-4xl">Maddeler</h1>
+          <p className="mt-2 text-sm text-muted">Yayın kapısı: doğru şık, açıklama, beceri, zorluk ve çeldirici tipi.</p>
+        </div>
+        <Link href="/admin/inceleme" className="rounded-xl border border-line bg-card px-4 py-2 text-sm font-medium text-pine">
+          Editoryal İnceleme
+        </Link>
+      </div>
       <ul className="mt-6 divide-y divide-line rounded-2xl border border-line bg-card">
         {rows.map((item) => (
           <li key={item.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">

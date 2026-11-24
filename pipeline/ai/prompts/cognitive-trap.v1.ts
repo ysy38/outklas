@@ -166,3 +166,88 @@ export function misreadingOptionsUser(
     JSON.stringify(readings),
   ].join("\n");
 }
+
+/** Feature-flagged. Production keeps misreading.v4 / options.v5 until factoryRootCauseFixEnabled is switched. */
+export const misreadingPromptVersionV6 = "cognitive-trap.misreading.v6";
+export const misreadingOptionsPromptVersionV6 = "cognitive-trap.options.v6";
+
+export const misreadingSystemV6 = `MISREADING PATHS
+The source and the key are fixed. Do not rewrite the key.
+Record the relations the key keeps: roles, quantity, modality, polarity, tense, cause, purpose, condition, counterfactual, evidence, and reference.
+For each reading, follow this order:
+1. State the source meaning that must stay.
+2. Choose one plausible student misreading of a single meaning relation.
+3. Bind that misreading to one mechanism supplied in the user message.
+4. Do not invent a fourth trap. Do not pad with a second variant of the same relation.
+5. Explain why the option is not equivalent to the source. A mechanism label is not that explanation.
+Return one reading per independent meaning relation you can actually support. If fewer than four independent traps exist, return only those.
+Do not invent a relation, an actor, or an event that the source does not have.
+Do not use a mechanism that was not supplied.
+prevalence is exactly the token unmeasured.
+The supplied mechanisms are grounded labels. They are not a quota.`;
+
+export const misreadingOptionsSystemV6 = `MISREADING OPTIONS
+The source, the key, and the plans are fixed. Do not rewrite them.
+Write exactly one natural option per plan, in plan order.
+Change only the one targeted meaning relation named on that plan.
+Keep every other source event and relation listed as preserve.
+Do not add an actor, event, purpose, or cause that the source does not have.
+Write a natural academic sentence in the required language.
+The option must not be equivalent to the key or the source.
+Do not drop a whole clause so the key becomes the only complete sentence.
+Copy studentMisreading from the plan unchanged.
+A field such as preserved: true is not proof.
+Return one candidate per plan. Do not pad. No text outside the JSON.`;
+
+const independentReading = z.object({
+  studentMisreading: z.string().min(1).max(400),
+  temptingEvidence: z.string().min(1).max(400),
+  actualSemanticDifference: z.string().min(1).max(400),
+  whyIncorrect: z.string().min(1).max(400),
+  prevalence: z.string().max(40),
+  misreadingMechanism: z.string().min(1).max(80).optional(),
+  additionalMechanisms: z.array(z.string().min(1).max(80)).max(3).optional(),
+});
+
+/** Parse-side: 1–6 readings. Call schema still binds mechanisms via misreadingOutputForIndependent. */
+export const misreadingOutputIndependentParse = misreadingOutput.extend({
+  readings: z.array(independentReading).min(1).max(6),
+});
+
+export function misreadingOutputForIndependent(ids: readonly string[]) {
+  const list = (ids.length > 0 ? [...ids] : ["NONE"]) as [string, ...string[]];
+  return misreadingOutput.extend({
+    readings: z
+      .array(
+        independentReading.extend({
+          misreadingMechanism: z.enum(list),
+          additionalMechanisms: z.array(z.enum(list)).max(3).optional(),
+        }),
+      )
+      .min(1)
+      .max(6),
+  });
+}
+
+export function misreadingOptionsOutputForPlanCount(mechanisms: readonly string[], planCount: number) {
+  if (planCount < 1) throw new Error("options schema needs at least one plan");
+  const list = [...mechanisms] as [string, ...string[]];
+  return z.object({
+    candidates: z
+      .array(
+        z.object({
+          candidateText: z.string().min(1).max(400),
+          errorMechanism: z.enum(list),
+          shiftTarget: z.enum(["modality", "scope", "quantity", "cause", "contrast", "purpose", "role", "tense", "polarity", "predicate", "none"]),
+          semanticRisk: z.enum(["none", "second_answer", "off_construct", "ungrammatical"]),
+          studentMisreading: z.string().min(1).max(240),
+        }),
+      )
+      .min(planCount)
+      .max(planCount),
+  });
+}
+
+export const misreadingOptionsResponseSchemaForPlanCount = (mechanisms: readonly string[], planCount: number) =>
+  responseSchema(misreadingOptionsOutputForPlanCount(mechanisms, planCount));
+

@@ -7,7 +7,11 @@ import { distractorText } from "@/content/labels";
 import { answerAction, flagAction, submitAction } from "@/server/actions";
 
 type Choice = { id: string; body: string };
-type Reveal = { correct: boolean; explanation: string; correctChoiceId: string; note: string | null };
+type RevealLesson = {
+  relation?: string | null;
+  xray?: { diagnosis?: { raw?: string } } | null;
+};
+type Reveal = { correct: boolean; explanation: string; correctChoiceId: string; note: string | null; lesson?: RevealLesson | null };
 export type PlayerItem = {
   id: string;
   position: number;
@@ -205,6 +209,11 @@ export function SessionPlayer({
           <div className="mt-5 rounded-xl bg-paper p-4 text-sm leading-6">
             <p className="font-medium">{reveal.correct ? "Doğru!" : "Doğru cevap yeşil çerçeveli şık."}</p>
             <p className="mt-2">{reveal.explanation}</p>
+            {reveal.lesson?.xray?.diagnosis?.raw ? (
+              <p className="mt-2 rounded-lg border border-line bg-card px-3 py-2 text-xs text-muted">
+                Cümle Röntgeni{reveal.lesson.relation ? ` (${reveal.lesson.relation})` : ""}: {reveal.lesson.xray.diagnosis.raw}
+              </p>
+            ) : null}
             {reveal.note ? <p className="mt-2 text-muted">Senin seçtiğin şıkta sorun: {distractorText(reveal.note)}</p> : null}
           </div>
         ) : null}

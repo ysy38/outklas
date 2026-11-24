@@ -161,6 +161,37 @@ export async function saveItemAction(formData: FormData) {
   redirect("/admin");
 }
 
+export async function submitEditorialReviewAction(formData: FormData) {
+  const profile = await currentProfile();
+  if (profile?.role !== "admin" || !profile.email) redirect("/admin");
+  const run = String(formData.get("run") ?? "");
+  const candidateId = String(formData.get("candidateId") ?? "");
+  const decision = String(formData.get("decision") ?? "") as "APPROVE" | "REVISE" | "REJECT";
+  const notes = String(formData.get("notes") ?? "");
+  const rawBand = String(formData.get("band") ?? "");
+  const band = rawBand === "easy" || rawBand === "medium" || rawBand === "hard" ? rawBand : undefined;
+
+  if (!["APPROVE", "REVISE", "REJECT"].includes(decision)) {
+    redirect(`/admin/inceleme?run=${encodeURIComponent(run)}&id=${encodeURIComponent(candidateId)}&hata=${encodeURIComponent("Geçersiz karar.")}`);
+  }
+
+  const { saveEditorialReview } = await import("@/server/factory-review");
+  try {
+    saveEditorialReview({
+      run,
+      candidateId,
+      decision,
+      adminEmail: profile.email,
+      notes,
+      band,
+    });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Karar kaydedilemedi.";
+    redirect(`/admin/inceleme?run=${encodeURIComponent(run)}&id=${encodeURIComponent(candidateId)}&hata=${encodeURIComponent(msg)}`);
+  }
+  redirect(`/admin/inceleme?run=${encodeURIComponent(run)}&id=${encodeURIComponent(candidateId)}&ok=1`);
+}
+
 export async function startTodayAction() {
   const profile = await currentProfile();
   if (!profile) redirect("/giris");

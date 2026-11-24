@@ -219,6 +219,7 @@ function quantityClasses(text: string): Set<string> {
     ["most", ["most", "çoğu", "cogu"]],
   ];
   for (const [name, forms] of groups) if (forms.some((form) => folded.includes(form))) found.add(name);
+  if (wordTokens(text).includes("no")) found.add("none");
   return found;
 }
 
@@ -254,7 +255,7 @@ function modalityShift(source: string, key: string): boolean {
 }
 
 function negated(text: string): boolean {
-  return /\bnot\b|\bnever\b|n't|\bnone\b|\bdeğil\b|\bdegil\b|\bhiç\b|\bhic\b/i.test(fold(text));
+  return /\bnot\b|\bno\b|\bnever\b|n't|\bnone\b|\bdeğil\b|\bdegil\b|\bhiç\b|\bhic\b/i.test(fold(text));
 }
 
 function counterfactual(text: string): boolean {
